@@ -4,17 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>2D Canvas with Sprites</title>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <canvas id="canvas"></canvas>
     <div class="container">
-        <div class="canvas-window"></div>
+        <div id="canvas-window" class="canvas-window"></div>
         <div class="ui-overlay">
             <div class="controls">
-                <button id="zoom-in">Zoom In</button>
-                <button id="zoom-out">Zoom Out</button>
-                <input type="range" id="zoom-slider" min="0.1" max="3" step="0.1" value="1">
+                <style>
+                    .zoom_ctrl {
+                        display: grid;
+                        grid-template-columns: auto auto auto;
+                        grid-gap: 5px;
+                        align-items: center;
+                    }
+                </style>
+                <div class="zoom_ctrl">
+                    Zoom
+                    <button class="button-4" role="button" id="zoom-in">+</button>
+                    <button class="button-4" role="button" id="zoom-out">-</button>
+                </div>
+                <input class="wide" type="range" id="zoom-slider" min="0.5" max="3" step="0.1" value="1">
+                <button class="button-4 wide" role="button" id="reset">Reset</button>
             </div>
             <div class="indicators">
                 <p>Zoom: <span id="zoom-level">1.0</span></p>
