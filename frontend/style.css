@@ -1,0 +1,59 @@
+body {
+    margin: 0;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+
+    /* width: 100%;
+    height: 100%; */
+}
+
+.container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+
+    display: grid;
+
+    grid-template-columns: auto 200px;
+
+    pointer-events: none;
+}
+
+canvas {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #f0f0f0;
+}
+
+.canvas-window {
+    display: block;
+    pointer-events: none;
+    /* display: none; */
+}
+
+.ui-overlay {
+    /* position: absolute;
+    top: 10px;
+    left: 10px; */
+    display: grid;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+
+    pointer-events: auto;
+}
+
+.controls {
+    margin-bottom: 10px;
+}
+
+.indicators {
+    font-size: 14px;
+}
