@@ -1,4 +1,3 @@
-
 const canvas_window = document.getElementById("canvas-window");
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
@@ -7,6 +6,7 @@ const zoomOutButton = document.getElementById("zoom-out");
 const zoomSlider = document.getElementById("zoom-slider");
 const zoomLevel = document.getElementById("zoom-level");
 const resetButton = document.getElementById("reset");
+const testButton = document.getElementById("test_button");
 
 // Set canvas size
 canvas.width = window.innerWidth;
@@ -125,7 +125,7 @@ function render() {
 // SocketIO events
 socket.on("update_sprites", (data) => {
     sprites = data;
-    console.log(sprites);
+    // console.log(sprites);
 });
 
 function update_ui_state()
@@ -133,7 +133,7 @@ function update_ui_state()
     zoomSlider.value = zoom;
     zoomLevel.textContent = zoom.toFixed(1);
     socket.emit("updated_ui_state", {zoom, pan_x: panX, pan_y: panY});
-    console.log("update_ui_state", zoom, panX, panY);
+    // console.log("update_ui_state", zoom, panX, panY);
 }
 
 socket.on("update_ui_state", (data) => {
@@ -160,7 +160,7 @@ zoomSlider.addEventListener("input", (e) => {
 });
 
 canvas.addEventListener('wheel', (e) => {
-    console.log('scrolled');
+    // console.log('scrolled');
     if (e.deltaY > 0) {
         zoom *= 1.03;
     } else {
@@ -175,6 +175,11 @@ resetButton.addEventListener("click", () => {
     panX = canvas_window_center_x;
     panY = canvas_window_center_y;
     update_ui_state();
+});
+
+testButton.addEventListener("click", () => {
+    // console.log("test");
+    socket.emit("test_signal", {});
 });
 
 // Panning
