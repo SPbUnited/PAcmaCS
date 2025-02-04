@@ -1,4 +1,2 @@
-fastapi
-uvicorn
-python-socketio
-eventlet
+flask
+flask-socketio

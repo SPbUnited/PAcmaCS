@@ -111,14 +111,10 @@ function render() {
     ctx.translate(panX, panY);
     ctx.scale(zoom*zoom_param, zoom*zoom_param);
 
+    // Draw field
     ctx.drawImage(field, -field.width/2, -field.height/2);
 
-    ctx.drawImage(robot_blu, 100, 100);
-    ctx.drawImage(robot_yel, -100, -200);
-    ctx.drawImage(ball, 0, 15);
-    drawBall(0,0);
-    drawRobot(robot_blu, 1000, 100, 1.57);
-
+    // Render sprites
     drawSprites(sprites);
 
     ctx.restore();
@@ -128,6 +124,7 @@ function render() {
 // SocketIO events
 socket.on("update_sprites", (data) => {
     sprites = data;
+    console.log(sprites);
 });
 
 function update_ui_state()
