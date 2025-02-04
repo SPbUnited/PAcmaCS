@@ -205,5 +205,36 @@ canvas.addEventListener('mouseleave', () => {
     isDragging = false;
 });
 
+// Keyboard hotkeys
+window.addEventListener('keydown', (e) => {
+    switch (e.key) {
+        // Movement
+        case 'r':
+            resetButton.click();
+            break;
+        case 'ArrowUp':
+            panY += 10;
+            break;
+        case 'ArrowDown':
+            panY -= 10;
+            break;
+        case 'ArrowLeft':
+            panX += 10;
+            break;
+        case 'ArrowRight':
+            panX -= 10;
+            break;
+
+        // Control
+        case 't':
+            testButton.click();
+            break;
+
+        default:
+            break;
+    }
+    update_ui_state();
+});
+
 // Start rendering
 render();
