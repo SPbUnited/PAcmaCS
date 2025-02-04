@@ -82,6 +82,28 @@ function drawBall(x, y){
     ctx.drawImage(ball, x - ball.width/2, y - ball.height/2);
 }
 
+function drawSingleSprite(sprite){
+    switch (sprite.type) {
+        case "robot_yel":
+            drawRobot(robot_yel, sprite.x, sprite.y, sprite.rotation);
+            break;
+        case "robot_blu":
+            drawRobot(robot_blu, sprite.x, sprite.y, sprite.rotation);
+            break;
+        case "ball":
+            drawBall(sprite.x, sprite.y);
+            break;
+        default:
+            break;
+    }
+}
+
+function drawSprites(sprites){
+    sprites.forEach(sprite => {
+        drawSingleSprite(sprite);
+    });
+}
+
 // Render loop
 function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -97,14 +119,7 @@ function render() {
     drawBall(0,0);
     drawRobot(robot_blu, 1000, 100, 1.57);
 
-    // ctx.fillStyle = "#006F05";
-    // ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    sprites.forEach(sprite => {
-        const img = new Image();
-        img.src = sprite.image;
-        ctx.drawImage(img, sprite.x, sprite.y, 50, 50); // Adjust size as needed
-    });
+    drawSprites(sprites);
 
     ctx.restore();
     requestAnimationFrame(render);
