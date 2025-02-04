@@ -53,7 +53,7 @@ const socket = io("http://localhost:8000");
 let canvas_window_center_x = canvas_window.offsetTop + canvas_window.offsetWidth / 2;
 let canvas_window_center_y = canvas_window.offsetLeft + canvas_window.offsetHeight / 2;
 
-let sprites = [];
+let draw_data = [];
 let zoom = 1;
 const zoom_param = 0.25
 let panX = canvas_window_center_x;
@@ -99,10 +99,18 @@ function drawSingleSprite(sprite){
     }
 }
 
-function drawSprites(sprites){
-    sprites.forEach(sprite => {
+function drawLayer(layer){
+    layer.forEach(sprite => {
+        console.log(sprite)
         drawSingleSprite(sprite);
     });
+}
+
+function iterateLayers(layers){
+    for (const [layer_name, layer_data] of Object.entries(layers)) {
+        console.log(layer_name, layer_data);
+        drawLayer(layer_data);
+    }
 }
 
 // Render loop
@@ -116,7 +124,7 @@ function render() {
     ctx.drawImage(field, -field.width/2, -field.height/2);
 
     // Render sprites
-    drawSprites(sprites);
+    iterateLayers(draw_data);
 
     ctx.restore();
     requestAnimationFrame(render);
@@ -124,7 +132,7 @@ function render() {
 
 // SocketIO events
 socket.on("update_sprites", (data) => {
-    sprites = data;
+    draw_data = data;
     // console.log(sprites);
 });
 

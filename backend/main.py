@@ -7,10 +7,12 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 sio = SocketIO(app, cors_allowed_origins="*")
 
-sprite_data = [{"type": "robot_yel", "x": -1000, "y": 100, "rotation": 0},
-        {"type": "robot_blu", "x": 1400, "y": 100, "rotation": 3.14},
-        {"type": "robot_blu", "x": -1400, "y": -100, "rotation": 0},
-        {"type": "ball", "x": 200, "y": 400}]
+sprite_data = {"test_vision": [
+    {"type": "robot_yel", "x": -1000, "y": 100, "rotation": 0},
+    {"type": "robot_blu", "x": 1400, "y": 100, "rotation": 3.14},
+    {"type": "robot_blu", "x": -1400, "y": -100, "rotation": 0},
+    {"type": "ball", "x": 200, "y": 400}
+    ]}
 
 @app.route('/')
 def index():
@@ -43,7 +45,7 @@ def update_sprites():
         sio.sleep(0.02)
         # print("Update sprites")
         data = sprite_data
-        data[0]["rotation"] = angle
+        data["test_vision"][0]["rotation"] = angle
         sio.emit("update_sprites", data)
 
         angle += 0.1
