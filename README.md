@@ -10,6 +10,12 @@ make up
 ## Запуск в ручном режиме
 
 ```bash
+git clone https://github.com/arsenier/serviz.git
+cd serviz
+pip install -r backend/requirements.txt
+```
+
+```bash
 cd frontend
 python3 -m http.server 3000 --directory /app
 ```
