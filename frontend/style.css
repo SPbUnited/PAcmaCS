@@ -45,7 +45,6 @@ canvas {
     /* position: absolute;
     top: 10px;
     left: 10px; */
-    display: grid;
     background: rgba(255, 255, 255, 0.8);
     padding: 10px;
     border-radius: 5px;
@@ -61,7 +60,8 @@ canvas {
 }
 
 .indicators {
-    font-size: 14px;
+    padding: 0px
+    /* font-size: 14px; */
 }
 
 

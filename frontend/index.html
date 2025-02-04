@@ -22,17 +22,19 @@
                     }
                 </style>
                 <div class="zoom_ctrl">
-                    Zoom
-                    <button class="button-4" role="button" id="zoom-in">+</button>
-                    <button class="button-4" role="button" id="zoom-out">-</button>
+                    Zoom <span id="zoom-level">1.0</span>
+                    <div>
+                        <button class="button-4" role="button" id="zoom-in">+</button>
+                        <button class="button-4" role="button" id="zoom-out">-</button>
+                    </div>
                 </div>
                 <input class="wide" type="range" id="zoom-slider" min="0.5" max="3" step="0.1" value="1">
                 <button class="button-4 wide" role="button" id="reset">Reset</button>
                 <button class="button-4 wide" role="button" id="test_button">Test button</button>
             </div>
-            <div class="indicators">
+            <!-- <div class="indicators">
                 <p>Zoom: <span id="zoom-level">1.0</span></p>
-            </div>
+            </div> -->
         </div>
     </div>
     <script src="socket.io.js"></script>
