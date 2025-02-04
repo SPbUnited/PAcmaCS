@@ -64,6 +64,27 @@ canvas {
     /* font-size: 14px; */
 }
 
+.layer-list {
+    display: flex;
+    flex-direction: column;
+
+    margin: 10px;
+}
+
+.layer-item {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: left;
+
+    /* display: grid;
+    grid-template-columns: 40px auto;
+
+    justify-content: center;
+
+    margin: 5px; */
+}
+
 
 /* ==========================================================================
    Buttons

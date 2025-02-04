@@ -7,12 +7,16 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 sio = SocketIO(app, cors_allowed_origins="*")
 
-sprite_data = {"test_vision": [
+sprite_data = {"test_vision": {"data":[
     {"type": "robot_yel", "x": -1000, "y": 100, "rotation": 0},
     {"type": "robot_blu", "x": 1400, "y": 100, "rotation": 3.14},
     {"type": "robot_blu", "x": -1400, "y": -100, "rotation": 0},
     {"type": "ball", "x": 200, "y": 400}
-    ]}
+],  "is_visible": True},
+"test_vision2": {"data":[
+    {"type": "robot_yel", "x": -300, "y": -900, "rotation": 0},
+],  "is_visible": True}
+}
 
 @app.route('/')
 def index():
@@ -35,7 +39,12 @@ def update_ui_state(data):
 @sio.on('test_signal')
 def test_signal(data):
     print("Test signal")
-    sprite_data[1]["x"] *= -1
+    sprite_data["test_vision"]["data"][1]["x"] *= -1
+
+@sio.on('toggle_layer_visibility')
+def toggle_layer_visibility(data):
+    print(data)
+    sprite_data[data]["is_visible"] = not sprite_data[data]["is_visible"]
 
 def update_sprites():
     import time
@@ -45,7 +54,7 @@ def update_sprites():
         sio.sleep(0.02)
         # print("Update sprites")
         data = sprite_data
-        data["test_vision"][0]["rotation"] = angle
+        data["test_vision"]["data"][0]["rotation"] = angle
         sio.emit("update_sprites", data)
 
         angle += 0.1

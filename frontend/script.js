@@ -7,6 +7,7 @@ const zoomSlider = document.getElementById("zoom-slider");
 const zoomLevel = document.getElementById("zoom-level");
 const resetButton = document.getElementById("reset");
 const testButton = document.getElementById("test_button");
+const layerList = document.getElementById("layer-list");
 
 // Set canvas size
 canvas.width = window.innerWidth;
@@ -53,7 +54,7 @@ const socket = io("http://localhost:8000");
 let canvas_window_center_x = canvas_window.offsetTop + canvas_window.offsetWidth / 2;
 let canvas_window_center_y = canvas_window.offsetLeft + canvas_window.offsetHeight / 2;
 
-let draw_data = [];
+let layer_data = [];
 let zoom = 1;
 const zoom_param = 0.25
 let panX = canvas_window_center_x;
@@ -106,10 +107,41 @@ function drawLayer(layer){
     });
 }
 
+function toggleLayerVisibility(layer_name){
+    console.info("Toggle layer visibility", layer_name);
+    socket.emit("toggle_layer_visibility", layer_name);
+}
+
+function layerDivGenerator(layer_name, layer_data){
+    const layerItem = document.createElement("div");
+    layerItem.className = "layer-item";
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.id = `layer-${layer_name}`;
+    checkbox.checked = layer_data["is_visible"];
+
+    const label = document.createElement("label");
+    label.htmlFor = `layer-${layer_name}`;
+    label.textContent = layer_name;
+
+    layerItem.addEventListener("mousedown", () => toggleLayerVisibility(layer_name));
+    layerItem.appendChild(checkbox);
+    layerItem.appendChild(label);
+    return layerItem
+}
+
 function iterateLayers(layers){
+    layerList.innerHTML = "";
     for (const [layer_name, layer_data] of Object.entries(layers)) {
         console.log(layer_name, layer_data);
-        drawLayer(layer_data);
+        layerList.appendChild(layerDivGenerator(layer_name, layer_data));
+
+        if (!layer_data["is_visible"]) {
+            continue;
+        }
+
+        drawLayer(layer_data["data"]);
     }
 }
 
@@ -124,7 +156,7 @@ function render() {
     ctx.drawImage(field, -field.width/2, -field.height/2);
 
     // Render sprites
-    iterateLayers(draw_data);
+    iterateLayers(layer_data);
 
     ctx.restore();
     requestAnimationFrame(render);
@@ -132,7 +164,7 @@ function render() {
 
 // SocketIO events
 socket.on("update_sprites", (data) => {
-    draw_data = data;
+    layer_data = data;
     // console.log(sprites);
 });
 
