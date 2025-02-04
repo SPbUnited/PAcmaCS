@@ -1,3 +1,4 @@
+
 const canvas_window = document.getElementById("canvas-window");
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");

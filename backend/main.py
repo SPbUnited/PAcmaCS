@@ -45,4 +45,4 @@ if __name__ == "__main__":
     print("Starting server")
     # threading.Thread(target=update_sprites).start()
     sio.start_background_task(target=lambda: update_sprites())
-    sio.run(app, port=8000, debug=True)#, host='localhost', port=8000, debug=True)
+    sio.run(app, host='0.0.0.0', port=8000, debug=True, allow_unsafe_werkzeug=True)#, host='localhost', port=8000, debug=True)
