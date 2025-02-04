@@ -14,24 +14,27 @@ canvas.height = window.innerHeight;
 // Load football field
 var field = new Image();
 field.onload = function() {
-    // ctx.drawImage(field, 0, 0);
     console.log("Field", field.width, field.height);
 }
 field.src = "field.svg";
 
 var robot_yel = new Image();
 robot_yel.onload = function() {
-    ctx.drawImage(robot_yel, 0, 0);
     console.log("Robot Yellow", robot_yel.width, robot_yel.height);
 }
 robot_yel.src = "robot_yel.svg";
 
 var robot_blu = new Image();
 robot_blu.onload = function() {
-    ctx.drawImage(robot_blu, 0, 0);
     console.log("Robot Blue", robot_blu.width, robot_blu.height);
 }
 robot_blu.src = "robot_blu.svg";
+
+var ball = new Image();
+ball.onload = function() {
+    console.log("Ball", ball.width, ball.height);
+}
+ball.src = "ball.svg";
 
 // SocketIO connection
 const socket = io("http://localhost:8000");
@@ -63,6 +66,18 @@ console.log(canvas_window)
 console.log(canvas_window_center_x, canvas_window_center_y);
 console.log(panX, panY);
 
+// https://stackoverflow.com/a/43155027
+function drawRobot(image, x, y, rotation){
+    cx = 90;
+    cy = 90;
+    scale = 1;
+    ctx.save();
+    ctx.translate(x, y); // sets scale and origin
+    ctx.rotate(rotation);
+    ctx.drawImage(image, -cx, -cy);
+    ctx.restore();
+}
+
 // Render loop
 function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -72,9 +87,10 @@ function render() {
 
     ctx.drawImage(field, -field.width/2, -field.height/2);
 
-    ctx.fillRect(100, 100, 200, 200);
     ctx.drawImage(robot_blu, 100, 100);
-    ctx.drawImage(robot_yel, 100, 200);
+    ctx.drawImage(robot_yel, -100, -200);
+    ctx.drawImage(ball, 0, 15);
+    drawRobot(robot_blu, 1000, 100, 1.57);
 
     // ctx.fillStyle = "#006F05";
     // ctx.fillRect(0, 0, canvas.width, canvas.height);
