@@ -78,6 +78,10 @@ function drawRobot(image, x, y, rotation){
     ctx.restore();
 }
 
+function drawBall(x, y){
+    ctx.drawImage(ball, x - ball.width/2, y - ball.height/2);
+}
+
 // Render loop
 function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -90,6 +94,7 @@ function render() {
     ctx.drawImage(robot_blu, 100, 100);
     ctx.drawImage(robot_yel, -100, -200);
     ctx.drawImage(ball, 0, 15);
+    drawBall(0,0);
     drawRobot(robot_blu, 1000, 100, 1.57);
 
     // ctx.fillStyle = "#006F05";
