@@ -14,10 +14,24 @@ canvas.height = window.innerHeight;
 // Load football field
 var field = new Image();
 field.onload = function() {
-    ctx.drawImage(field, 0, 0);
-    console.log(field.width, field.height);
+    // ctx.drawImage(field, 0, 0);
+    console.log("Field", field.width, field.height);
 }
 field.src = "field.svg";
+
+var robot_yel = new Image();
+robot_yel.onload = function() {
+    ctx.drawImage(robot_yel, 0, 0);
+    console.log("Robot Yellow", robot_yel.width, robot_yel.height);
+}
+robot_yel.src = "robot_yel.svg";
+
+var robot_blu = new Image();
+robot_blu.onload = function() {
+    ctx.drawImage(robot_blu, 0, 0);
+    console.log("Robot Blue", robot_blu.width, robot_blu.height);
+}
+robot_blu.src = "robot_blu.svg";
 
 // SocketIO connection
 const socket = io("http://localhost:8000");
@@ -57,6 +71,10 @@ function render() {
     ctx.scale(zoom*zoom_param, zoom*zoom_param);
 
     ctx.drawImage(field, -field.width/2, -field.height/2);
+
+    ctx.fillRect(100, 100, 200, 200);
+    ctx.drawImage(robot_blu, 100, 100);
+    ctx.drawImage(robot_yel, 100, 200);
 
     // ctx.fillStyle = "#006F05";
     // ctx.fillRect(0, 0, canvas.width, canvas.height);
