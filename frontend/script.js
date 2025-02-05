@@ -69,11 +69,10 @@ console.log(canvas_window_center_x, canvas_window_center_y);
 console.log(panX, panY);
 
 function drawField(field_orientation){
-    console.info("Draw field", field_orientation);
+    console.log("Draw field", field_orientation);
     ctx.save();
     if (field_orientation == "left") {
         ctx.scale(-1, 1);
-        console.info("Left field");
     }
     ctx.drawImage(field, -field.width/2, -field.height/2);
     ctx.restore();
@@ -222,6 +221,14 @@ canvas.addEventListener('wheel', (e) => {
     update_ui_state();
 });
 
+window.addEventListener("resize", () => {
+    canvas_window_center_x = canvas_window.offsetTop + canvas_window.offsetWidth / 2;
+    canvas_window_center_y = canvas_window.offsetLeft + canvas_window.offsetHeight / 2;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    update_ui_state();
+});
+
 resetButton.addEventListener("click", () => {
     zoom = 1;
     panX = canvas_window_center_x;
@@ -259,22 +266,28 @@ canvas.addEventListener('mouseleave', () => {
 
 // Keyboard hotkeys
 window.addEventListener('keydown', (e) => {
+    let panAmount = 100;
     switch (e.key) {
         // Movement
         case 'r':
             resetButton.click();
             break;
         case 'ArrowUp':
-            panY += 10;
+            panY += panAmount;
             break;
         case 'ArrowDown':
-            panY -= 10;
+            panY -= panAmount;
             break;
         case 'ArrowLeft':
-            panX += 10;
+            panX += panAmount;
             break;
         case 'ArrowRight':
-            panX -= 10;
+            panX -= panAmount;
+            break;
+
+        // Field orientation
+        case 'f':
+            document.getElementById("field-orientation").click();
             break;
 
         // Control
