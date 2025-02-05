@@ -9,10 +9,10 @@
           fill="#65b455" stroke="white" stroke-width="10px" stroke-opacity="0"/>
      <rect x="200" y="200" width="5100" height="3600"
           fill="none" stroke="black" stroke-width="10px" stroke-opacity="1"/>
-     <rect x="320" y="1600" width="180" height="800"
-          fill="none" stroke="black" stroke-width="10px" stroke-opacity="1"/>
-     <rect x="5000" y="1600" width="180" height="800"
-          fill="none" stroke="black" stroke-width="10px" stroke-opacity="1"/>
+     <path d="M 500 1600 h -180 v 800 h 180" fill="none" stroke="black" stroke-width="30px"/>
+     <path d="M 500 1600 h -180 v 800 h 180" fill="none" stroke="yellow" stroke-width="20px"/>
+     <path d="M 5000 1600 h 180 v 800 h -180" fill="none" stroke="black" stroke-width="30px"/>
+     <path d="M 5000 1600 h 180 v 800 h -180" fill="none" stroke="blue" stroke-width="20px"/>
 
      <rect x="500" y="500" width="4500" height="3000"
           fill="none" stroke="white" stroke-width="10px" stroke-opacity="1"/>

@@ -68,6 +68,17 @@ console.log(canvas_window)
 console.log(canvas_window_center_x, canvas_window_center_y);
 console.log(panX, panY);
 
+function drawField(field_orientation){
+    console.info("Draw field", field_orientation);
+    ctx.save();
+    if (field_orientation == "left") {
+        ctx.scale(-1, 1);
+        console.info("Left field");
+    }
+    ctx.drawImage(field, -field.width/2, -field.height/2);
+    ctx.restore();
+}
+
 // https://stackoverflow.com/a/43155027
 function drawRobot(image, x, y, rotation){
     cx = 90;
@@ -153,7 +164,8 @@ function render() {
     ctx.scale(zoom*zoom_param, zoom*zoom_param);
 
     // Draw field
-    ctx.drawImage(field, -field.width/2, -field.height/2);
+    field_orientation = document.getElementById("field-orientation").checked ? "left" : "right";
+    drawField(field_orientation);
 
     // Render sprites
     iterateLayers(layer_data);
