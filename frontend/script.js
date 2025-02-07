@@ -273,16 +273,27 @@ window.addEventListener('keydown', (e) => {
             resetButton.click();
             break;
         case 'ArrowUp':
+        case 'k':
             panY += panAmount;
             break;
         case 'ArrowDown':
+        case 'j':
             panY -= panAmount;
             break;
         case 'ArrowLeft':
+        case 'h':
             panX += panAmount;
             break;
         case 'ArrowRight':
+        case 'l':
             panX -= panAmount;
+            break;
+        // Zoom
+        case '-':
+            zoomOutButton.click();
+            break;
+        case '=':
+            zoomInButton.click();
             break;
 
         // Field orientation

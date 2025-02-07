@@ -13,6 +13,7 @@
         <div id="canvas-window" class="canvas-window"></div>
         <div class="ui-overlay">
             <div class="controls">
+                <h3>Controls</h3>
                 <style>
                     .zoom_ctrl {
                         display: grid;
@@ -31,22 +32,35 @@
                 <input class="wide" type="range" id="zoom-slider" min="0.5" max="3" step="0.1" value="1">
                 <button class="button-4 wide" role="button" id="reset">Reset view</button>
                 <button class="button-4 wide" role="button" id="test_button">Test button</button>
+                <hr>
                 <h3>Field orientation</h3>
                 <div>
                     Blue left
                     <input type="checkbox" id="field-orientation">
                 </div>
+                <hr>
                 <h3>Layers</h3>
                 <div id="layer-list" class="layer-list"></div>
+                <hr>
                 <h3>Hotkeys</h3>
-                <div>
-                    <ul>
-                        <li><tt>'r'</tt> Reset view</li>
-                        <li><tt>'f'</tt> Toggle field orientation</li>
-                        <li><tt>'t'</tt> Test button</li>
-                        <li><tt>Arrows</tt> Panning</li>
-                    </ul>
-            </div>
+                <table>
+                    <tr>
+                        <td><tt>'r'</tt></td>
+                        <td>Reset view</td>
+                    </tr>
+                    <tr>
+                        <td><tt>'f'</tt></td>
+                        <td>Toggle field orientation</td>
+                    </tr>
+                    <tr>
+                        <td><tt>'t'</tt></td>
+                        <td>Test button</td>
+                    </tr>
+                    <tr>
+                        <td><tt>←↓↑→</tt><br><tt>hjkl</tt></td>
+                        <td>Panning</td>
+                    </tr>
+                </table>
             <!-- <div class="indicators">
                 <p>Zoom: <span id="zoom-level">1.0</span></p>
             </div> -->
