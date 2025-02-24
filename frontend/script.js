@@ -117,14 +117,25 @@ function drawLayer(layer){
     });
 }
 
+function toggleLayerVisibilityByIndex(layer_index){
+    layer_index -= 1;
+    if (layer_index >= 0 && layer_index < Object.keys(layer_data).length) {
+        layer_name = Object.keys(layer_data)[layer_index];
+        toggleLayerVisibility(layer_name);
+    }
+}
+
 function toggleLayerVisibility(layer_name){
     console.info("Toggle layer visibility", layer_name);
     socket.emit("toggle_layer_visibility", layer_name);
 }
 
-function layerDivGenerator(layer_name, layer_data){
+function layerDivGenerator(layers, layer_name, layer_data){
     const layerItem = document.createElement("div");
     layerItem.className = "layer-item";
+
+    const index = Object.keys(layers).indexOf(layer_name);
+    const layerIndex = "<tt>[" + (index + 1) + "]</tt>";
 
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
@@ -136,6 +147,8 @@ function layerDivGenerator(layer_name, layer_data){
     label.textContent = layer_name;
 
     layerItem.addEventListener("mousedown", () => toggleLayerVisibility(layer_name));
+    layerItem.innerHTML += layerIndex;
+    // layerItem.appendChild(layerIndex);
     layerItem.appendChild(checkbox);
     layerItem.appendChild(label);
     return layerItem
@@ -145,7 +158,7 @@ function iterateLayers(layers){
     layerList.innerHTML = "";
     for (const [layer_name, layer_data] of Object.entries(layers)) {
         console.log(layer_name, layer_data);
-        layerList.appendChild(layerDivGenerator(layer_name, layer_data));
+        layerList.appendChild(layerDivGenerator(layers, layer_name, layer_data));
 
         if (!layer_data["is_visible"]) {
             continue;
@@ -304,6 +317,18 @@ window.addEventListener('keydown', (e) => {
         // Control
         case 't':
             testButton.click();
+            break;
+
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+            toggleLayerVisibilityByIndex(e.key);
             break;
 
         default:
