@@ -6,10 +6,23 @@ services:
     volumes:
       - ./frontend:/app
     init: true
+
   backend:
     build: ./backend
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app
+      - ipc:/tmp
     init: true
+
+  larcmacs:
+    build: ./LARCmaCS
+    volumes:
+      - ./LARCmaCS:/app
+      - ipc:/tmp
+      # - /tmp:/tmp
+    init: true
+
+volumes:
+  ipc:
