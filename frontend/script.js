@@ -176,7 +176,7 @@ function render() {
 // SocketIO events
 socket.on("update_sprites", (data) => {
     layer_data = data;
-    // console.log(sprites);
+    // console.log(layer_data);
 });
 
 function update_ui_state()
@@ -252,8 +252,8 @@ canvas.addEventListener('mousemove', (e) => {
     if (isDragging) {
         panX = e.clientX - startX;
         panY = e.clientY - startY;
+        update_ui_state();
     }
-    update_ui_state();
 });
 
 canvas.addEventListener('mouseup', () => {
