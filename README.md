@@ -7,20 +7,9 @@ make build
 make up
 ```
 
-## Запуск в ручном режиме
+Или без использования `make`:
 
 ```bash
-git clone https://github.com/arsenier/serviz.git
-cd serviz
-pip install -r backend/requirements.txt
-```
-
-```bash
-cd frontend
-python3 -m http.server 3000 --directory /app
-```
-
-```bash
-cd backend
-python3 main.py
+docker-compose build
+docker-compose up
 ```
