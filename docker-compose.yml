@@ -10,11 +10,15 @@ services:
 
   larcmacs:
     build: ./LARCmaCS
+    network_mode: host
     volumes:
       - ./LARCmaCS:/app
       - ipc:/tmp
-      # - /tmp:/tmp
     init: true
+
+  grsim:
+    image: robocupssl/grsim:latest
+    network_mode: host
 
 volumes:
   ipc:
