@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, render_template
 from flask_socketio import SocketIO
 
 import threading
@@ -39,7 +39,7 @@ def update_layer(layer_name, data):
 
 @app.route('/')
 def index():
-    return "Hello World!"
+    return render_template('index.html')
 
 # SocketIO events
 @sio.on('connect')

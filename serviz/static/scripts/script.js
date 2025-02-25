@@ -18,25 +18,25 @@ var field = new Image();
 field.onload = function() {
     console.log("Field", field.width, field.height);
 }
-field.src = "field.svg";
+field.src = "/static/images/field.svg";
 
 var robot_yel = new Image();
 robot_yel.onload = function() {
     console.log("Robot Yellow", robot_yel.width, robot_yel.height);
 }
-robot_yel.src = "robot_yel.svg";
+robot_yel.src = "/static/images/robot_yel.svg";
 
 var robot_blu = new Image();
 robot_blu.onload = function() {
     console.log("Robot Blue", robot_blu.width, robot_blu.height);
 }
-robot_blu.src = "robot_blu.svg";
+robot_blu.src = "/static/images/robot_blu.svg";
 
 var ball = new Image();
 ball.onload = function() {
     console.log("Ball", ball.width, ball.height);
 }
-ball.src = "ball.svg";
+ball.src = "/static/images/ball.svg";
 
 // SocketIO connection
 const socket = io("http://localhost:8000");

@@ -1,18 +1,10 @@
 services:
-  frontend:
-    build: ./frontend
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./frontend:/app
-    init: true
-
-  backend:
-    build: ./backend
+  serviz:
+    build: ./serviz
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/app
+      - ./serviz:/app
       - ipc:/tmp
     init: true
 
