@@ -30,7 +30,7 @@ jobs:
       - name: "Update README.md badge"
         # [![Version](https://badgen.net/badge/version/1.2.3/informational)](https://github.com/your-username/your-repo/actions)
         run: |
-          NEW_BADGE="[![Version](https://img.shields.io/badge/version-${{ steps.version.outputs.semver }}-informational)](https://github.com/your-username/your-repo/actions)"
+          NEW_BADGE="[![Version](https://img.shields.io/badge/version-${{ steps.version.outputs.semver }}-informational)](https://github.com/SPBUnited/serviz/actions/workflows/auto-semver.yml)"
           sed -i '1s#.*#'"${NEW_BADGE}"'#' README.md
 
       - name: "Commit changes"
