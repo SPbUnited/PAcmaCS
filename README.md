@@ -1,4 +1,4 @@
-[![Version](https://img.shields.io/badge/version-v0.0.1-informational)](https://github.com/your-username/your-repo/actions)
+[![Version](https://img.shields.io/badge/version-v0.0.2-informational)](https://github.com/your-username/your-repo/actions)
 
 # SERVIZ - vizualisation server
 
