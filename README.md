@@ -1,3 +1,5 @@
+[![Version](https://img.shields.io/badge/version-v0.0.1-informational)](https://github.com/your-username/your-repo/actions)
+
 # SERVIZ - vizualisation server
 
 ## Установка и запуск через docker-compose
