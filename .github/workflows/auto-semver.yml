@@ -1,5 +1,9 @@
 name: AutoBashed SemVer
-on: push
+on:
+  push:
+    branches:
+      - 'main'
+      - 'master'
 
 jobs:
   generate:
