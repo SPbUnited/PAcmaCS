@@ -1,4 +1,4 @@
-[![Version](https://img.shields.io/badge/version-v0.0.4-informational)](https://github.com/SPBUnited/serviz/actions/workflows/auto-semver.yml)
+[![Version](https://img.shields.io/badge/version-v0.1.0-informational)](https://github.com/SPBUnited/serviz/actions/workflows/auto-semver.yml)
 
 # SERVIZ - vizualisation server
 

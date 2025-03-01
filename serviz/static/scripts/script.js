@@ -20,17 +20,25 @@ field.onload = function() {
 }
 field.src = "/static/images/field.svg";
 
-var robot_yel = new Image();
-robot_yel.onload = function() {
-    console.log("Robot Yellow", robot_yel.width, robot_yel.height);
+var yellow_robots = [];
+// Load yellow robots
+for (let i = 0; i < 16; i++) {
+    yellow_robots[i] = new Image();
+    yellow_robots[i].onload = function() {
+        console.log("Robot Yellow", yellow_robots[i].width, yellow_robots[i].height);
+    }
+    yellow_robots[i].src = "/static/images/robots/y" + i + ".svg";
 }
-robot_yel.src = "/static/images/robot_yel.svg";
 
-var robot_blu = new Image();
-robot_blu.onload = function() {
-    console.log("Robot Blue", robot_blu.width, robot_blu.height);
+var blue_robots = [];
+// Load blue robots
+for (let i = 0; i < 16; i++) {
+    blue_robots[i] = new Image();
+    blue_robots[i].onload = function() {
+        console.log("Robot Blue", blue_robots[i].width, blue_robots[i].height);
+    }
+    blue_robots[i].src = "/static/images/robots/b" + i + ".svg";
 }
-robot_blu.src = "/static/images/robot_blu.svg";
 
 var ball = new Image();
 ball.onload = function() {
@@ -79,14 +87,18 @@ function drawField(field_orientation){
 }
 
 // https://stackoverflow.com/a/43155027
-function drawRobot(image, x, y, rotation){
+function drawRobot(team, robot_id, x, y, rotation){
     cx = 90;
     cy = 90;
     scale = 1;
     ctx.save();
     ctx.translate(x, y); // sets scale and origin
     ctx.rotate(rotation);
-    ctx.drawImage(image, -cx, -cy);
+    if(team == "y") {
+        ctx.drawImage(yellow_robots[robot_id], -cx, -cy);
+    } else {
+        ctx.drawImage(blue_robots[robot_id], -cx, -cy);
+    }
     ctx.restore();
 }
 
@@ -97,10 +109,10 @@ function drawBall(x, y){
 function drawSingleSprite(sprite){
     switch (sprite.type) {
         case "robot_yel":
-            drawRobot(robot_yel, sprite.x, sprite.y, sprite.rotation);
+            drawRobot("y", sprite.robot_id, sprite.x, sprite.y, sprite.rotation);
             break;
         case "robot_blu":
-            drawRobot(robot_blu, sprite.x, sprite.y, sprite.rotation);
+            drawRobot("b", sprite.robot_id, sprite.x, sprite.y, sprite.rotation);
             break;
         case "ball":
             drawBall(sprite.x, sprite.y);

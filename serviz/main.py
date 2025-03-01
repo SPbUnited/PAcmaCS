@@ -16,13 +16,13 @@ manager = Manager()
 # Shared sprite data
 sprite_data = manager.dict({
 "test_vision": manager.dict({"data":[
-    {"type": "robot_yel", "x": -1000, "y": 100, "rotation": 0},
-    {"type": "robot_blu", "x": 1400, "y": 100, "rotation": 3.14},
-    {"type": "robot_blu", "x": -1400, "y": -100, "rotation": 0},
+    {"type": "robot_yel", "robot_id": 0, "x": 100, "y": 100, "rotation": 0},
+    {"type": "robot_blu", "robot_id": 0, "x": 1400, "y": 100, "rotation": 3.14},
+    {"type": "robot_blu", "robot_id": 3, "x": -1400, "y": -100, "rotation": 0},
     {"type": "ball", "x": 200, "y": 400}
 ],  "is_visible": True}),
 "test_vision2": manager.dict({"data":[
-    {"type": "robot_yel", "x": -300, "y": -900, "rotation": 0},
+    {"type": "robot_yel", "robot_id": 5, "x": -300, "y": -900, "rotation": 0},
 ],  "is_visible": True}),
 # "zmq_feed": {"data":[
 #     {"type": "robot_yel", "x": 100, "y": 100, "rotation": 0},

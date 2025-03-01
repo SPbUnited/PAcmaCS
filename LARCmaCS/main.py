@@ -84,6 +84,7 @@ if __name__ == '__main__':
                 "x": robot.x,
                 "y": robot.y,
                 "rotation": robot.orientation,
+                "robot_id": robot.robot_id,
             }
 
         robots = vision.get_robots(Team.YELLOW)
@@ -92,6 +93,7 @@ if __name__ == '__main__':
                 "x": robot.x,
                 "y": robot.y,
                 "rotation": robot.orientation,
+                "robot_id": robot.robot_id,
             }
 
         field_info = []
@@ -106,6 +108,7 @@ if __name__ == '__main__':
                 continue
             field_info.append({
                 "type": "robot_blu",
+                "robot_id": robot["robot_id"],
                 "x": robot["x"],
                 "y": robot["y"],
                 "rotation": robot["rotation"],
@@ -115,6 +118,7 @@ if __name__ == '__main__':
                 continue
             field_info.append({
                 "type": "robot_yel",
+                "robot_id": robot["robot_id"],
                 "x": robot["x"],
                 "y": robot["y"],
                 "rotation": robot["rotation"],
@@ -128,7 +132,7 @@ if __name__ == '__main__':
 
 
         data = {"zmq_feed": {"data":[
-            {"type": "robot_yel", "x": x, "y": 100, "rotation": 0},
+            {"type": "robot_yel", "robot_id": 14, "x": x, "y": 100, "rotation": 0},
         ], "is_visible": True},
         }
 
