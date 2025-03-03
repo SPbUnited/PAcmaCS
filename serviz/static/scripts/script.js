@@ -345,6 +345,8 @@ canvas.addEventListener('mousedown', (e) => {
     }
     startBallX = startX / (zoom * zoom_param);
     startBallY = startY / (zoom * zoom_param);
+    deltaBallX = 0;
+    deltaBallY = 0;
 });
 
 canvas.addEventListener('mousemove', (e) => {
