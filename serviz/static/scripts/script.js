@@ -15,7 +15,7 @@ canvas.height = window.innerHeight;
 
 // Load football field
 var field = new Image();
-field.onload = function() {
+field.onload = function () {
     console.log("Field", field.width, field.height);
 }
 field.src = "/static/images/field.svg";
@@ -24,24 +24,36 @@ var yellow_robots = [];
 // Load yellow robots
 for (let i = 0; i < 16; i++) {
     yellow_robots[i] = new Image();
-    yellow_robots[i].onload = function() {
+    yellow_robots[i].onload = function () {
         console.log("Robot Yellow", yellow_robots[i].width, yellow_robots[i].height);
     }
     yellow_robots[i].src = "/static/images/robots/y" + i + ".svg";
 }
 
+var yellow_robot_blank = new Image();
+yellow_robot_blank.onload = function () {
+    console.log("Robot Yellow Blank", yellow_robot_blank.width, yellow_robot_blank.height);
+}
+yellow_robot_blank.src = "/static/images/robot_yel.svg";
+
 var blue_robots = [];
 // Load blue robots
 for (let i = 0; i < 16; i++) {
     blue_robots[i] = new Image();
-    blue_robots[i].onload = function() {
+    blue_robots[i].onload = function () {
         console.log("Robot Blue", blue_robots[i].width, blue_robots[i].height);
     }
     blue_robots[i].src = "/static/images/robots/b" + i + ".svg";
 }
 
+var blue_robot_blank = new Image();
+blue_robot_blank.onload = function () {
+    console.log("Robot blue Blank", blue_robot_blank.width, blue_robot_blank.height);
+}
+blue_robot_blank.src = "/static/images/robot_blu.svg";
+
 var ball = new Image();
-ball.onload = function() {
+ball.onload = function () {
     console.log("Ball", ball.width, ball.height);
 }
 ball.src = "/static/images/ball.svg";
@@ -76,43 +88,59 @@ console.log(canvas_window)
 console.log(canvas_window_center_x, canvas_window_center_y);
 console.log(panX, panY);
 
-function drawField(field_orientation){
+function drawField(field_orientation) {
     console.log("Draw field", field_orientation);
     ctx.save();
     if (field_orientation == "left") {
         ctx.scale(-1, 1);
     }
-    ctx.drawImage(field, -field.width/2, -field.height/2);
+    ctx.drawImage(field, -field.width / 2, -field.height / 2);
     ctx.restore();
 }
 
 // https://stackoverflow.com/a/43155027
-function drawRobot(team, robot_id, x, y, rotation){
+function drawRobot(team, robot_id, x, y, rotation, use_number_ids) {
     cx = 90;
     cy = 90;
     scale = 1;
     ctx.save();
     ctx.translate(x, y); // sets scale and origin
     ctx.rotate(rotation);
-    if(team == "y") {
-        ctx.drawImage(yellow_robots[robot_id], -cx, -cy);
-    } else {
-        ctx.drawImage(blue_robots[robot_id], -cx, -cy);
+    if (use_number_ids) {
+        if (team == "y") {
+            ctx.drawImage(yellow_robot_blank, -cx, -cy);
+            ctx.fillStyle = "black";
+        } else {
+            ctx.drawImage(blue_robot_blank, -cx, -cy);
+            ctx.fillStyle = "white";
+        }
+        ctx.rotate(-rotation);
+        ctx.font = "bold 100px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(robot_id, 0, 40);
+    }
+    else
+    {
+        if (team == "y") {
+            ctx.drawImage(yellow_robots[robot_id], -cx, -cy);
+        } else {
+            ctx.drawImage(blue_robots[robot_id], -cx, -cy);
+        }
     }
     ctx.restore();
 }
 
-function drawBall(x, y){
-    ctx.drawImage(ball, x - ball.width/2, y - ball.height/2);
+function drawBall(x, y) {
+    ctx.drawImage(ball, x - ball.width / 2, y - ball.height / 2);
 }
 
-function drawSingleSprite(sprite){
+function drawSingleSprite(sprite, use_number_ids) {
     switch (sprite.type) {
         case "robot_yel":
-            drawRobot("y", sprite.robot_id, sprite.x, -sprite.y, sprite.rotation);
+            drawRobot("y", sprite.robot_id, sprite.x, -sprite.y, sprite.rotation, use_number_ids);
             break;
         case "robot_blu":
-            drawRobot("b", sprite.robot_id, sprite.x, -sprite.y, sprite.rotation);
+            drawRobot("b", sprite.robot_id, sprite.x, -sprite.y, sprite.rotation, use_number_ids);
             break;
         case "ball":
             drawBall(sprite.x, -sprite.y);
@@ -122,14 +150,14 @@ function drawSingleSprite(sprite){
     }
 }
 
-function drawLayer(layer){
+function drawLayer(layer, use_number_ids) {
     layer.forEach(sprite => {
         console.log(sprite)
-        drawSingleSprite(sprite);
+        drawSingleSprite(sprite, use_number_ids);
     });
 }
 
-function toggleLayerVisibilityByIndex(layer_index){
+function toggleLayerVisibilityByIndex(layer_index) {
     layer_index -= 1;
     if (layer_index >= 0 && layer_index < Object.keys(layer_data).length) {
         layer_name = Object.keys(layer_data)[layer_index];
@@ -137,12 +165,12 @@ function toggleLayerVisibilityByIndex(layer_index){
     }
 }
 
-function toggleLayerVisibility(layer_name){
+function toggleLayerVisibility(layer_name) {
     console.info("Toggle layer visibility", layer_name);
     socket.emit("toggle_layer_visibility", layer_name);
 }
 
-function layerDivGenerator(layers, layer_name, layer_data){
+function layerDivGenerator(layers, layer_name, layer_data) {
     const layerItem = document.createElement("div");
     layerItem.className = "layer-item";
 
@@ -166,7 +194,7 @@ function layerDivGenerator(layers, layer_name, layer_data){
     return layerItem
 }
 
-function iterateLayers(layers){
+function iterateLayers(layers, use_number_ids) {
     layerList.innerHTML = "";
     for (const [layer_name, layer_data] of Object.entries(layers)) {
         console.log(layer_name, layer_data);
@@ -176,7 +204,7 @@ function iterateLayers(layers){
             continue;
         }
 
-        drawLayer(layer_data["data"]);
+        drawLayer(layer_data["data"], use_number_ids);
     }
 }
 
@@ -185,14 +213,15 @@ function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
     ctx.translate(panX, panY);
-    ctx.scale(zoom*zoom_param, zoom*zoom_param);
+    ctx.scale(zoom * zoom_param, zoom * zoom_param);
 
     // Draw field
     field_orientation = document.getElementById("field-orientation").checked ? "left" : "right";
     drawField(field_orientation);
 
     // Render sprites
-    iterateLayers(layer_data);
+    use_number_ids = document.getElementById("use-number-ids").checked;
+    iterateLayers(layer_data, use_number_ids);
 
     ctx.restore();
     requestAnimationFrame(render);
@@ -204,11 +233,10 @@ socket.on("update_sprites", (data) => {
     // console.log(layer_data);
 });
 
-function update_ui_state()
-{
+function update_ui_state() {
     zoomSlider.value = zoom;
     zoomLevel.textContent = zoom.toFixed(1);
-    socket.emit("updated_ui_state", {zoom, pan_x: panX, pan_y: panY});
+    socket.emit("updated_ui_state", { zoom, pan_x: panX, pan_y: panY });
     // console.log("update_ui_state", zoom, panX, panY);
 }
 
@@ -321,9 +349,12 @@ window.addEventListener('keydown', (e) => {
             zoomInButton.click();
             break;
 
-        // Field orientation
+        // Display parameters
         case 'f':
             document.getElementById("field-orientation").click();
+            break;
+        case 'i':
+            document.getElementById("use-number-ids").click();
             break;
 
         // Control
