@@ -6,6 +6,8 @@ services:
     volumes:
       - ./serviz:/app
       - ipc:/tmp
+    environment:
+      - VERSION=${VERSION}
     init: true
 
   larcmacs:
@@ -14,6 +16,8 @@ services:
     volumes:
       - ./LARCmaCS:/app
       - ipc:/tmp
+    environment:
+      - VERSION=${VERSION}
     init: true
 
   grsim:

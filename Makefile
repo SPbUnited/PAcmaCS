@@ -1,13 +1,16 @@
+export VERSION := $(shell jq '.version' package.json)
+
 build:
 	docker compose build
 
 up:
-	docker compose up serviz larcmacs
+	VERSION="${jq '.version' package.json}" docker compose up serviz larcmacs
 
 up-grsim:
-	docker compose up grsim
+	VERSION="${jq '.version' package.json}" docker compose up grsim
 
 up-all:
+	echo "VERSION=${VERSION}"
 	docker compose up serviz larcmacs grsim
 
 down:

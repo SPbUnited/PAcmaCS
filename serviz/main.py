@@ -8,6 +8,10 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 sio = SocketIO(app, cors_allowed_origins="*")
 
+version = 'version unknown'
+import os
+if os.environ.get('VERSION'):
+    version = "v" + os.environ.get('VERSION').replace('"', '')
 
 import zmq
 import copy
@@ -39,7 +43,7 @@ def update_layer(layer_name, data):
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', VERSION=version)
 
 # SocketIO events
 @sio.on('connect')
