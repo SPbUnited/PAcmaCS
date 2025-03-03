@@ -66,11 +66,16 @@ def update_ui_state(data):
 @sio.on('test_signal')
 def test_signal(data):
     print("Test signal")
-    socket.send_string("test_signal")
+    socket.send_json({"larcmacs": "test_signal"})
     with state_lock:
         buf = sprite_data["test_vision"]["data"].copy()
         buf[1]['x'] *= -1
         sprite_data["test_vision"]["data"] = buf
+
+@sio.on('send_signal')
+def send_signal(data):
+    print("Send signal")
+    socket.send_json(data)
 
 @sio.on('toggle_layer_visibility')
 def toggle_layer_visibility(data):

@@ -82,6 +82,12 @@ let panY = canvas_window_center_y;
 let isDragging = false;
 let startX = 0;
 let startY = 0;
+let isBallDragging = false;
+let startBallX = 0;
+let startBallY = 0;
+let deltaBallX = 0;
+let deltaBallY = 0;
+let velScaleFactor = 4;
 
 console.log(canvas_window)
 // console.log(canvas_window.width, canvas_window.height);
@@ -89,7 +95,7 @@ console.log(canvas_window_center_x, canvas_window_center_y);
 console.log(panX, panY);
 
 function drawField(field_orientation) {
-    console.log("Draw field", field_orientation);
+    // console.log("Draw field", field_orientation);
     ctx.save();
     if (field_orientation == "left") {
         ctx.scale(-1, 1);
@@ -119,8 +125,7 @@ function drawRobot(team, robot_id, x, y, rotation, use_number_ids) {
         ctx.textAlign = "center";
         ctx.fillText(robot_id, 0, 40);
     }
-    else
-    {
+    else {
         if (team == "y") {
             ctx.drawImage(yellow_robots[robot_id], -cx, -cy);
         } else {
@@ -152,7 +157,7 @@ function drawSingleSprite(sprite, use_number_ids) {
 
 function drawLayer(layer, use_number_ids) {
     layer.forEach(sprite => {
-        console.log(sprite)
+        // console.log(sprite)
         drawSingleSprite(sprite, use_number_ids);
     });
 }
@@ -197,7 +202,7 @@ function layerDivGenerator(layers, layer_name, layer_data) {
 function iterateLayers(layers, use_number_ids) {
     layerList.innerHTML = "";
     for (const [layer_name, layer_data] of Object.entries(layers)) {
-        console.log(layer_name, layer_data);
+        // console.log(layer_name, layer_data);
         layerList.appendChild(layerDivGenerator(layers, layer_name, layer_data));
 
         if (!layer_data["is_visible"]) {
@@ -206,6 +211,35 @@ function iterateLayers(layers, use_number_ids) {
 
         drawLayer(layer_data["data"], use_number_ids);
     }
+}
+
+function drawArrow(x, y, angle, length) {
+    ctx.beginPath();
+    ctx.lineCap = "round";
+
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + Math.cos(angle) * length, y + Math.sin(angle) * length);
+
+    const tipX = x + Math.cos(angle) * length;
+    const tipY = y + Math.sin(angle) * length;
+
+    const arrowFactor = 40;
+    // Arrowhead
+    ctx.moveTo(tipX, tipY);
+    ctx.lineTo(
+        tipX - Math.cos(angle - Math.PI/6) * arrowFactor,
+        tipY - Math.sin(angle - Math.PI/6) * arrowFactor
+    );
+    ctx.moveTo(tipX, tipY);
+    ctx.lineTo(
+        tipX - Math.cos(angle + Math.PI/6) * arrowFactor,
+        tipY - Math.sin(angle + Math.PI/6) * arrowFactor
+    );
+
+    // ctx.strokeStyle = "#ff0000";
+    ctx.strokeStyle = "#E8D743";
+    ctx.lineWidth = 10;
+    ctx.stroke();
 }
 
 // Render loop
@@ -222,6 +256,12 @@ function render() {
     // Render sprites
     use_number_ids = document.getElementById("use-number-ids").checked;
     iterateLayers(layer_data, use_number_ids);
+
+    if (isBallDragging) {
+        const ballVel = Math.sqrt(Math.pow(deltaBallX, 2) + Math.pow(deltaBallY, 2));
+        drawArrow(startBallX, startBallY, Math.atan2(deltaBallY, deltaBallX), ballVel);
+    }
+
 
     ctx.restore();
     requestAnimationFrame(render);
@@ -299,22 +339,44 @@ canvas.addEventListener('mousedown', (e) => {
     isDragging = true;
     startX = e.clientX - panX;
     startY = e.clientY - panY;
+
+    if(e.altKey) {
+        isBallDragging = true;
+    }
+    startBallX = startX / (zoom * zoom_param);
+    startBallY = startY / (zoom * zoom_param);
 });
 
 canvas.addEventListener('mousemove', (e) => {
-    if (isDragging) {
+    if (!isDragging) {
+        return;
+    }
+
+    if (e.altKey) {
+        deltaBallX = - ((e.clientX - panX) / (zoom * zoom_param) - startBallX);
+        deltaBallY = - ((e.clientY - panY) / (zoom * zoom_param) - startBallY);
+        console.log(deltaBallX, deltaBallY);
+    }
+    else {
         panX = e.clientX - startX;
         panY = e.clientY - startY;
         update_ui_state();
     }
 });
 
-canvas.addEventListener('mouseup', () => {
+canvas.addEventListener('mouseup', (e) => {
+    if (isDragging && e.altKey) {
+        const vx = deltaBallX * velScaleFactor;
+        const vy = deltaBallY * velScaleFactor;
+        socket.emit("send_signal", { "larcmacs": "set_ball", "data": { "x": startBallX, "y": -startBallY, "vx": vx, "vy": -vy } });
+    }
     isDragging = false;
+    isBallDragging = false;
 });
 
 canvas.addEventListener('mouseleave', () => {
     isDragging = false;
+    isBallDragging = false;
 });
 
 // Keyboard hotkeys

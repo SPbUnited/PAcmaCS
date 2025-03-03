@@ -5,13 +5,17 @@ from grsim.client import GrSimClient
 from grsim.model import BallReplacement, RobotReplacement, Team
 from common.vision_model import Detection
 
+from typing import Dict
+
 context = zmq.Context()
 socket = context.socket(zmq.PUSH)
 socket.connect("ipc:///tmp/serviz.sock")
 
 signal_socket = context.socket(zmq.SUB)
 signal_socket.connect("ipc:///tmp/serviz.pub.sock")
-signal_socket.setsockopt_string(zmq.SUBSCRIBE, "test_signal")
+# signal_socket.setsockopt_string(zmq.SUBSCRIBE, "test_signal")
+signal_socket.setsockopt_string(zmq.SUBSCRIBE, "{\"larcmacs\":")
+signal_socket.setsockopt_string(zmq.SUBSCRIBE, "{\'larcmacs\':")
 
 poller = zmq.Poller()
 poller.register(signal_socket, zmq.POLLIN)
@@ -45,7 +49,7 @@ class Vision:
         return robots
 
     def set_ball(self, x, y, vx, vy):
-        self.client.send_ball_replacement(BallReplacement(x=x, y=y, vx=vx, vy=vy))
+        self.client.send_ball_replacement(BallReplacement(x=x/1000, y=y/1000, vx=vx/1000, vy=vy/1000))
 
     def set_robot(self, team, index, x, y, direction):
         self.client.send_robot_replacement(RobotReplacement(x=x/1000, y=y/1000, direction=direction, robot_id=index, team=team))
@@ -111,6 +115,51 @@ class Vision:
     def close(self):
         self.client.close()
 
+def signal_handler(signal: Dict, vision: Vision):
+    signal_type = signal["larcmacs"]
+
+    if signal_type == "test_signal":
+        test_formation = {
+            Team.YELLOW.name: [
+                {"robot_id": 0, "x": -2000, "y": 0, "rotation": 0},
+                {"robot_id": 1, "x": -700, "y": 600, "rotation": 0},
+                {"robot_id": 2, "x": -700, "y": -600, "rotation": 0},
+            ],
+            Team.BLUE.name: [
+                {"robot_id": 3, "x": 2000, "y": 0, "rotation": 3.14},
+                {"robot_id": 4, "x": 700, "y": 600, "rotation": 3.14},
+                {"robot_id": 5, "x": 700, "y": -600, "rotation": 3.14},
+            ],
+        }
+        graveyard = {"x": -2000, "y": 3000, "rotation": 0}
+
+        # Send all robots to the graveyard
+        for i in range(16):
+            vision.set_robot(Team.YELLOW, i, graveyard["x"], graveyard["y"], graveyard["rotation"])
+            graveyard["x"] += 200
+        for i in range(16):
+            vision.set_robot(Team.BLUE, i, graveyard["x"], graveyard["y"], graveyard["rotation"])
+            graveyard["x"] += 200
+
+        # Send all known robots to the test formation
+        for robot in test_formation[Team.YELLOW.name]:
+            vision.set_robot(Team.YELLOW, robot["robot_id"], robot["x"], robot["y"], robot["rotation"])
+        for robot in test_formation[Team.BLUE.name]:
+            vision.set_robot(Team.BLUE, robot["robot_id"], robot["x"], robot["y"], robot["rotation"])
+
+        vision.set_ball(1000, 1000, -2000, -2000)
+
+    elif signal_type == "set_ball":
+        x = signal["data"]["x"]
+        y = signal["data"]["y"]
+        vx = signal["data"]["vx"]
+        vy = signal["data"]["vy"]
+        vision.set_ball(x, y, vx, vy)
+
+    else:
+        print("Unknown signal")
+
+
 
 if __name__ == '__main__':
 
@@ -147,37 +196,8 @@ if __name__ == '__main__':
             break
 
         if signal_socket in socks:
-            signal = signal_socket.recv_string()
-            if signal == "test_signal":
-
-                test_formation = {
-                    Team.YELLOW.name: [
-                        {"robot_id": 0, "x": -2000, "y": 0, "rotation": 0},
-                        {"robot_id": 1, "x": -700, "y": 600, "rotation": 0},
-                        {"robot_id": 2, "x": -700, "y": -600, "rotation": 0},
-                    ],
-                    Team.BLUE.name: [
-                        {"robot_id": 3, "x": 2000, "y": 0, "rotation": 3.14},
-                        {"robot_id": 4, "x": 700, "y": 600, "rotation": 3.14},
-                        {"robot_id": 5, "x": 700, "y": -600, "rotation": 3.14},
-                    ],
-                }
-                graveyard = {"x": -2000, "y": 3000, "rotation": 0}
-
-                # Send all robots to the graveyard
-                for i in range(12):
-                    vision.set_robot(Team.YELLOW, i, graveyard["x"], graveyard["y"], graveyard["rotation"])
-                    graveyard["x"] += 200
-                for i in range(12):
-                    vision.set_robot(Team.BLUE, i, graveyard["x"], graveyard["y"], graveyard["rotation"])
-                    graveyard["x"] += 200
-
-                # Send all known robots to the test formation
-                for robot in test_formation[Team.YELLOW.name]:
-                    vision.set_robot(Team.YELLOW, robot["robot_id"], robot["x"], robot["y"], robot["rotation"])
-                for robot in test_formation[Team.BLUE.name]:
-                    vision.set_robot(Team.BLUE, robot["robot_id"], robot["x"], robot["y"], robot["rotation"])
-
-                vision.set_ball(1, 1, -2, -2)
+            signal = signal_socket.recv_json()
+            print(signal)
+            signal_handler(signal, vision)
 
         time.sleep(0.02)
