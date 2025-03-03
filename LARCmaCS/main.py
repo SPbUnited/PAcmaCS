@@ -125,9 +125,9 @@ def signal_handler(signal: Dict, vision: Vision):
                 {"robot_id": 2, "x": -700, "y": -600, "rotation": 0},
             ],
             Team.BLUE.name: [
-                {"robot_id": 3, "x": 2000, "y": 0, "rotation": 3.14},
-                {"robot_id": 4, "x": 700, "y": 600, "rotation": 3.14},
-                {"robot_id": 5, "x": 700, "y": -600, "rotation": 3.14},
+                {"robot_id": 3, "x": 2000, "y": 0, "rotation": 180},
+                {"robot_id": 4, "x": 700, "y": 600, "rotation": 180},
+                {"robot_id": 5, "x": 700, "y": -600, "rotation": 180},
             ],
         }
         graveyard = {"x": -2000, "y": 3000, "rotation": 0}
@@ -146,7 +146,7 @@ def signal_handler(signal: Dict, vision: Vision):
         for robot in test_formation[Team.BLUE.name]:
             vision.set_robot(Team.BLUE, robot["robot_id"], robot["x"], robot["y"], robot["rotation"])
 
-        vision.set_ball(1000, 1000, -2000, -2000)
+        vision.set_ball(1000, 750, -2000, -2000)
 
     elif signal_type == "set_ball":
         x = signal["data"]["x"]
