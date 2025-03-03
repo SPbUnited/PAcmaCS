@@ -19,18 +19,6 @@ import copy
 manager = Manager()
 # Shared sprite data
 sprite_data = manager.dict({
-"test_vision": manager.dict({"data":[
-    {"type": "robot_yel", "robot_id": 0, "x": 100, "y": 100, "rotation": 0},
-    {"type": "robot_blu", "robot_id": 0, "x": 1400, "y": 100, "rotation": 3.14},
-    {"type": "robot_blu", "robot_id": 3, "x": -1400, "y": -100, "rotation": 0},
-    {"type": "ball", "x": 200, "y": 400}
-],  "is_visible": True}),
-"test_vision2": manager.dict({"data":[
-    {"type": "robot_yel", "robot_id": 5, "x": -300, "y": -900, "rotation": 0},
-],  "is_visible": True}),
-# "zmq_feed": {"data":[
-#     {"type": "robot_yel", "x": 100, "y": 100, "rotation": 0},
-# ], "is_visible": True},
 })
 state_lock = manager.Lock()
 
@@ -67,10 +55,6 @@ def update_ui_state(data):
 def test_signal(data):
     print("Test signal")
     socket.send_json({"larcmacs": "test_signal"})
-    with state_lock:
-        buf = sprite_data["test_vision"]["data"].copy()
-        buf[1]['x'] *= -1
-        sprite_data["test_vision"]["data"] = buf
 
 @sio.on('send_signal')
 def send_signal(data):
@@ -86,7 +70,6 @@ def toggle_layer_visibility(data):
 
 def update_sprites(sio, manager, sprite_data, state_lock):
     print("Update sprites enter")
-    angle = 0
 
     context = zmq.Context()
     socket = context.socket(zmq.PULL)
@@ -109,11 +92,7 @@ def update_sprites(sio, manager, sprite_data, state_lock):
                     raise
 
         data = sprite_data
-        data["test_vision"]["data"][0]["rotation"] = angle
-        # print(sprite_data)
         sio.emit("update_sprites", copy.deepcopy(data.copy()))
-
-        angle += 0.1
 
 # Run the app
 if __name__ == "__main__":

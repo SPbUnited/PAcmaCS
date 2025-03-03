@@ -167,8 +167,6 @@ if __name__ == '__main__':
 
     time.sleep(2)
 
-    x = 0
-
     while True:
 
         # Process vision
@@ -176,17 +174,6 @@ if __name__ == '__main__':
         field_info = vision.get_field_info()
         data = {"grsim_feed": {"data": field_info, "is_visible": True}}
         socket.send_json(data)
-
-        # Generate test data
-        data = {"zmq_feed": {"data":[
-            {"type": "robot_yel", "robot_id": 14, "x": x, "y": 100, "rotation": 0},
-        ], "is_visible": True},
-        }
-
-        socket.send_json(data)
-
-        x += 10
-        x %= 1000
 
         # Process incoming signals
         try:
