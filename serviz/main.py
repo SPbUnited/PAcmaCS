@@ -34,6 +34,10 @@ sprite_data = manager.dict({
 })
 state_lock = manager.Lock()
 
+context = zmq.Context()
+socket = context.socket(zmq.PUB)
+socket.bind("ipc:///tmp/serviz.pub.sock")
+
 def update_layer(layer_name, data):
     with state_lock:
         if layer_name not in sprite_data:
@@ -62,6 +66,7 @@ def update_ui_state(data):
 @sio.on('test_signal')
 def test_signal(data):
     print("Test signal")
+    socket.send_string("test_signal")
     with state_lock:
         buf = sprite_data["test_vision"]["data"].copy()
         buf[1]['x'] *= -1

@@ -109,13 +109,13 @@ function drawBall(x, y){
 function drawSingleSprite(sprite){
     switch (sprite.type) {
         case "robot_yel":
-            drawRobot("y", sprite.robot_id, sprite.x, sprite.y, sprite.rotation);
+            drawRobot("y", sprite.robot_id, sprite.x, -sprite.y, sprite.rotation);
             break;
         case "robot_blu":
-            drawRobot("b", sprite.robot_id, sprite.x, sprite.y, sprite.rotation);
+            drawRobot("b", sprite.robot_id, sprite.x, -sprite.y, sprite.rotation);
             break;
         case "ball":
-            drawBall(sprite.x, sprite.y);
+            drawBall(sprite.x, -sprite.y);
             break;
         default:
             break;
