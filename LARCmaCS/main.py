@@ -13,7 +13,6 @@ socket.connect("ipc:///tmp/serviz.sock")
 
 signal_socket = context.socket(zmq.SUB)
 signal_socket.connect("ipc:///tmp/serviz.pub.sock")
-# signal_socket.setsockopt_string(zmq.SUBSCRIBE, "test_signal")
 signal_socket.setsockopt_string(zmq.SUBSCRIBE, "{\"larcmacs\":")
 signal_socket.setsockopt_string(zmq.SUBSCRIBE, "{\'larcmacs\':")
 
