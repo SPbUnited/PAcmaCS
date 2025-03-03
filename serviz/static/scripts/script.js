@@ -121,7 +121,7 @@ function drawRobot(team, robot_id, x, y, rotation, use_number_ids) {
             ctx.fillStyle = "white";
         }
         ctx.rotate(-rotation);
-        ctx.font = "bold 100px Arial";
+        ctx.font = "bold 100px Courier New";
         ctx.textAlign = "center";
         ctx.fillText(robot_id, 0, 40);
     }
