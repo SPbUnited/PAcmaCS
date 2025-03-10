@@ -1,8 +1,9 @@
 services:
   serviz:
     build: ./serviz
-    ports:
-      - "8000:8000"
+    # ports:
+    #   - "8000:8000"
+    network_mode: host
     volumes:
       - ./serviz:/app
       - ipc:/tmp
@@ -23,6 +24,10 @@ services:
   grsim:
     image: robocupssl/grsim:latest
     network_mode: host
+    environment:
+      - HOME=/grsim
+    volumes:
+      - ./grsim:/grsim
 
 volumes:
   ipc:
