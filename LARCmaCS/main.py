@@ -15,8 +15,8 @@ signal_socket.setsockopt_string(zmq.SUBSCRIBE, "{'larcmacs':")
 poller = zmq.Poller()
 poller.register(signal_socket, zmq.POLLIN)
 
-
-from viscont import SSLVision, SimControl, RobotControl
+from common.vision_model import Team
+from viscont import SSLVision, SimControl, GrSimRobotControl, RobotActuateModel
 
 
 if __name__ == "__main__":
@@ -27,6 +27,7 @@ if __name__ == "__main__":
 
     vision = SSLVision(client=client)
     simControl = SimControl(client=client)
+    robotControl = GrSimRobotControl(client=client)
 
     time.sleep(2)
 
@@ -48,5 +49,15 @@ if __name__ == "__main__":
             signal = signal_socket.recv_json()
             print(signal)
             simControl.signal_handler(signal)
+
+        robotControl.actuate_robot(
+            RobotActuateModel(
+                team=Team.YELLOW,
+                robot_id=2,
+                vx=2,
+                vy=0,
+                w=2,
+            )
+        )
 
         time.sleep(0.02)

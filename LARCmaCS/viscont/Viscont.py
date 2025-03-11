@@ -1,6 +1,7 @@
 from grsim.model import BallReplacement, RobotReplacement
+from grsim.client import GrSimClient, ActionCommand
 from common.vision_model import Team
-from attrs import define
+from attrs import define, field
 from typing import Any, Dict
 
 
@@ -170,7 +171,44 @@ class SimControl:
 
 
 @define
+class RobotActuateModel:
+    team: Team = field(default=Team.YELLOW)
+    robot_id: int = field(default=0)
+    vx: float = field(default=0)
+    vy: float = field(default=0)
+    w: float = field(default=0)
+    kicklow: bool = field(default=False)
+    kickhigh: bool = field(default=False)
+
+
+@define
+class GrSimRobotControl:
+    client: GrSimClient
+
+    def actuate_robot(self, command: RobotActuateModel):
+        self.client.send_action_command(
+            ActionCommand(
+                team=command.team,
+                robot_id=command.robot_id,
+                timestamp=0,
+                kickspeedx=0,
+                kickspeedz=0,
+                veltangent=command.vy,
+                velnormal=command.vx,
+                velangular=command.w,
+                spinner=0,
+                wheelsspeed=False,
+                wheel1=None,
+                wheel2=None,
+                wheel3=None,
+                wheel4=None,
+            )
+        )
+
+
+@define
 class RobotControl:
     client = None
 
-    # def actuate_robot(self, team, )
+    def actuate_robot(self, command: RobotActuateModel):
+        self.client.actuate_robot(command)
