@@ -13,12 +13,16 @@ const layerList = document.getElementById("layer-list");
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-// Load football field
-var field = new Image();
-field.onload = function () {
-    console.log("Field", field.width, field.height);
-}
-field.src = "/static/images/field.svg";
+var fields = {};
+['divB', 'divC'].forEach(function (division) {
+    var field = new Image();
+    field.onload = function () {
+        console.log("Field", field.width, field.height);
+        fields[division] = field;
+    }
+    field.src = "/static/images/field_" + division + ".svg";
+});
+console.log(fields);
 
 var yellow_robots = [];
 // Load yellow robots
@@ -61,22 +65,18 @@ ball.src = "/static/images/ball.svg";
 // SocketIO connection
 const socket = io("http://localhost:8000");
 
-// offsetHeight: 653
-// \u200b
-// offsetLeft: 0
-// \u200b
-// offsetParent: <div class="container">
-// \u200b
-// offsetTop: 0
-// \u200b
-// offsetWidth: 1415
-
 let canvas_window_center_x = canvas_window.offsetTop + canvas_window.offsetWidth / 2;
 let canvas_window_center_y = canvas_window.offsetLeft + canvas_window.offsetHeight / 2;
 
+let currentDivision = 'divB';
+
 let layer_data = [];
 let zoom = 1;
-const zoom_param = 0.25
+const zoom_params = {
+    'divB': 0.13,
+    'divC': 0.25,
+};
+let zoom_param = zoom_params['divB'];
 let panX = canvas_window_center_x;
 let panY = canvas_window_center_y;
 let isDragging = false;
@@ -94,13 +94,13 @@ console.log(canvas_window)
 console.log(canvas_window_center_x, canvas_window_center_y);
 console.log(panX, panY);
 
-function drawField(field_orientation) {
-    // console.log("Draw field", field_orientation);
+function drawField(division, field_orientation) {
+    // console.log("Draw field", division, field_orientation);
     ctx.save();
     if (field_orientation == "left") {
         ctx.scale(-1, 1);
     }
-    ctx.drawImage(field, -field.width / 2, -field.height / 2);
+    ctx.drawImage(fields[division], -fields[division].width / 2, -fields[division].height / 2);
     ctx.restore();
 }
 
@@ -251,7 +251,7 @@ function render() {
 
     // Draw field
     field_orientation = document.getElementById("field-orientation").checked ? "left" : "right";
-    drawField(field_orientation);
+    drawField(currentDivision, field_orientation);
 
     // Render sprites
     use_number_ids = document.getElementById("use-number-ids").checked;
@@ -268,6 +268,12 @@ function render() {
 }
 
 // SocketIO events
+socket.on("update_division", (data) => {
+    currentDivision = data;
+    zoom_param = zoom_params[currentDivision];
+    console.log("Update division", data);
+});
+
 socket.on("update_sprites", (data) => {
     layer_data = data;
     // console.log(layer_data);
@@ -445,4 +451,6 @@ window.addEventListener('keydown', (e) => {
 });
 
 // Start rendering
-render();
+window.addEventListener('load', function () {
+    render();
+})

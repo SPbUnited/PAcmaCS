@@ -14,6 +14,10 @@ import os
 if os.environ.get("VERSION"):
     version = "v" + os.environ.get("VERSION").replace('"', "")
 
+currentDivision = "divB"
+if os.environ.get("DIV"):
+    currentDivision = os.environ.get("DIV")
+
 import zmq
 import copy
 
@@ -44,6 +48,7 @@ def index():
 @sio.on("connect")
 def connect():
     print(f"Client connected")
+    sio.emit("update_division", currentDivision)
 
 
 @sio.on("disconnect")

@@ -12,6 +12,7 @@ up-grsim:
 
 up-all:
 	echo "VERSION=${VERSION}"
+	echo "DIVISION=${DIV}"
 	docker compose up serviz larcmacs grsim
 
 down:
