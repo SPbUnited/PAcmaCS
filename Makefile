@@ -5,10 +5,10 @@ build:
 	docker compose build
 
 up:
-	VERSION="${jq '.version' package.json}" docker compose up serviz larcmacs
+	docker compose up serviz larcmacs
 
 up-grsim:
-	VERSION="${jq '.version' package.json}" docker compose up grsim
+	docker compose up grsim
 
 up-all:
 	echo "VERSION=${VERSION}"
