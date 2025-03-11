@@ -1,4 +1,5 @@
 export VERSION := $(shell jq '.version' package.json)
+export DIV:= divB
 
 build:
 	docker compose build
