@@ -5,26 +5,27 @@ import threading
 from multiprocessing import Manager
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'secret!'
+app.config["SECRET_KEY"] = "secret!"
 sio = SocketIO(app, cors_allowed_origins="*")
 
-version = 'version unknown'
+version = "version unknown"
 import os
-if os.environ.get('VERSION'):
-    version = "v" + os.environ.get('VERSION').replace('"', '')
+
+if os.environ.get("VERSION"):
+    version = "v" + os.environ.get("VERSION").replace('"', "")
 
 import zmq
 import copy
 
 manager = Manager()
 # Shared sprite data
-sprite_data = manager.dict({
-})
+sprite_data = manager.dict({})
 state_lock = manager.Lock()
 
 context = zmq.Context()
 socket = context.socket(zmq.PUB)
 socket.bind("ipc:///tmp/serviz.pub.sock")
+
 
 def update_layer(layer_name, data):
     with state_lock:
@@ -33,35 +34,42 @@ def update_layer(layer_name, data):
         else:
             sprite_data[layer_name]["data"] = data["data"]
 
-@app.route('/')
+
+@app.route("/")
 def index():
-    return render_template('index.html', VERSION=version)
+    return render_template("index.html", VERSION=version)
+
 
 # SocketIO events
-@sio.on('connect')
+@sio.on("connect")
 def connect():
     print(f"Client connected")
 
-@sio.on('disconnect')
+
+@sio.on("disconnect")
 def disconnect():
     print(f"Client disconnected")
 
-@sio.on('updated_ui_state')
+
+@sio.on("updated_ui_state")
 def update_ui_state(data):
     # print(data)
     pass
 
-@sio.on('test_signal')
+
+@sio.on("test_signal")
 def test_signal(data):
     print("Test signal")
     socket.send_json({"larcmacs": "test_signal"})
 
-@sio.on('send_signal')
+
+@sio.on("send_signal")
 def send_signal(data):
     print("Send signal")
     socket.send_json(data)
 
-@sio.on('toggle_layer_visibility')
+
+@sio.on("toggle_layer_visibility")
 def toggle_layer_visibility(data):
     # print(data)
     with state_lock:
@@ -94,6 +102,7 @@ def update_sprites(sio, manager, sprite_data, state_lock):
         data = sprite_data
         sio.emit("update_sprites", copy.deepcopy(data.copy()))
 
+
 # Run the app
 if __name__ == "__main__":
     sio.sleep(1)
@@ -102,5 +111,9 @@ if __name__ == "__main__":
 
     # import os
     # if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
-    sio.start_background_task(target=lambda: update_sprites(sio, manager, sprite_data, state_lock))
-    sio.run(app, host='0.0.0.0', port=8000, debug=False, allow_unsafe_werkzeug=True)#, host='localhost', port=8000, debug=True)
+    sio.start_background_task(
+        target=lambda: update_sprites(sio, manager, sprite_data, state_lock)
+    )
+    sio.run(
+        app, host="0.0.0.0", port=8000, debug=False, allow_unsafe_werkzeug=True
+    )  # , host='localhost', port=8000, debug=True)

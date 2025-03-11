@@ -13,11 +13,12 @@ socket.connect("ipc:///tmp/serviz.sock")
 
 signal_socket = context.socket(zmq.SUB)
 signal_socket.connect("ipc:///tmp/serviz.pub.sock")
-signal_socket.setsockopt_string(zmq.SUBSCRIBE, "{\"larcmacs\":")
-signal_socket.setsockopt_string(zmq.SUBSCRIBE, "{\'larcmacs\':")
+signal_socket.setsockopt_string(zmq.SUBSCRIBE, '{"larcmacs":')
+signal_socket.setsockopt_string(zmq.SUBSCRIBE, "{'larcmacs':")
 
 poller = zmq.Poller()
 poller.register(signal_socket, zmq.POLLIN)
+
 
 class Vision:
     __field_state = {
@@ -48,10 +49,16 @@ class Vision:
         return robots
 
     def set_ball(self, x, y, vx, vy):
-        self.client.send_ball_replacement(BallReplacement(x=x/1000, y=y/1000, vx=vx/1000, vy=vy/1000))
+        self.client.send_ball_replacement(
+            BallReplacement(x=x / 1000, y=y / 1000, vx=vx / 1000, vy=vy / 1000)
+        )
 
     def set_robot(self, team, index, x, y, direction):
-        self.client.send_robot_replacement(RobotReplacement(x=x/1000, y=y/1000, direction=direction, robot_id=index, team=team))
+        self.client.send_robot_replacement(
+            RobotReplacement(
+                x=x / 1000, y=y / 1000, direction=direction, robot_id=index, team=team
+            )
+        )
 
     def update_vision(self):
         self.update_ball()
@@ -84,35 +91,42 @@ class Vision:
     def get_field_info(self):
         field_info = []
         if self.__field_state["ball"] is not None:
-            field_info.append({
-                "type": "ball",
-                "x": self.__field_state["ball"]["x"],
-                "y": self.__field_state["ball"]["y"],
-            })
+            field_info.append(
+                {
+                    "type": "ball",
+                    "x": self.__field_state["ball"]["x"],
+                    "y": self.__field_state["ball"]["y"],
+                }
+            )
         for robot in self.__field_state[Team.BLUE.name]:
             if robot is None:
                 continue
-            field_info.append({
-                "type": "robot_blu",
-                "robot_id": robot["robot_id"],
-                "x": robot["x"],
-                "y": robot["y"],
-                "rotation": robot["rotation"],
-            })
+            field_info.append(
+                {
+                    "type": "robot_blu",
+                    "robot_id": robot["robot_id"],
+                    "x": robot["x"],
+                    "y": robot["y"],
+                    "rotation": robot["rotation"],
+                }
+            )
         for robot in self.__field_state[Team.YELLOW.name]:
             if robot is None:
                 continue
-            field_info.append({
-                "type": "robot_yel",
-                "robot_id": robot["robot_id"],
-                "x": robot["x"],
-                "y": robot["y"],
-                "rotation": robot["rotation"],
-            })
+            field_info.append(
+                {
+                    "type": "robot_yel",
+                    "robot_id": robot["robot_id"],
+                    "x": robot["x"],
+                    "y": robot["y"],
+                    "rotation": robot["rotation"],
+                }
+            )
         return field_info
 
     def close(self):
         self.client.close()
+
 
 def signal_handler(signal: Dict, vision: Vision):
     signal_type = signal["larcmacs"]
@@ -134,17 +148,29 @@ def signal_handler(signal: Dict, vision: Vision):
 
         # Send all robots to the graveyard
         for i in range(16):
-            vision.set_robot(Team.YELLOW, i, graveyard["x"], graveyard["y"], graveyard["rotation"])
+            vision.set_robot(
+                Team.YELLOW, i, graveyard["x"], graveyard["y"], graveyard["rotation"]
+            )
             graveyard["x"] += 200
         for i in range(16):
-            vision.set_robot(Team.BLUE, i, graveyard["x"], graveyard["y"], graveyard["rotation"])
+            vision.set_robot(
+                Team.BLUE, i, graveyard["x"], graveyard["y"], graveyard["rotation"]
+            )
             graveyard["x"] += 200
 
         # Send all known robots to the test formation
         for robot in test_formation[Team.YELLOW.name]:
-            vision.set_robot(Team.YELLOW, robot["robot_id"], robot["x"], robot["y"], robot["rotation"])
+            vision.set_robot(
+                Team.YELLOW,
+                robot["robot_id"],
+                robot["x"],
+                robot["y"],
+                robot["rotation"],
+            )
         for robot in test_formation[Team.BLUE.name]:
-            vision.set_robot(Team.BLUE, robot["robot_id"], robot["x"], robot["y"], robot["rotation"])
+            vision.set_robot(
+                Team.BLUE, robot["robot_id"], robot["x"], robot["y"], robot["rotation"]
+            )
 
         vision.set_ball(1000, 750, -2000, -2000)
 
@@ -159,8 +185,7 @@ def signal_handler(signal: Dict, vision: Vision):
         print("Unknown signal")
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     print("Enter LARCmaCS")
     vision = Vision()
