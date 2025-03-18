@@ -3,8 +3,19 @@ import typing
 
 import attr
 
-from common.vision_model import Detection, Team, BallDetection, RobotDetection, Geometry, FrameInfo
-from common.pb.messages_robocup_ssl_detection_pb2 import SSL_DetectionFrame, SSL_DetectionRobot, SSL_DetectionBall
+from common.vision_model import (
+    Detection,
+    Team,
+    BallDetection,
+    RobotDetection,
+    Geometry,
+    FrameInfo,
+)
+from common.pb.messages_robocup_ssl_detection_pb2 import (
+    SSL_DetectionFrame,
+    SSL_DetectionRobot,
+    SSL_DetectionBall,
+)
 from common.pb.messages_robocup_ssl_wrapper_pb2 import SSL_WrapperPacket
 
 from common.sockets import SocketReader
@@ -13,7 +24,7 @@ from common.sockets import SocketReader
 # TODO: Refactor this class
 @attr.s(auto_attribs=True, kw_only=True)
 class VisionClient:
-    multicast_ip: str = '224.5.23.2'
+    multicast_ip: str = "224.5.23.2"
     multicast_port: int = 10020
 
     _socket_reader: SocketReader = attr.ib(init=False)
@@ -23,7 +34,9 @@ class VisionClient:
     _reader: multiprocessing.Process = attr.ib(init=False)
 
     def __attrs_post_init__(self) -> None:
-        self._socket_reader = SocketReader(ip=self.multicast_ip, port=self.multicast_port)
+        self._socket_reader = SocketReader(
+            ip=self.multicast_ip, port=self.multicast_port
+        )
         manager = multiprocessing.Manager()
         self._detections = manager.list()
         self._reader = multiprocessing.Process(target=self._read_loop)
@@ -40,7 +53,9 @@ class VisionClient:
             return self._detections[0]
         return self._read_detection()
 
-    def get_robot(self,  team: Team, robot_id: int, use_async: bool = True) -> typing.Optional[RobotDetection]:
+    def get_robot(
+        self, team: Team, robot_id: int, use_async: bool = True
+    ) -> typing.Optional[RobotDetection]:
         found = False
         robot = None
         while not found:
@@ -48,7 +63,7 @@ class VisionClient:
             found = robot or use_async
         return robot
 
-    def get_ball(self,  use_async: bool = True) -> typing.Optional[BallDetection]:
+    def get_ball(self, use_async: bool = True) -> typing.Optional[BallDetection]:
         found = False
         ball = None
         while not found:
@@ -64,23 +79,31 @@ class VisionClient:
             detection = self._merge_detections(detection, new_detection)
             self._detections[0] = detection
 
+    def read_raw_detection(self) -> bytes:
+        return self._socket_reader.read_package()
+
     def _read_detection(self) -> Detection:
         raw_package = self._socket_reader.read_package()
         package = self._ssl_converter.FromString(raw_package)
 
         balls = []
         robots = []
-        if package.HasField('detection'):
+        if package.HasField("detection"):
             detection = package.detection
 
             frame_info = self._convert_frame_info(detection)
             balls = [self._convert_ball(frame_info, ball) for ball in detection.balls]
 
-            robots = [self._convert_robot(frame_info, robot, Team.BLUE) for robot in detection.robots_blue] + \
-                     [self._convert_robot(frame_info, robot, Team.YELLOW) for robot in detection.robots_yellow]
+            robots = [
+                self._convert_robot(frame_info, robot, Team.BLUE)
+                for robot in detection.robots_blue
+            ] + [
+                self._convert_robot(frame_info, robot, Team.YELLOW)
+                for robot in detection.robots_yellow
+            ]
 
         geometry = None
-        if package.HasField('geometry'):
+        if package.HasField("geometry"):
             raw_geometry = package.geometry
             # TODO: Implement
             geometry = Geometry()
@@ -97,7 +120,9 @@ class VisionClient:
         )
 
     @staticmethod
-    def _convert_robot(frame_info: FrameInfo, convert_from: SSL_DetectionRobot, team: Team) -> RobotDetection:
+    def _convert_robot(
+        frame_info: FrameInfo, convert_from: SSL_DetectionRobot, team: Team
+    ) -> RobotDetection:
         return RobotDetection(
             frame_info,
             team,
@@ -111,7 +136,9 @@ class VisionClient:
         )
 
     @staticmethod
-    def _convert_ball(frame_info: FrameInfo, convert_from: SSL_DetectionFrame) -> SSL_DetectionBall:
+    def _convert_ball(
+        frame_info: FrameInfo, convert_from: SSL_DetectionFrame
+    ) -> SSL_DetectionBall:
         return BallDetection(
             frame_info,
             convert_from.confidence,

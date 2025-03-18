@@ -12,11 +12,25 @@ signal_socket.connect("ipc:///tmp/serviz.pub.sock")
 signal_socket.setsockopt_string(zmq.SUBSCRIBE, '{"larcmacs":')
 signal_socket.setsockopt_string(zmq.SUBSCRIBE, "{'larcmacs':")
 
+command_socket = context.socket(zmq.SUB)
+command_socket.connect("tcp://localhost:5667")
+command_socket.setsockopt_string(zmq.SUBSCRIBE, "")
+
+vision_socket = context.socket(zmq.PUB)
+vision_socket.bind("tcp://*:4242")
+
 poller = zmq.Poller()
 poller.register(signal_socket, zmq.POLLIN)
+poller.register(command_socket, zmq.POLLIN)
 
 from common.vision_model import Team
-from viscont import SSLVision, SimControl, GrSimRobotControl, RobotActuateModel
+from viscont import (
+    SSLVision,
+    SimControl,
+    GrSimRobotControl,
+    RobotActuateModel,
+    RobotControl,
+)
 
 
 if __name__ == "__main__":
@@ -27,11 +41,14 @@ if __name__ == "__main__":
 
     vision = SSLVision(client=client)
     simControl = SimControl(client=client)
-    robotControl = GrSimRobotControl(client=client)
+    robotControl = RobotControl(client=GrSimRobotControl(client=client))
 
     time.sleep(2)
 
     while True:
+
+        raw_frame = client.read_raw_detection()
+        vision_socket.send(raw_frame)
 
         # Process vision
         vision.update_vision()
@@ -50,14 +67,21 @@ if __name__ == "__main__":
             print(signal)
             simControl.signal_handler(signal)
 
-        robotControl.actuate_robot(
-            RobotActuateModel(
-                team=Team.YELLOW,
-                robot_id=2,
-                vx=2,
-                vy=0,
-                w=2,
-            )
-        )
+        if command_socket in socks:
+            # print("Command socket received something")
+            commands = command_socket.recv()
+            # print(len(commands))
+            # print("============")
+            robotControl.apply_commands(robotControl.decypher_commands(commands))
 
-        time.sleep(0.02)
+        # robotControl.actuate_robot(
+        #     RobotActuateModel(
+        #         team=Team.YELLOW,
+        #         robot_id=2,
+        #         vx=2,
+        #         vy=0,
+        #         w=2,
+        #     )
+        # )
+
+        time.sleep(0.005)
