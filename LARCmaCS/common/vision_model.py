@@ -57,9 +57,12 @@ class Detection:
     geometry: typing.Optional[Geometry]
 
     def get_robot(self, team: Team, robot_id: int) -> typing.Optional[RobotDetection]:
-        robot = [r for r in self.robots if r.team.value == team.value and r.robot_id == robot_id]
+        robot = [
+            r
+            for r in self.robots
+            if r.team.value == team.value and r.robot_id == robot_id
+        ]
         return robot[0] if robot else None
 
     def get_ball(self) -> typing.Optional[BallDetection]:
         return self.balls[0] if self.balls else None
-

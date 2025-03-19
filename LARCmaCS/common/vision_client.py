@@ -27,9 +27,12 @@ class VisionClient:
     multicast_ip: str = "224.5.23.2"
     multicast_port: int = 10020
 
+    zmq_relay_template: typing.Any = attr.ib(default=None, init=True)
+
     _socket_reader: SocketReader = attr.ib(init=False)
     _ssl_converter: SSL_WrapperPacket = attr.ib(default=SSL_WrapperPacket(), init=False)
 
+    _packages: typing.List[bytes] = attr.ib(init=False)
     _detections: typing.List[Detection] = attr.ib(init=False)
     _reader: multiprocessing.Process = attr.ib(init=False)
 
@@ -38,6 +41,7 @@ class VisionClient:
             ip=self.multicast_ip, port=self.multicast_port
         )
         manager = multiprocessing.Manager()
+        self._packages = manager.list()
         self._detections = manager.list()
         self._reader = multiprocessing.Process(target=self._read_loop)
 
@@ -72,18 +76,25 @@ class VisionClient:
         return ball
 
     def _read_loop(self) -> None:
+        self._packages.append(bytes())
         detection = Detection([], [], None)
         self._detections.append(detection)
+        zmq_relay = self.zmq_relay_template()
         while True:
-            new_detection = self._read_detection()
+            new_package = self._socket_reader.read_package()
+            new_detection = self._read_detection(new_package)
             detection = self._merge_detections(detection, new_detection)
+            self._packages[0] = new_package
             self._detections[0] = detection
+            zmq_relay.send(new_package)
 
-    def read_raw_detection(self) -> bytes:
-        return self._socket_reader.read_package()
+    def read_last_package(self) -> bytes:
+        return self._packages[0]
 
-    def _read_detection(self) -> Detection:
-        raw_package = self._socket_reader.read_package()
+    def _read_detection(self, raw_package: bytes = None) -> Detection:
+        if raw_package is None:
+            raw_package = self._socket_reader.read_package()
+
         package = self._ssl_converter.FromString(raw_package)
 
         balls = []

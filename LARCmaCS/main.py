@@ -1,3 +1,4 @@
+from attrs import define, field
 import zmq
 import time
 
@@ -16,9 +17,6 @@ command_socket = context.socket(zmq.SUB)
 command_socket.connect("tcp://localhost:5667")
 command_socket.setsockopt_string(zmq.SUBSCRIBE, "")
 
-vision_socket = context.socket(zmq.PUB)
-vision_socket.bind("tcp://*:4242")
-
 poller = zmq.Poller()
 poller.register(signal_socket, zmq.POLLIN)
 poller.register(command_socket, zmq.POLLIN)
@@ -33,11 +31,26 @@ from viscont import (
 )
 
 
+@define
+class zmqVisionRelayTemplate:
+    context: zmq.Context = field(init=False)
+    relay: zmq.Socket = field(init=False)
+
+    def __attrs_post_init__(self):
+        self.context = zmq.Context()
+        self.relay = self.context.socket(zmq.PUB)
+        self.relay.bind("tcp://*:4242")
+        print("Relay init")
+
+    def send(self, raw_frame):
+        self.relay.send(raw_frame)
+
+
 if __name__ == "__main__":
 
     print("Enter LARCmaCS")
 
-    client = GrSimClient()
+    client = GrSimClient(zmq_relay_template=zmqVisionRelayTemplate)
 
     vision = SSLVision(client=client)
     simControl = SimControl(client=client)
@@ -46,9 +59,6 @@ if __name__ == "__main__":
     time.sleep(2)
 
     while True:
-
-        raw_frame = client.read_raw_detection()
-        vision_socket.send(raw_frame)
 
         # Process vision
         vision.update_vision()

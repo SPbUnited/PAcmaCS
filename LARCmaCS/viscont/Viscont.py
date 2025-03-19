@@ -178,6 +178,7 @@ class RobotActuateModel:
     vx_m_s: float = field(default=0)
     vy_m_s: float = field(default=0)
     w_rad_s: float = field(default=0)
+    dribbler_enable: bool = field(default=False)
     kicklow: bool = field(default=False)
     kickhigh: bool = field(default=False)
 
@@ -192,7 +193,7 @@ class GrSimRobotControl:
                 team=command.team,
                 robot_id=command.robot_id,
                 timestamp=0,
-                kickspeedx=0,
+                kickspeedx=4 if command.kicklow or True else 0,
                 kickspeedz=0,
                 veltangent=command.vy_m_s,
                 velnormal=command.vx_m_s,
@@ -270,34 +271,20 @@ class RobotControl:
         """
         for team in commands:
             for n, robot in enumerate(commands[team]):
-                # if n == 0 and team == "blue":
-                #     print(robot["speed_x"])
+                k = 1 / 100 * 6
+                k /= 4
+                if n == 3 and team == "blue":
+                    # print(robot["kick_forward"])
+                    print(robot)
                 self.client.actuate_robot(
                     RobotActuateModel(
                         team=(Team.BLUE if team == "blue" else Team.YELLOW),
                         robot_id=n,
-                        vx_m_s=robot["speed_x"] * (833 / 20) / 1000,
-                        vy_m_s=robot["speed_y"] * (-833 / 20) / 1000,
-                        w_rad_s=robot["speed_r_or_angle"] * (1.25 / 20),
-                        kicklow=robot["kick_up"],
-                        kickhigh=robot["kick_forward"],
+                        vx_m_s=-robot["speed_y"] * k,
+                        vy_m_s=robot["speed_x"] * k,
+                        w_rad_s=robot["speed_r_or_angle"] * k,
+                        kicklow=robot["kick_forward"],
+                        kickhigh=robot["kick_up"],
+                        dribbler_enable=robot["dribbler_enable"],
                     )
                 )
-                # self.client.actuate(
-                #     ActionCommand(
-                #         team=Team[team],
-                #         robot_id=robot["robot_id"],
-                #         timestamp=0,
-                #         kickspeedx=robot["speed_x"],
-                #         kickspeedz=robot["speed_y"],
-                #         veltangent=robot["speed_r_or_angle"],
-                #         velnormal=0,
-                #         velangular=0,
-                #         spinner=0,
-                #         wheelsspeed=False,
-                #         wheel1=None,
-                #         wheel2=None,
-                #         wheel3=None,
-                #         wheel4=None,
-                #     )
-                # )
