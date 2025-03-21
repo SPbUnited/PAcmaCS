@@ -273,9 +273,9 @@ class RobotControl:
             for n, robot in enumerate(commands[team]):
                 k = 1 / 100 * 6
                 k /= 4
-                if n == 3 and team == "blue":
-                    # print(robot["kick_forward"])
-                    print(robot)
+                # if n == 3 and team == "blue":
+                # print(robot["kick_forward"])
+                # print(robot)
                 self.client.actuate_robot(
                     RobotActuateModel(
                         team=(Team.BLUE if team == "blue" else Team.YELLOW),
