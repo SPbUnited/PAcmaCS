@@ -1,0 +1,102 @@
+<script lang="ts">
+</script>
+
+<table class="ui-overlay">
+    <thead>
+        <tr>
+            <td valign="top">
+                <div class="controls">
+                    <h3>Controls</h3>
+                    <style>
+                        .zoom_ctrl {
+                            display: grid;
+                            grid-template-columns: auto auto auto;
+                            grid-gap: 5px;
+                            align-items: center;
+                        }
+                    </style>
+                    <div class="zoom_ctrl">
+                        Zoom <span id="zoom-level">1.0</span>
+                        <div>
+                            <button class="button-4" role="button" id="zoom-in"
+                                >+</button
+                            >
+                            <button class="button-4" role="button" id="zoom-out"
+                                >-</button
+                            >
+                        </div>
+                    </div>
+                    <input
+                        class="wide"
+                        type="range"
+                        id="zoom-slider"
+                        min="0.5"
+                        max="3"
+                        step="0.1"
+                        value="1"
+                    />
+                    <button class="button-4 wide" role="button" id="reset"
+                        >Reset view</button
+                    >
+                    <button class="button-4 wide" role="button" id="test_button"
+                        >Test button</button
+                    >
+                    <hr />
+                    <h3>Display parameters</h3>
+                    <div>
+                        Blue left
+                        <input type="checkbox" id="field-orientation" />
+                    </div>
+                    <div>
+                        Use number id's
+                        <input type="checkbox" id="use-number-ids" />
+                    </div>
+                    <hr />
+                    <h3>Layers</h3>
+                    <div id="layer-list" class="layer-list"></div>
+                    <hr />
+                    <h3>Hotkeys</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <td><tt>'r'</tt></td>
+                                <td>Reset view</td>
+                            </tr>
+                            <tr>
+                                <td><tt>'f'</tt></td>
+                                <td>Toggle field orientation</td>
+                            </tr>
+                            <tr>
+                                <td><tt>'i'</tt></td>
+                                <td>Toggle number id's</td>
+                            </tr>
+                            <tr>
+                                <td><tt>'t'</tt></td>
+                                <td>Test button</td>
+                            </tr>
+                            <tr>
+                                <td
+                                    ><tt>....</tt><br /><tt>hjkl</tt><br /><tt
+                                        >Mouse</tt
+                                    ></td
+                                >
+                                <td>Panning</td>
+                            </tr>
+                            <tr
+                                ><td><tt>Alt + Mouse</tt></td><td>Set ball</td
+                                ></tr
+                            >
+                            <tr>
+                                <td><tt>1..9</tt></td>
+                                <td>Toggle layer visibility</td>
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td valign="bottom" align="right"> undef </td>
+        </tr>
+    </thead>
+</table>
