@@ -20,7 +20,7 @@ var fields = {};
         console.log("Field", field.width, field.height);
         fields[division] = field;
     }
-    field.src = "/public/images/field_" + division + ".svg";
+    field.src = "/static/images/field_" + division + ".svg";
 });
 console.log(fields);
 
@@ -31,14 +31,14 @@ for (let i = 0; i < 16; i++) {
     yellow_robots[i].onload = function () {
         console.log("Robot Yellow", yellow_robots[i].width, yellow_robots[i].height);
     }
-    yellow_robots[i].src = "/public/images/robots/y" + i + ".svg";
+    yellow_robots[i].src = "/static/images/robots/y" + i + ".svg";
 }
 
 var yellow_robot_blank = new Image();
 yellow_robot_blank.onload = function () {
     console.log("Robot Yellow Blank", yellow_robot_blank.width, yellow_robot_blank.height);
 }
-yellow_robot_blank.src = "/public/images/robot_yel.svg";
+yellow_robot_blank.src = "/static/images/robot_yel.svg";
 
 var blue_robots = [];
 // Load blue robots
@@ -47,20 +47,20 @@ for (let i = 0; i < 16; i++) {
     blue_robots[i].onload = function () {
         console.log("Robot Blue", blue_robots[i].width, blue_robots[i].height);
     }
-    blue_robots[i].src = "/public/images/robots/b" + i + ".svg";
+    blue_robots[i].src = "/static/images/robots/b" + i + ".svg";
 }
 
 var blue_robot_blank = new Image();
 blue_robot_blank.onload = function () {
     console.log("Robot blue Blank", blue_robot_blank.width, blue_robot_blank.height);
 }
-blue_robot_blank.src = "/public/images/robot_blu.svg";
+blue_robot_blank.src = "/static/images/robot_blu.svg";
 
 var ball = new Image();
 ball.onload = function () {
     console.log("Ball", ball.width, ball.height);
 }
-ball.src = "/public/images/ball.svg";
+ball.src = "/static/images/ball.svg";
 
 // SocketIO connection
 const socket = io("http://localhost:8000");
@@ -69,6 +69,7 @@ let canvas_window_center_x = canvas_window.offsetTop + canvas_window.offsetWidth
 let canvas_window_center_y = canvas_window.offsetLeft + canvas_window.offsetHeight / 2;
 
 let currentDivision = 'divB';
+let currentVersion = 'undefined';
 
 let layer_data = [];
 let zoom = 1;
@@ -272,6 +273,16 @@ socket.on("update_division", (data) => {
     currentDivision = data;
     zoom_param = zoom_params[currentDivision];
     console.log("Update division", data);
+});
+
+/*
+    BUG: Uncaught (in promise) TypeError: version_field is null
+*/
+socket.on("update_version", (data) => {
+    currentVersion = data;
+    console.log("Update version", data);
+    version_field = document.getElementById("version");
+    version_field.textContent = data;
 });
 
 socket.on("update_sprites", (data) => {

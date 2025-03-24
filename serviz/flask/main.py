@@ -4,7 +4,9 @@ from flask_socketio import SocketIO
 import threading
 from multiprocessing import Manager
 
-app = Flask(__name__)
+app = Flask(
+    __name__,
+)
 app.config["SECRET_KEY"] = "secret!"
 sio = SocketIO(app, cors_allowed_origins="*")
 
@@ -41,7 +43,7 @@ def update_layer(layer_name, data):
 
 @app.route("/")
 def index():
-    return render_template("index.html", VERSION=version)
+    return render_template("index.html")
 
 
 # SocketIO events
@@ -49,6 +51,7 @@ def index():
 def connect():
     print(f"Client connected")
     sio.emit("update_division", currentDivision)
+    sio.emit("update_version", version)
 
 
 @sio.on("disconnect")

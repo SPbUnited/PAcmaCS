@@ -7,9 +7,9 @@
     <div class="container">
         <div id="canvas-window" class="canvas-window"></div>
         <UI/>
-        <script src="/public/scripts/socket.io.js"></script>
-        <script src="/public/scripts/script.js"></script>
     </div>
+    <script src="/static/scripts/socket.io.js"></script>
+    <script src="/static/scripts/script.js"></script>
 </main>
 
 <style>

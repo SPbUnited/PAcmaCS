@@ -1,10 +1,10 @@
 services:
   serviz:
-    build: ./serviz
+    build: ./serviz/flask
     ports:
       - "8000:8000"
     volumes:
-      - ./serviz:/app
+      - ./serviz/flask:/app
       - ipc:/tmp
     environment:
       - VERSION=${VERSION}
