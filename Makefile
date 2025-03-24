@@ -2,6 +2,7 @@ export VERSION := $(shell jq '.version' package.json)
 export DIV:= divB
 
 build:
+	cd serviz/serviz_frontend && npm run build
 	docker compose build
 
 up:

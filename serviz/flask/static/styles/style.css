@@ -3,12 +3,20 @@
 }
 
 body {
-    margin: 0;
-    overflow: hidden;
-    font-family: Arial, sans-serif;
+  margin: 0;
+  overflow: hidden;
+  /* font-family: Arial, sans-serif; */
 
-    /* width: 100%;
+  font: 0.8rem Inconsolata, monospace;
+
+  /* text-shadow: 0 0 5px #C8C8C8; */
+
+  /* width: 100%;
     height: 100%; */
+}
+
+.test {
+  color: red;
 }
 
 textarea {
@@ -16,73 +24,73 @@ textarea {
 }
 
 .container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 
-    display: grid;
+  display: grid;
 
-    /* grid-template: auto 200px / auto 200px; */
-    grid-template: auto / auto 200px;
+  /* grid-template: auto 200px / auto 200px; */
+  grid-template: auto / auto 200px;
 
-    pointer-events: none;
+  pointer-events: none;
 }
 
 canvas {
-    display: block;
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: #f0f0f0;
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #f0f0f0;
 }
 
 .canvas-window {
-    display: block;
-    pointer-events: none;
-    /* display: none; */
+  display: block;
+  pointer-events: none;
+  /* display: none; */
 }
 
 .ui-overlay {
-    /* position: absolute;
+  /* position: absolute;
     top: 10px;
     left: 10px; */
-    background: rgba(255, 255, 255, 0.8);
-    padding: 10px;
-    border-radius: 5px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.8);
+  padding: 10px;
+  border-radius: 5px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 
-    pointer-events: auto;
+  pointer-events: auto;
 }
 
 .controls {
-    padding: 0px;
-    margin: 0 auto;
-    margin-bottom: 10px;
+  padding: 0px;
+  margin: 0 auto;
+  margin-bottom: 10px;
 }
 
 .indicators {
-    padding: 0px
+  padding: 0px
     /* font-size: 14px; */
 }
 
 .layer-list {
-    display: flex;
-    flex-direction: column;
+  display: flex;
+  flex-direction: column;
 
-    /* margin: 10px; */
+  /* margin: 10px; */
 }
 
 .layer-item {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: left;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: left;
 
-    /* display: grid;
+  /* display: grid;
     grid-template-columns: 40px auto;
 
     justify-content: center;
@@ -109,8 +117,8 @@ canvas {
   color: #24292E;
   cursor: pointer;
   display: inline-block;
-  font-family: -apple-system, system-ui, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
-  font-size: 14px;
+  /* font-family: -apple-system, system-ui, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji"; */
+  /* font-size: 14px; */
   font-weight: 500;
   line-height: 20px;
   list-style: none;

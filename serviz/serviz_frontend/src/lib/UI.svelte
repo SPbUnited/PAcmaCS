@@ -1,4 +1,5 @@
 <script lang="ts">
+
 </script>
 
 <table class="ui-overlay">
@@ -96,7 +97,7 @@
             </td>
         </tr>
         <tr>
-            <td valign="bottom" align="right"> undef </td>
+            <td valign="bottom" align="right" id="version"> undef </td>
         </tr>
     </thead>
 </table>

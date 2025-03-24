@@ -69,6 +69,7 @@ let canvas_window_center_x = canvas_window.offsetTop + canvas_window.offsetWidth
 let canvas_window_center_y = canvas_window.offsetLeft + canvas_window.offsetHeight / 2;
 
 let currentDivision = 'divB';
+let currentVersion = 'undefined';
 
 let layer_data = [];
 let zoom = 1;
@@ -272,6 +273,13 @@ socket.on("update_division", (data) => {
     currentDivision = data;
     zoom_param = zoom_params[currentDivision];
     console.log("Update division", data);
+});
+
+socket.on("update_version", (data) => {
+    currentVersion = data;
+    console.log("Update version", data);
+    version_field = document.getElementById("version");
+    version_field.textContent = data;
 });
 
 socket.on("update_sprites", (data) => {
