@@ -15,10 +15,6 @@ body {
     height: 100%; */
 }
 
-.test {
-  color: red;
-}
-
 textarea {
   resize: none;
 }
@@ -58,7 +54,7 @@ canvas {
   /* position: absolute;
     top: 10px;
     left: 10px; */
-  background: rgba(255, 255, 255, 0.8);
+  background: #ffffffcc;
   padding: 10px;
   border-radius: 5px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
