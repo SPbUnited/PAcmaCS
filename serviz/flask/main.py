@@ -6,6 +6,7 @@ from multiprocessing import Manager
 
 app = Flask(
     __name__,
+    template_folder="static",
 )
 app.config["SECRET_KEY"] = "secret!"
 sio = SocketIO(app, cors_allowed_origins="*")

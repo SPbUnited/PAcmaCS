@@ -1,4 +1,14 @@
 <script lang="ts">
+    import { onMount } from "svelte";
+    import { fade, scale } from "svelte/transition";
+
+    import { socket, initializeSocket } from "./lib/socket.js";
+    import { get } from "svelte/store";
+
+    import { iterateLayers, drawArrow } from "./lib/drawing.js";
+    import type { Socket, SocketOptions } from "socket.io-client";
+    import { preventDefault } from "svelte/legacy";
+
     let showTop = $state(false);
     let showRight = $state(true);
     let showBottom = $state(false);
@@ -25,9 +35,6 @@
     let canvas_window_center_x = $derived(offsetLeft + offsetWidth / 2);
     let canvas_window_center_y = $derived(offsetTop + offsetHeight / 2);
 
-    import { onMount } from "svelte";
-    import { fade } from "svelte/transition";
-
     let canvas: HTMLCanvasElement;
     let ctx: CanvasRenderingContext2D;
 
@@ -44,12 +51,17 @@
         field.src = `/static/images/field_${division}.svg`;
     });
 
-    let currentDivision: "divB" | "divC" = "divB";
+    const ALLOWED_DIVISIONS = ["divB", "divC"] as const;
+    type Division = (typeof ALLOWED_DIVISIONS)[number];
+
+    let currentDivision: Division = "divB";
     let zoomParams = {
         divB: 0.13,
         divC: 0.25,
     };
-    let currentVersion = "undefined";
+    let currentVersion = $state("undefined");
+
+    let layer_data = $state([]);
 
     class Camera {
         panX = $state(0);
@@ -73,6 +85,7 @@
             this.panX = 0;
             this.panY = 0;
             this.zoom = 1;
+            resizeCanvas();
         }
 
         pan(x: number, y: number) {
@@ -80,9 +93,19 @@
             this.panY += y;
         }
 
-        changeZoom(factor: number) {
+        changeZoom(factor: number, x = 0, y = 0) {
             this.zoom *= factor;
             this.zoom = Math.min(Math.max(camera.zoom, 0.5), 3);
+        }
+
+        screen2field_mm(scr_x: number, scr_y: number) {
+            const field_x =
+                (scr_x + (-canvas_window_center_x - this.panX)) /
+                (this.zoom * this.zoomParam);
+            const field_y =
+                (scr_y + (-canvas_window_center_y - this.panY)) /
+                (this.zoom * this.zoomParam);
+            return [field_x, field_y];
         }
     }
 
@@ -173,12 +196,25 @@
         //     callback: () => testButton.click(),
         // },
         // Layer visibility (programmatically generated)
-        // ...Array.from({ length: 9 }, (_, i) => ({
-        //     keys: [`${i + 1}`],
-        //     description: `Toggle visibility of layer ${i + 1}`,
-        //     callback: () => toggleLayerVisibilityByIndex(i + 1),
-        // })),
+        ...Array.from({ length: 9 }, (_, i) => ({
+            keys: [`${i + 1}`],
+            description: `Toggle visibility of layer ${i + 1}`,
+            callback: () => toggleLayerVisibilityByIndex(i + 1),
+        })),
     ];
+
+    function toggleLayerVisibilityByIndex(layer_index: number) {
+        layer_index -= 1;
+        if (layer_index >= 0 && layer_index < Object.keys(layer_data).length) {
+            const layer_name = Object.keys(layer_data)[layer_index];
+            toggleLayerVisibility(layer_name);
+        }
+    }
+
+    function toggleLayerVisibility(layer_name: string) {
+        console.info("Toggle layer visibility", layer_name);
+        socketEmit("toggle_layer_visibility", layer_name);
+    }
 
     // Key handler with support for multiple keys per command
     function handleKeydown(e: KeyboardEvent) {
@@ -202,13 +238,23 @@
 
         window.addEventListener("wheel", (e) => {
             if (e.deltaY > 0) {
-                camera.changeZoom(1.03);
+                camera.changeZoom(
+                    1.03,
+                    e.clientX - canvas_window_center_x,
+                    e.clientY - canvas_window_center_y,
+                );
             } else {
-                camera.changeZoom(1 / 1.03);
+                camera.changeZoom(
+                    1 / 1.03,
+                    e.clientX - canvas_window_center_x,
+                    e.clientY - canvas_window_center_y,
+                );
             }
         });
 
         canvas.addEventListener("mousedown", (e) => {
+            if (e.button !== 0) return;
+
             isDragging = true;
             startX = e.clientX - camera.panX;
             startY = e.clientY - camera.panY;
@@ -216,8 +262,10 @@
             if (e.altKey) {
                 isBallDragging = true;
             }
-            startBallX = startX / (camera.zoom * camera.zoomParam);
-            startBallY = startY / (camera.zoom * camera.zoomParam);
+            [startBallX, startBallY] = camera.screen2field_mm(
+                e.clientX,
+                e.clientY,
+            );
             deltaBallX = 0;
             deltaBallY = 0;
         });
@@ -229,14 +277,10 @@
 
             if (e.altKey) {
                 deltaBallX = -(
-                    (e.clientX - camera.panX) /
-                        (camera.zoom * camera.zoomParam) -
-                    startBallX
+                    camera.screen2field_mm(e.clientX, e.clientY)[0] - startBallX
                 );
                 deltaBallY = -(
-                    (e.clientY - camera.panY) /
-                        (camera.zoom * camera.zoomParam) -
-                    startBallY
+                    camera.screen2field_mm(e.clientX, e.clientY)[1] - startBallY
                 );
                 // console.log(deltaBallX, deltaBallY);
             } else {
@@ -247,9 +291,14 @@
 
         canvas.addEventListener("mouseup", (e) => {
             if (isDragging && e.altKey) {
+                const x = startBallX;
+                const y = startBallY;
                 const vx = deltaBallX * velScaleFactor;
                 const vy = deltaBallY * velScaleFactor;
-                // socket.emit("send_signal", { "larcmacs": "set_ball", "data": { "x": startBallX, "y": -startBallY, "vx": vx, "vy": -vy } });
+                socketEmit("send_signal", {
+                    larcmacs: "set_ball",
+                    data: { x: x, y: -y, vx: vx, vy: -vy },
+                });
             }
             isDragging = false;
             isBallDragging = false;
@@ -261,7 +310,43 @@
         });
 
         window.addEventListener("keydown", handleKeydown);
+
+        const socket = initializeSocket();
+
+        socket.on("message", (message: string) => {
+            // messages = [...messages, message];
+        });
+
+        socket.on("update_division", (data: string) => {
+            if (!(ALLOWED_DIVISIONS as readonly string[]).includes(data)) {
+                console.warn(`Invalid division: ${data}`);
+                return;
+            }
+            currentDivision = data as Division;
+            camera.zoomParam = zoomParams[currentDivision];
+            console.log("Update division", data);
+        });
+
+        socket.on("update_version", (data: string) => {
+            currentVersion = data;
+            console.log("Update version", data);
+        });
+
+        socket.on("update_sprites", (data: any) => {
+            layer_data = data;
+        });
+
+        return () => {
+            window.removeEventListener("resize", resizeCanvas);
+            socket.disconnect();
+        };
     });
+
+    function socketEmit(event: string, data: any) {
+        const currentSocket = get(socket);
+        if (!currentSocket) return;
+        (currentSocket as Socket).emit(event, data);
+    }
 
     function resizeCanvas() {
         canvas.width = window.innerWidth;
@@ -295,14 +380,29 @@
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        drawField(currentDivision, "left");
+        drawField(currentDivision, fieldOrientation ? "left" : "right");
+
+        iterateLayers(ctx, layer_data, useNumberIds);
+
+        if (isBallDragging) {
+            const ballVel = Math.sqrt(
+                Math.pow(deltaBallX, 2) + Math.pow(deltaBallY, 2),
+            );
+            drawArrow(
+                ctx,
+                startBallX,
+                startBallY,
+                Math.atan2(deltaBallY, deltaBallX),
+                ballVel,
+            );
+        }
 
         ctx.restore();
         requestAnimationFrame(draw);
     }
 
     function drawField(
-        division: "divB" | "divC",
+        division: Division,
         field_orientation: "left" | "right",
     ) {
         ctx.save();
@@ -320,7 +420,12 @@
 
 <main>
     <div class="canvas-container">
-        <canvas bind:this={canvas}></canvas>
+        <canvas
+            bind:this={canvas}
+            oncontextmenu={(e) => {
+                e.preventDefault();
+            }}
+        ></canvas>
     </div>
 
     <div
@@ -390,6 +495,19 @@
         <hr />
 
         <h3>Layers</h3>
+        {#each Object.entries(layer_data) as [name, data], i}
+            <div>
+                <input
+                    type="checkbox"
+                    bind:checked={(data as any).is_visible}
+                    onchange={() => {
+                        toggleLayerVisibility(name);
+                    }}
+                />
+                [{i + 1}]
+                {name}
+            </div>
+        {/each}
 
         <hr />
 
