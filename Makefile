@@ -16,5 +16,8 @@ up-all:
 	echo "DIVISION=${DIV}"
 	docker compose up serviz larcmacs grsim
 
+npm-dev:
+	cd serviz/serviz_frontend && npm run dev
+
 down:
 	docker compose down
