@@ -32,9 +32,6 @@
             (showBottom ? bottomHeight : 0),
     );
 
-    let canvas_window_center_x = $derived(offsetLeft + offsetWidth / 2);
-    let canvas_window_center_y = $derived(offsetTop + offsetHeight / 2);
-
     let canvas: HTMLCanvasElement;
     let ctx: CanvasRenderingContext2D;
 
@@ -68,6 +65,11 @@
         panY = $state(0);
         zoom = $state(1);
         zoomParam = $state(1);
+        canvasWidth = $state(0);
+        canvasHeight = $state(0);
+
+        offsetX = $derived(this.panX + this.canvasWidth / 2);
+        offsetY = $derived(this.panY + this.canvasHeight / 2);
 
         constructor(
             panX: number,
@@ -93,23 +95,55 @@
             this.panY += y;
         }
 
-        changeZoom(factor: number, x = 0, y = 0) {
+        changeZoom(factor: number, clientX = this.canvasWidth / 2, clientY = this.canvasHeight / 2) {
+            // console.log(this.panX.toFixed(2), this.panY.toFixed(2), clientX, clientY);
+            // console.log("field2scr", camera.field_mm2screen(1000, 0));
+            // console.log("scr2field", camera.screen2field_mm(clientX, clientY));
+            // const old_zoom = this.zoom * this.zoomParam;
+
             this.zoom *= factor;
             this.zoom = Math.min(Math.max(camera.zoom, 0.5), 3);
+            // const new_zoom = this.zoom * this.zoomParam;
+
+            // const [fieldX, fieldY] = this.screen2field_mm(clientX, clientY);
+            // // this.panX = this.panX - (clientX / old_zoom) + (clientY / new_zoom);
+            // this.panX = this.offsetX - this.canvasWidth / 2 + (clientX) * (new_zoom - old_zoom);
+            // this.panX = this.panX - (clientX / old_zoom) + (clientX / new_zoom);
+            // this.panY = this.panY - (clientY / old_zoom) + (clientY / new_zoom);
         }
 
         screen2field_mm(scr_x: number, scr_y: number) {
             const field_x =
-                (scr_x + (-canvas_window_center_x - this.panX)) /
+                (scr_x + (-this.canvasWidth / 2 - this.panX)) /
                 (this.zoom * this.zoomParam);
             const field_y =
-                (scr_y + (-canvas_window_center_y - this.panY)) /
+                (scr_y + (-this.canvasHeight / 2 - this.panY)) /
                 (this.zoom * this.zoomParam);
             return [field_x, field_y];
+        }
+
+        field_mm2screen(field_x: number, field_y: number) {
+            const scr_x =
+                (field_x * (this.zoom * this.zoomParam)) +
+                (-this.canvasWidth / 2 - this.panX);
+            const scr_y =
+                (field_y * (this.zoom * this.zoomParam)) +
+                (-this.canvasHeight / 2 - this.panY);
+            return [scr_x, scr_y];
+        }
+
+        transcale(ctx: CanvasRenderingContext2D) {
+            ctx.translate(this.offsetX, this.offsetY);
+            ctx.scale(this.zoom * this.zoomParam, this.zoom * this.zoomParam);
         }
     }
 
     let camera = $state(new Camera(0, 0, 1, zoomParams[currentDivision]));
+
+    $effect(() => {
+        camera.canvasWidth = offsetWidth;
+        camera.canvasHeight = offsetHeight;
+    });
 
     $effect(() => {
         console.log("View update: ", camera);
@@ -240,14 +274,14 @@
             if (e.deltaY > 0) {
                 camera.changeZoom(
                     1.03,
-                    e.clientX - canvas_window_center_x,
-                    e.clientY - canvas_window_center_y,
+                    e.clientX,
+                    e.clientY,
                 );
             } else {
                 camera.changeZoom(
                     1 / 1.03,
-                    e.clientX - canvas_window_center_x,
-                    e.clientY - canvas_window_center_y,
+                    e.clientX,
+                    e.clientY,
                 );
             }
         });
@@ -359,14 +393,7 @@
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.save();
-        ctx.translate(
-            canvas_window_center_x + camera.panX,
-            canvas_window_center_y + camera.panY,
-        );
-        ctx.scale(
-            camera.zoom * camera.zoomParam,
-            camera.zoom * camera.zoomParam,
-        );
+        camera.transcale(ctx);
 
         const gradient = ctx.createLinearGradient(
             0,
