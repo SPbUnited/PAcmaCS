@@ -227,11 +227,11 @@
             callback: () => (useNumberIds = !useNumberIds),
         },
         // Control
-        // {
-        //     keys: ["t"],
-        //     description: "Test command",
-        //     callback: () => testButton.click(),
-        // },
+        {
+            keys: ["t"],
+            description: "Test command",
+            callback: testButton,
+        },
         // Layer visibility (programmatically generated)
         ...Array.from({ length: 9 }, (_, i) => ({
             keys: [`${i + 1}`],
@@ -239,6 +239,10 @@
             callback: () => toggleLayerVisibilityByIndex(i + 1),
         })),
     ];
+    function testButton() {
+        console.log("test button");
+        socketEmit("test_signal", {});
+    }
 
     function toggleLayerVisibilityByIndex(layer_index: number) {
         layer_index -= 1;
@@ -496,11 +500,7 @@
                 camera.reset();
             }}>Reset view</button
         >
-        <button
-            class="button-4 wide"
-            onclick={() => {
-                console.log("test");
-            }}>Test button</button
+        <button class="button-4 wide" onclick={testButton}>Test button</button
         >
 
         <hr />
@@ -522,7 +522,7 @@
             <div>
                 <input
                     type="checkbox"
-                    bind:checked={(data as any).is_visible}
+                    bind:checked={data.is_visible}
                     onchange={() => {
                         toggleLayerVisibility(name);
                     }}
