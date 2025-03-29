@@ -51,7 +51,7 @@ function drawRobot(ctx, team, robot_id, x, y, rotation, use_number_ids) {
     const cy = 90;
     ctx.save();
     ctx.translate(x, y);
-    ctx.rotate(rotation);
+    ctx.rotate(-rotation);
     if (use_number_ids) {
         if (team === "y") {
             ctx.drawImage(yellow_robot_blank, -cx, -cy);
@@ -60,7 +60,7 @@ function drawRobot(ctx, team, robot_id, x, y, rotation, use_number_ids) {
             ctx.drawImage(blue_robot_blank, -cx, -cy);
             ctx.fillStyle = "white";
         }
-        ctx.rotate(-rotation);
+        ctx.rotate(rotation);
         ctx.font = "bold 100px Courier New";
         ctx.textAlign = "center";
         ctx.fillText(robot_id, 0, 40);
