@@ -7,7 +7,6 @@
 
     import { iterateLayers, drawArrow } from "./lib/drawing.js";
     import type { Socket, SocketOptions } from "socket.io-client";
-    import { preventDefault } from "svelte/legacy";
 
     let showTop = $state(false);
     let showRight = $state(true);
@@ -95,7 +94,11 @@
             this.panY += y;
         }
 
-        changeZoom(factor: number, clientX = this.canvasWidth / 2, clientY = this.canvasHeight / 2) {
+        changeZoom(
+            factor: number,
+            clientX = this.canvasWidth / 2,
+            clientY = this.canvasHeight / 2,
+        ) {
             // console.log(this.panX.toFixed(2), this.panY.toFixed(2), clientX, clientY);
             // console.log("field2scr", camera.field_mm2screen(1000, 0));
             // console.log("scr2field", camera.screen2field_mm(clientX, clientY));
@@ -124,10 +127,10 @@
 
         field_mm2screen(field_x: number, field_y: number) {
             const scr_x =
-                (field_x * (this.zoom * this.zoomParam)) +
+                field_x * (this.zoom * this.zoomParam) +
                 (-this.canvasWidth / 2 - this.panX);
             const scr_y =
-                (field_y * (this.zoom * this.zoomParam)) +
+                field_y * (this.zoom * this.zoomParam) +
                 (-this.canvasHeight / 2 - this.panY);
             return [scr_x, scr_y];
         }
@@ -266,23 +269,16 @@
     onMount(() => {
         ctx = canvas.getContext("2d")!;
         resizeCanvas();
-        draw();
+        // draw();
+        setInterval(draw, 1000 / 60);
 
         window.addEventListener("resize", resizeCanvas);
 
         window.addEventListener("wheel", (e) => {
             if (e.deltaY > 0) {
-                camera.changeZoom(
-                    1.03,
-                    e.clientX,
-                    e.clientY,
-                );
+                camera.changeZoom(1.03, e.clientX, e.clientY);
             } else {
-                camera.changeZoom(
-                    1 / 1.03,
-                    e.clientX,
-                    e.clientY,
-                );
+                camera.changeZoom(1 / 1.03, e.clientX, e.clientY);
             }
         });
 
@@ -372,6 +368,8 @@
 
         return () => {
             window.removeEventListener("resize", resizeCanvas);
+            // window.removeEventListener("wheel", );
+            window.removeEventListener("keydown", handleKeydown);
             socket.disconnect();
         };
     });
@@ -388,24 +386,15 @@
         draw();
     }
 
+    var lastUpdate = Date.now();
+    var dt = $state(0);
+
     function draw() {
         if (!ctx) return;
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.save();
         camera.transcale(ctx);
-
-        const gradient = ctx.createLinearGradient(
-            0,
-            0,
-            canvas.width,
-            canvas.height,
-        );
-        gradient.addColorStop(0, "#1a1a1a");
-        gradient.addColorStop(1, "#4a4a4a");
-
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         drawField(currentDivision, fieldOrientation ? "left" : "right");
 
@@ -425,7 +414,9 @@
         }
 
         ctx.restore();
-        requestAnimationFrame(draw);
+
+        dt = Date.now() - lastUpdate;
+        lastUpdate = Date.now();
     }
 
     function drawField(
@@ -459,12 +450,17 @@
         class="panel right"
         style="
         --card-background-color:#ffffffcc;
+        --card-box-shadow: 0 0 10px 5px rgba(0, 0, 0, 0.1);
         --right-width:{rightWidth}px;
         --right-pos:{showRight ? 0 : -rightWidth}px;
         --panel-bottom:{showBottom ? bottomHeight : 0}px;
         --panel-top:{showTop ? topHeight : 0}px;
     "
     >
+        <div style="display: flex; justify-content: space-between;">
+            <span>dt: {dt}</span>
+            <span>FPS: {Math.round(1000 / dt)} </span>
+        </div>
         <h3>Controls</h3>
         <div class="controls">
             <div
@@ -562,6 +558,16 @@
 </main>
 
 <style>
+    * {
+        box-sizing: border-box;
+    }
+
+    main {
+        font:
+            0.8rem "Liberation Mono",
+            monospace;
+    }
+
     .canvas-container {
         position: fixed;
         top: 0;
@@ -618,5 +624,76 @@
         margin-top: auto;
         text-align: right;
         padding: 0.5rem;
+    }
+
+    /* ==========================================================================
+   Buttons
+   ========================================================================== */
+
+    /* <!-- HTML !-->
+<button class="button-4" role="button">Button 4</button> */
+
+    /* CSS */
+    .button-4 {
+        appearance: none;
+        background-color: #fafbfc;
+        border: 1px solid rgba(27, 31, 35, 0.15);
+        border-radius: 6px;
+        box-shadow:
+            rgba(27, 31, 35, 0.04) 0 1px 0,
+            rgba(255, 255, 255, 0.25) 0 1px 0 inset;
+        box-sizing: border-box;
+        color: #24292e;
+        cursor: pointer;
+        display: inline-block;
+        /* font-family: -apple-system, system-ui, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji"; */
+        /* font-size: 14px; */
+        font-weight: 500;
+        line-height: 20px;
+        list-style: none;
+        padding: 6px 16px;
+        position: relative;
+        transition: background-color 0.2s cubic-bezier(0.3, 0, 0.5, 1);
+        user-select: none;
+        -webkit-user-select: none;
+        touch-action: manipulation;
+        vertical-align: middle;
+        white-space: nowrap;
+        word-wrap: break-word;
+    }
+
+    .wide {
+        width: 100%;
+    }
+
+    .button-4:hover {
+        background-color: #f3f4f6;
+        text-decoration: none;
+        transition-duration: 0.1s;
+    }
+
+    .button-4:disabled {
+        background-color: #fafbfc;
+        border-color: rgba(27, 31, 35, 0.15);
+        color: #959da5;
+        cursor: default;
+    }
+
+    .button-4:active {
+        background-color: #edeff2;
+        box-shadow: rgba(225, 228, 232, 0.2) 0 1px 0 inset;
+        transition: none 0s;
+    }
+
+    .button-4:focus {
+        outline: 1px transparent;
+    }
+
+    .button-4:before {
+        display: none;
+    }
+
+    .button-4:-webkit-details-marker {
+        display: none;
     }
 </style>
