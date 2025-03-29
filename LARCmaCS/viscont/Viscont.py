@@ -26,7 +26,6 @@ class SSLVision:
     def update_ball(self):
         detection = self.client.get_detection()
         if detection.balls is not None and len(detection.balls) > 0:
-            print(detection.balls)
             self.__field_state["ball"] = {
                 "x": detection.balls[0].x,
                 "y": detection.balls[0].y,
