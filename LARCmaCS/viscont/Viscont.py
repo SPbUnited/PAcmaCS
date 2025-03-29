@@ -25,7 +25,8 @@ class SSLVision:
 
     def update_ball(self):
         detection = self.client.get_detection()
-        if detection.balls is not None:
+        if detection.balls is not None and len(detection.balls) > 0:
+            print(detection.balls)
             self.__field_state["ball"] = {
                 "x": detection.balls[0].x,
                 "y": detection.balls[0].y,
@@ -35,7 +36,7 @@ class SSLVision:
 
     def update_robots(self):
         for team in Team:
-            for i in range(12):
+            for i in range(16):
                 robot = self.client.get_robot(team, i)
                 if robot is not None:
                     self.__field_state[team.name][robot.robot_id] = {
