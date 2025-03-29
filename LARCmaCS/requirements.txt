@@ -1,4 +1,3 @@
 zmq
 attrs
 protobuf
-struct
