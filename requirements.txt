@@ -1,0 +1,13 @@
+# Orchestrator
+honcho
+watchdog
+
+# LARCmaCS
+zmq
+attrs
+protobuf
+
+# serviz
+zmq
+flask
+flask-socketio

@@ -1,25 +1,15 @@
 services:
-  serviz:
-    build: ./serviz/flask
-    ports:
-      - "8000:8000"
+  core:
+    build: .
+    network_mode: host
     volumes:
-      - ./serviz/flask:/app
+      - .:/app
       - ipc:/tmp
     environment:
       - VERSION=${VERSION}
       - DIV=${DIV}
     init: true
-
-  larcmacs:
-    build: ./LARCmaCS
-    network_mode: host
-    volumes:
-      - ./LARCmaCS:/app
-      - ipc:/tmp
-    environment:
-      - VERSION=${VERSION}
-    init: true
+    tty: true
 
   grsim:
     image: robocupssl/grsim:latest
