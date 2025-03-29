@@ -1,10 +1,45 @@
-[![Version](https://img.shields.io/badge/version-v0.7.9-informational)](https://github.com/SPBUnited/serviz/actions/workflows/auto-semver.yml)
+[![Version](https://img.shields.io/badge/version-v0.7.10-informational)](https://github.com/SPBUnited/serviz/actions/workflows/auto-semver.yml)
 
 # SERVIZ - vizualisation server
 
-## Установка и запуск через docker-compose
+![](images/2025-03-29-22-52-41.png)
+
+Данный проект представляет
+
+## Реализованные функции
+
+### CORE
+
+- Связь между модулями через zmq (ipc)
+- Автоматическая установка зависимостей, сборка и запуск сервисов
+
+### LARCMACS
+
+- Чтение состояния игрового поля
+- Отправка команд управления в grsim
+- Связь с кодом стратегии, использущим strategy-bridge через zmq
+
+### SERVIZ
+- Отрисовка игрового поля с объектами на поле в реальном времени. Реализованные объекты:
+    - [x] Роботы (с маркерами или номерами)
+    - [x] Мяч
+    - [ ] Линии и стрелки
+    - [ ] Кривые
+    - [ ] Точки
+- Поддержка множества слоев с настройкой видимости для каждого слоя
+
+
+## Зависимости
+
+- Python 3.12
+- Node.js 18
+- Docker
+- Docker Compose
+
+## Установка и запуск
 
 ```bash
+make init
 make build
 make up-all
 ```
@@ -13,11 +48,13 @@ make up-all
 
 ## Более подробное описание реализованных инструкций:
 
+- `make init` - инициализирует виртуальное окружение и зависимости
 - `make build` - собирает образы для serviz и larcmacs
-- `make up` - запускает все сервисы кроме grsim (а именно: serviz, larcmacs)
+- `make up` - запускает все сервисы кроме grsim
 - `make up-grsim` - запускает headless grsim
 - `make up-all` - запускает все сервисы (serviz, larcmacs, grsim)
 - `make down` - останавливает все сервисы
+- `make purge` - очищает все сервисы и их данные
 
 ## Переключение дивизионов
 
