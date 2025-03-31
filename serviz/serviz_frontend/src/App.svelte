@@ -244,6 +244,20 @@
             callback: () => toggleLayerVisibilityByIndex(i + 1),
         })),
     ];
+
+    // Key handler with support for multiple keys per command
+    function handleKeydown(e: KeyboardEvent) {
+        const pressedKey = e.key;
+
+        hotkeys.some((hotkey) => {
+            if (hotkey.keys.includes(pressedKey)) {
+                e.preventDefault();
+                hotkey.callback();
+                return true; // Stop checking once found
+            }
+        });
+    }
+
     function testButton() {
         console.log("test button");
         socketEmit("send_signal", {
@@ -262,19 +276,6 @@
     function toggleLayerVisibility(layer_name: string) {
         console.info("Toggle layer visibility", layer_name);
         socketEmit("toggle_layer_visibility", layer_name);
-    }
-
-    // Key handler with support for multiple keys per command
-    function handleKeydown(e: KeyboardEvent) {
-        const pressedKey = e.key;
-
-        hotkeys.some((hotkey) => {
-            if (hotkey.keys.includes(pressedKey)) {
-                e.preventDefault();
-                hotkey.callback();
-                return true; // Stop checking once found
-            }
-        });
     }
 
     onMount(() => {
@@ -507,8 +508,7 @@
                 camera.reset();
             }}>Reset view</button
         >
-        <button class="button-4 wide" onclick={testButton}>Test button</button
-        >
+        <button class="button-4 wide" onclick={testButton}>Test button</button>
 
         <hr />
 
