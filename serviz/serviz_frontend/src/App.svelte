@@ -246,7 +246,9 @@
     ];
     function testButton() {
         console.log("test button");
-        socketEmit("test_signal", {});
+        socketEmit("send_signal", {
+            larcmacs: "test_signal",
+        });
     }
 
     function toggleLayerVisibilityByIndex(layer_index: number) {

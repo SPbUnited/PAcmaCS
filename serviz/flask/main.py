@@ -66,12 +66,6 @@ def update_ui_state(data):
     pass
 
 
-@sio.on("test_signal")
-def test_signal(data):
-    print("Test signal")
-    socket.send_json({"larcmacs": "test_signal"})
-
-
 @sio.on("send_signal")
 def send_signal(data):
     print("Send signal")
