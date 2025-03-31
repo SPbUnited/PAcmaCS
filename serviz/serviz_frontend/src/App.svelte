@@ -232,6 +232,11 @@
             description: "Test command",
             callback: testButton,
         },
+        {
+            keys: ["Alt + Drag"],
+            description: "Launch ball",
+            callback: () => {},
+        },
         // Layer visibility (programmatically generated)
         ...Array.from({ length: 9 }, (_, i) => ({
             keys: [`${i + 1}`],
