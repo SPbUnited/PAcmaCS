@@ -68,7 +68,7 @@ def update_ui_state(data):
 
 @sio.on("send_signal")
 def send_signal(data):
-    print("Send signal")
+    # print("Send signal")
     socket.send_json(data)
 
 

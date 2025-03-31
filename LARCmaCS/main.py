@@ -66,23 +66,32 @@ if __name__ == "__main__":
         data = {"grsim_feed": {"data": field_info, "is_visible": True}}
         socket.send_json(data)
 
-        # Process incoming signals
-        try:
-            socks = dict(poller.poll(timeout=1))
-        except KeyboardInterrupt:
-            break
+        for i in range(100):
+            # Process incoming signals
+            try:
+                socks = dict(poller.poll(timeout=0))
+            except KeyboardInterrupt:
+                break
 
-        if signal_socket in socks:
-            signal = signal_socket.recv_json()
-            print(signal)
-            simControl.signal_handler(signal)
+            if socks == {}:
+                break
 
-        if command_socket in socks:
-            # print("Command socket received something")
-            commands = command_socket.recv()
-            # print(len(commands))
-            # print("============")
-            robotControl.apply_commands(robotControl.decypher_commands(commands))
+            if signal_socket in socks:
+                signal = signal_socket.recv_json()
+                # print(signal)
+                is_signal_valid = False
+                is_signal_valid |= simControl.signal_handler(signal)
+                is_signal_valid |= robotControl.signal_handler(signal)
+
+                if not is_signal_valid:
+                    print("Invalid signal: ", signal)
+
+            if command_socket in socks:
+                # print("Command socket received something")
+                commands = command_socket.recv()
+                # print(len(commands))
+                # print("============")
+                robotControl.apply_commands(robotControl.decypher_commands(commands))
 
         # robotControl.actuate_robot(
         #     RobotActuateModel(

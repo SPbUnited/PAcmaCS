@@ -1,4 +1,4 @@
-[![Version](https://img.shields.io/badge/version-v0.7.14-informational)](https://github.com/SPBUnited/serviz/actions/workflows/auto-semver.yml)
+[![Version](https://img.shields.io/badge/version-v0.8.0-informational)](https://github.com/SPBUnited/serviz/actions/workflows/auto-semver.yml)
 
 # SERVIZ - vizualisation server
 
@@ -43,6 +43,7 @@
     - [ ] Кривые
     - [ ] Точки
 - Поддержка множества слоев с настройкой видимости для каждого слоя
+- Возможность управления роботами через клавиатуру
 
 ## Документация
 

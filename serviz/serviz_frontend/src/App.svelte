@@ -166,6 +166,7 @@
 
     let fieldOrientation = $state(false);
     let useNumberIds = $state(false);
+    let isRobotControlEnabled = $state(false);
 
     let panAmount = 100;
 
@@ -176,55 +177,56 @@
         {
             keys: ["?"],
             description: "Show help",
-            callback: () => (showHelp = !showHelp),
+            callback: (e: KeyboardEvent) => (showHelp = !showHelp),
         },
         // Movement
         {
             keys: ["r"],
             description: "Reset camera position",
-            callback: () => camera.reset(),
+            callback: (e: KeyboardEvent) => camera.reset(),
         },
         {
             keys: ["ArrowUp", "k"],
             description: "Pan up",
-            callback: () => camera.pan(0, panAmount),
+            callback: (e: KeyboardEvent) => camera.pan(0, panAmount),
         },
         {
             keys: ["ArrowDown", "j"],
             description: "Pan down",
-            callback: () => camera.pan(0, -panAmount),
+            callback: (e: KeyboardEvent) => camera.pan(0, -panAmount),
         },
         {
             keys: ["ArrowLeft", "h"],
             description: "Pan left",
-            callback: () => camera.pan(panAmount, 0),
+            callback: (e: KeyboardEvent) => camera.pan(panAmount, 0),
         },
         {
             keys: ["ArrowRight", "l"],
             description: "Pan right",
-            callback: () => camera.pan(-panAmount, 0),
+            callback: (e: KeyboardEvent) => camera.pan(-panAmount, 0),
         },
         // Zoom
         {
             keys: ["-"],
             description: "Zoom out",
-            callback: () => camera.changeZoom(1 / 1.1),
+            callback: (e: KeyboardEvent) => camera.changeZoom(1 / 1.1),
         },
         {
             keys: ["="],
             description: "Zoom in",
-            callback: () => camera.changeZoom(1.1),
+            callback: (e: KeyboardEvent) => camera.changeZoom(1.1),
         },
         // Display parameters
         {
             keys: ["f"],
             description: "Toggle field orientation",
-            callback: () => (fieldOrientation = !fieldOrientation),
+            callback: (e: KeyboardEvent) =>
+                (fieldOrientation = !fieldOrientation),
         },
         {
             keys: ["i"],
             description: "Toggle ID display format",
-            callback: () => (useNumberIds = !useNumberIds),
+            callback: (e: KeyboardEvent) => (useNumberIds = !useNumberIds),
         },
         // Control
         {
@@ -235,15 +237,35 @@
         {
             keys: ["Alt + Drag"],
             description: "Launch ball",
-            callback: () => {},
+            callback: (e: KeyboardEvent) => {},
         },
         // Layer visibility (programmatically generated)
         ...Array.from({ length: 9 }, (_, i) => ({
             keys: [`${i + 1}`],
-            description: `Toggle visibility of layer ${i + 1}`,
-            callback: () => toggleLayerVisibilityByIndex(i + 1),
+            description: undefined,
+            callback: (e: KeyboardEvent) => toggleLayerVisibilityByIndex(i + 1),
         })),
+        {
+            keys: ["1..9"],
+            description: "Toggle visibility of layer 1..9",
+            callback: (e: KeyboardEvent) => {},
+        },
+        {
+            keys: ["m"],
+            description: "Toggle manual robot control",
+            callback: (e: KeyboardEvent) => {
+                isRobotControlEnabled = !isRobotControlEnabled;
+            },
+        },
+        {
+            keys: ["w", "a", "s", "d", "q", "e"],
+            description: "Manual robot control",
+            callback: (e: KeyboardEvent) => {},
+            callbackReleased: (e: KeyboardEvent) => {},
+        },
     ];
+
+    let pressed: { [key: string]: boolean } = {};
 
     // Key handler with support for multiple keys per command
     function handleKeydown(e: KeyboardEvent) {
@@ -252,13 +274,122 @@
         hotkeys.some((hotkey) => {
             if (hotkey.keys.includes(pressedKey)) {
                 e.preventDefault();
-                hotkey.callback();
+                hotkey.callback(e);
+                pressed[e.key] = true;
                 return true; // Stop checking once found
             }
         });
     }
 
-    function testButton() {
+    function handleKeyup(e: KeyboardEvent) {
+        const releasedKey = e.key;
+
+        hotkeys.some((hotkey) => {
+            if (hotkey.keys.includes(releasedKey)) {
+                e.preventDefault();
+                if (hotkey.callbackReleased !== undefined) {
+                    hotkey.callbackReleased(e);
+                }
+                delete pressed[e.key];
+                return true; // Stop checking once found
+            }
+        });
+    }
+
+    function checkIfPressed(key: string): boolean {
+        return pressed[key];
+    }
+
+    let vel_xy = $state(1000);
+    let vel_r = $state(2);
+    let robotControlTeam = $state("blue");
+
+    function controlRobot() {
+        let speed_x = 0;
+        let speed_y = 0;
+        let speed_r = 0;
+
+        const dirs = [
+            {
+                key: "w",
+                speed_x: vel_xy,
+                speed_y: 0,
+                speed_r: 0,
+            },
+            {
+                key: "a",
+                speed_x: 0,
+                speed_y: -vel_xy,
+                speed_r: 0,
+            },
+            {
+                key: "s",
+                speed_x: -vel_xy,
+                speed_y: 0,
+                speed_r: 0,
+            },
+            {
+                key: "d",
+                speed_x: 0,
+                speed_y: vel_xy,
+                speed_r: 0,
+            },
+            {
+                key: "q",
+                speed_x: 0,
+                speed_y: 0,
+                speed_r: vel_r,
+            },
+            {
+                key: "e",
+                speed_x: 0,
+                speed_y: 0,
+                speed_r: -vel_r,
+            },
+        ];
+
+        for (const dir of dirs) {
+            if (checkIfPressed(dir.key)) {
+                speed_x += dir.speed_x;
+                speed_y += dir.speed_y;
+                speed_r += dir.speed_r;
+            }
+        }
+
+        actuateRobot(robotControlTeam, speed_x, speed_y, speed_r);
+    }
+
+    function actuateRobot(
+        team: string,
+        speed_x: number,
+        speed_y: number,
+        speed_r: number,
+    ) {
+        let data = {
+            larcmacs: "actuate_robot",
+            data: {
+                [team]: [
+                    {
+                        speed_x: speed_x,
+                        speed_y: speed_y,
+                        speed_r_or_angle: speed_r,
+                        kick_up: 0,
+                        kick_forward: 0,
+                        // auto_kick: 0,
+                        // kicker_voltage: 0,
+                        dribbler_enable: 0,
+                        // dribbler_speed: 0,
+                        // kicker_charge_enable: 0,
+                        // beep: 0,
+                    },
+                ],
+            },
+        };
+
+        socketEmit("send_signal", data);
+    }
+
+    function testButton(e: Event) {
         console.log("test button");
         socketEmit("send_signal", {
             larcmacs: "test_signal",
@@ -352,6 +483,7 @@
         });
 
         window.addEventListener("keydown", handleKeydown);
+        window.addEventListener("keyup", handleKeyup);
 
         const socket = initializeSocket();
 
@@ -426,6 +558,10 @@
         }
 
         ctx.restore();
+
+        if (isRobotControlEnabled) {
+            controlRobot();
+        }
 
         dt = Date.now() - lastUpdate;
         lastUpdate = Date.now();
@@ -524,6 +660,42 @@
 
         <hr />
 
+        <h3>Robot control</h3>
+        <div>
+            <input type="checkbox" bind:checked={isRobotControlEnabled} />
+            Robot control
+        </div>
+        <div>
+            <select bind:value={robotControlTeam}>
+                <option value="blue">Blue</option>
+                <option value="yellow">Yellow</option>
+            </select>
+        </div>
+        <div>
+            <p>
+                Linear vel [mm/s]: {vel_xy}
+                <input
+                    type="range"
+                    bind:value={vel_xy}
+                    min="0"
+                    max="2000"
+                    step="100"
+                />
+            </p>
+            <p>
+                Angular vel [rad/s]: {vel_r}
+                <input
+                    type="range"
+                    bind:value={vel_r}
+                    min="0"
+                    max="4"
+                    step="0.1"
+                />
+            </p>
+        </div>
+
+        <hr />
+
         <h3>Layers</h3>
         {#each Object.entries(layer_data) as [name, data], i}
             <div>
@@ -550,14 +722,16 @@
             <div class="help-menu" transition:fade>
                 <h3>Hotkeys</h3>
                 {#each hotkeys as hotkey}
-                    <p>
-                        <kbd>
-                            {#each hotkey.keys as key, index}
-                                {index > 0 ? "/" : ""}{key}
-                            {/each}
-                        </kbd>
-                        - {hotkey.description}
-                    </p>
+                    {#if hotkey.description !== undefined}
+                        <p>
+                            <kbd>
+                                {#each hotkey.keys as key, index}
+                                    {index > 0 ? "/" : ""}{key}
+                                {/each}
+                            </kbd>
+                            - {hotkey.description}
+                        </p>
+                    {/if}
                 {/each}
             </div>
         {/if}

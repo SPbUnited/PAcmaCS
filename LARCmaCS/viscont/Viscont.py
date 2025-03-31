@@ -139,7 +139,7 @@ class SimControl:
             )
         )
 
-    def signal_handler(self, signal: Dict):
+    def signal_handler(self, signal: Dict) -> bool:
         signal_type = signal["larcmacs"]
 
         if signal_type == "test_signal":
@@ -160,6 +160,8 @@ class SimControl:
 
             self.set_ball(1000, 750, -2000, -2000)
 
+            return True
+
         elif signal_type == "set_ball":
             x = signal["data"]["x"]
             y = signal["data"]["y"]
@@ -167,8 +169,9 @@ class SimControl:
             vy = signal["data"]["vy"]
             self.set_ball(x, y, vx, vy)
 
-        else:
-            print("Unknown signal")
+            return True
+
+        return False
 
 
 @define
@@ -238,12 +241,15 @@ class RobotControl:
                 start = (team_idx * team_size + robot_idx) * 13
                 params = values[start : start + 13]
 
+                k = 1 / 100 * 6
+                k /= 4
                 # Map parameters to their meanings (ignore first/last zero values)
                 control_data[team].append(
                     {
-                        "speed_x": params[1],
-                        "speed_y": params[2],
-                        "speed_r_or_angle": params[3],  # Could be speed_r or angle info
+                        "speed_x": params[1] * k,
+                        "speed_y": params[2] * k,
+                        #!v Could be speed_r or angle info
+                        "speed_r_or_angle": params[3] * k,
                         "kick_up": params[4],
                         "kick_forward": params[5],
                         "auto_kick": params[6],
@@ -271,8 +277,6 @@ class RobotControl:
         """
         for team in commands:
             for n, robot in enumerate(commands[team]):
-                k = 1 / 100 * 6
-                k /= 4
                 # if n == 3 and team == "blue":
                 # print(robot["kick_forward"])
                 # print(robot)
@@ -280,11 +284,21 @@ class RobotControl:
                     RobotActuateModel(
                         team=(Team.BLUE if team == "blue" else Team.YELLOW),
                         robot_id=n,
-                        vx_m_s=-robot["speed_y"] * k,
-                        vy_m_s=robot["speed_x"] * k,
-                        w_rad_s=robot["speed_r_or_angle"] * k,
+                        vx_m_s=-robot["speed_y"],
+                        vy_m_s=robot["speed_x"],
+                        w_rad_s=robot["speed_r_or_angle"],
                         kicklow=robot["kick_forward"],
                         kickhigh=robot["kick_up"],
                         dribbler_enable=robot["dribbler_enable"],
                     )
                 )
+
+    def signal_handler(self, signal: Dict) -> bool:
+        signal_type = signal["larcmacs"]
+
+        if signal_type == "actuate_robot":
+            self.apply_commands(signal["data"])
+
+            return True
+
+        return False
