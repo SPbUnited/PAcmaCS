@@ -150,7 +150,6 @@
 
     $effect(() => {
         console.log("View update: ", camera);
-        draw();
     });
 
     let isDragging = false;
@@ -410,10 +409,7 @@
     }
 
     onMount(() => {
-        ctx = canvas.getContext("2d")!;
-        resizeCanvas();
-        // draw();
-        setInterval(draw, 1000 / 60);
+        ctx = canvas.getContext("2d", {alpha: true})!;
 
         window.addEventListener("resize", resizeCanvas);
 
@@ -510,6 +506,9 @@
             layer_data = data;
         });
 
+        resizeCanvas();
+        draw(0);
+
         return () => {
             window.removeEventListener("resize", resizeCanvas);
             // window.removeEventListener("wheel", );
@@ -527,13 +526,12 @@
     function resizeCanvas() {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
-        draw();
     }
 
-    var lastUpdate = Date.now();
-    var dt = $state(0);
+    let lastUpdate = 0;
+    let dt = $state(0);
 
-    function draw() {
+    function draw(timestamp: number) {
         if (!ctx) return;
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -563,8 +561,10 @@
             controlRobot();
         }
 
-        dt = Date.now() - lastUpdate;
-        lastUpdate = Date.now();
+        dt = timestamp - lastUpdate;
+        lastUpdate = timestamp;
+
+        requestAnimationFrame(draw);
     }
 
     function drawField(
@@ -577,8 +577,8 @@
         }
         ctx.drawImage(
             divFields[division],
-            -divFields[division].width / 2,
-            -divFields[division].height / 2,
+            Math.floor(-divFields[division].width / 2),
+            Math.floor(-divFields[division].height / 2),
         );
         ctx.restore();
     }

@@ -50,7 +50,7 @@ function drawRobot(ctx, team, robot_id, x, y, rotation, use_number_ids) {
     const cx = 90;
     const cy = 90;
     ctx.save();
-    ctx.translate(x, y);
+    ctx.translate(Math.floor(x), Math.floor(y));
     ctx.rotate(-rotation);
     if (use_number_ids) {
         if (team === "y") {
@@ -75,7 +75,7 @@ function drawRobot(ctx, team, robot_id, x, y, rotation, use_number_ids) {
 }
 
 function drawBall(ctx, x, y) {
-    ctx.drawImage(ball, x - ball.width / 2, y - ball.height / 2);
+    ctx.drawImage(ball, Math.floor(x - ball.width / 2), Math.floor(y - ball.height / 2));
 }
 
 function drawSingleSprite(ctx, sprite, use_number_ids) {

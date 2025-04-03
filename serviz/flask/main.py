@@ -87,7 +87,7 @@ def update_sprites(sio, manager, sprite_data, state_lock):
     socket.bind("ipc:///tmp/serviz.sock")
 
     while True:
-        sio.sleep(0.02)
+        sio.sleep(0.001)
         for _ in range(100):
             try:
                 message = socket.recv_json(flags=zmq.NOBLOCK)
