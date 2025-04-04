@@ -2,6 +2,7 @@ from attrs import define, field
 import zmq
 import time
 
+from common.tracker_client import TrackerClient
 from grsim.client import GrSimClient
 
 context = zmq.Context()
@@ -51,12 +52,27 @@ if __name__ == "__main__":
     print("Enter LARCmaCS")
 
     client = GrSimClient(zmq_relay_template=zmqVisionRelayTemplate)
+    # tracker_client = TrackerClient()
 
     vision = SSLVision(client=client)
     simControl = SimControl(client=client)
     robotControl = RobotControl(client=GrSimRobotControl(client=client))
 
     time.sleep(2)
+
+    # tracker_client.start()
+
+    from common.sockets import SocketReader
+    from common.pb.messages_robocup_ssl_wrapper_tracked_pb2 import TrackerWrapperPacket
+    from common.tracker_model import TrackerWrapperPacket as TrackerWrapperPacketModel
+
+    tracker_reader = SocketReader(ip="224.5.23.2", port=10010)
+
+    while True:
+        package = tracker_reader.read_package()
+        tracking_data: TrackerWrapperPacketModel = TrackerWrapperPacket()
+        tracking_data.ParseFromString(package)
+        print(tracking_data.tracked_frame.balls)
 
     while True:
 

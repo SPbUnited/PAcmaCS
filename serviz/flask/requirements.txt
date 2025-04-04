@@ -1,5 +1,0 @@
-flask
-flask-socketio
-zmq
-# eventlet
-# gunicorn

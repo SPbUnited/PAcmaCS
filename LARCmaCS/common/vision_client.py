@@ -25,7 +25,7 @@ from common.sockets import SocketReader
 @attr.s(auto_attribs=True, kw_only=True)
 class VisionClient:
     multicast_ip: str = "224.5.23.2"
-    multicast_port: int = 10020
+    multicast_port: int = 10006
 
     zmq_relay_template: typing.Any = attr.ib(default=None, init=True)
 

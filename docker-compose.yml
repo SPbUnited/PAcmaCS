@@ -19,5 +19,10 @@ services:
     volumes:
       - ${PWD}/grsim/.grsim.${DIV}.xml:/grsim/.grsim.xml
 
+  autoreferee:
+    # image: tigersmannheim/auto-referee
+    image: roboticserlangen/autoref
+    network_mode: host
+
 volumes:
   ipc:

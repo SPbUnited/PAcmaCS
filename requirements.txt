@@ -6,6 +6,7 @@ watchdog
 zmq
 attrs
 protobuf
+protoletariat
 
 # serviz
 zmq

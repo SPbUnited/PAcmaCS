@@ -75,11 +75,14 @@ up: up-message
 up-grsim: up-message
 	docker compose up grsim
 
+up-autoreferee: up-message
+	docker compose up autoreferee
+
 up-all: up-message
 	echo "VERSION=${VERSION}"
 	echo "DIVISION=${DIV}"
 	# docker compose up serviz larcmacs grsim
-	docker compose up core grsim
+	docker compose up core grsim autoreferee
 
 up-message:
 	@echo "${PURPLE}============="
