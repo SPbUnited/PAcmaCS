@@ -92,6 +92,19 @@ function drawSingleSprite(ctx, sprite, use_number_ids) {
         default:
             break;
     }
+    if (sprite.vx !== undefined && sprite.vy !== undefined) {
+        const k = 1;
+        const threshold = 10;
+        if(Math.abs(sprite.vx) > threshold && Math.abs(sprite.vy) > threshold)
+        {
+            console.log(sprite.vx, sprite.vy);
+            drawArrow(ctx,
+                sprite.x,
+                -sprite.y,
+                Math.atan2(-sprite.vy, sprite.vx),
+                Math.sqrt(sprite.vx * sprite.vx + sprite.vy * sprite.vy) * k);
+        }
+    }
 }
 
 function drawLayer(ctx, layer, use_number_ids) {
@@ -124,13 +137,13 @@ export function drawArrow(ctx, x, y, angle, length) {
     // Arrowhead
     ctx.moveTo(tipX, tipY);
     ctx.lineTo(
-        tipX - Math.cos(angle - Math.PI/6) * arrowFactor,
-        tipY - Math.sin(angle - Math.PI/6) * arrowFactor
+        tipX - Math.cos(angle - Math.PI / 6) * arrowFactor,
+        tipY - Math.sin(angle - Math.PI / 6) * arrowFactor
     );
     ctx.moveTo(tipX, tipY);
     ctx.lineTo(
-        tipX - Math.cos(angle + Math.PI/6) * arrowFactor,
-        tipY - Math.sin(angle + Math.PI/6) * arrowFactor
+        tipX - Math.cos(angle + Math.PI / 6) * arrowFactor,
+        tipY - Math.sin(angle + Math.PI / 6) * arrowFactor
     );
 
     // ctx.strokeStyle = "#ff0000";

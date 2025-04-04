@@ -3,6 +3,7 @@ import zmq
 import time
 
 from common.tracker_client import TrackerClient
+from common.tracker_model import TeamColor
 from grsim.client import GrSimClient
 
 context = zmq.Context()
@@ -47,12 +48,56 @@ class zmqVisionRelayTemplate:
         self.relay.send(raw_frame)
 
 
+from common.tracker_model import (
+    TrackerWrapperPacket as TrackerWrapperPacketModel,
+)
+
+
+def convert_trackers_to_serviz(trackers: TrackerWrapperPacketModel):
+    data = {
+        "tracker_feed": {
+            "data": [],
+            "is_visible": True,
+        }
+    }
+
+    for ball in trackers.tracked_frame.balls:
+        data["tracker_feed"]["data"].append(
+            {
+                "type": "ball",
+                "x": ball.pos.x * 1000,
+                "y": ball.pos.y * 1000,
+                "vx": ball.vel.x * 1000,
+                "vy": ball.vel.y * 1000,
+            }
+        )
+
+    for robot in trackers.tracked_frame.robots:
+        sprite_type = "ball"
+        if robot.robot_id.team_color == TeamColor.TEAM_COLOR_BLUE.value:
+            sprite_type = "robot_blu"
+        elif robot.robot_id.team_color == TeamColor.TEAM_COLOR_YELLOW.value:
+            sprite_type = "robot_yel"
+        data["tracker_feed"]["data"].append(
+            {
+                "type": sprite_type,
+                "robot_id": robot.robot_id.id,
+                "x": robot.pos.x * 1000,
+                "y": robot.pos.y * 1000,
+                "vx": robot.vel.x * 1000,
+                "vy": robot.vel.y * 1000,
+                "rotation": robot.orientation,
+            }
+        )
+    return data
+
+
 if __name__ == "__main__":
 
     print("Enter LARCmaCS")
 
     client = GrSimClient(zmq_relay_template=zmqVisionRelayTemplate)
-    # tracker_client = TrackerClient()
+    tracker_client = TrackerClient()
 
     vision = SSLVision(client=client)
     simControl = SimControl(client=client)
@@ -60,19 +105,7 @@ if __name__ == "__main__":
 
     time.sleep(2)
 
-    # tracker_client.start()
-
-    from common.sockets import SocketReader
-    from common.pb.messages_robocup_ssl_wrapper_tracked_pb2 import TrackerWrapperPacket
-    from common.tracker_model import TrackerWrapperPacket as TrackerWrapperPacketModel
-
-    tracker_reader = SocketReader(ip="224.5.23.2", port=10010)
-
-    while True:
-        package = tracker_reader.read_package()
-        tracking_data: TrackerWrapperPacketModel = TrackerWrapperPacket()
-        tracking_data.ParseFromString(package)
-        print(tracking_data.tracked_frame.balls)
+    tracker_client.init()
 
     while True:
 
@@ -80,6 +113,10 @@ if __name__ == "__main__":
         vision.update_vision()
         field_info = vision.get_field_info()
         data = {"grsim_feed": {"data": field_info, "is_visible": True}}
+        socket.send_json(data)
+
+        trackers = tracker_client.get_detection()
+        data = convert_trackers_to_serviz(trackers)
         socket.send_json(data)
 
         for i in range(100):

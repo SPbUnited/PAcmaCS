@@ -1,4 +1,4 @@
-[![Version](https://img.shields.io/badge/version-v0.8.1-informational)](https://github.com/SPBUnited/serviz/actions/workflows/auto-semver.yml)
+[![Version](https://img.shields.io/badge/version-v0.9.0-informational)](https://github.com/SPBUnited/serviz/actions/workflows/auto-semver.yml)
 
 # SERVIZ - vizualisation server
 
@@ -34,12 +34,14 @@
 - Чтение состояния игрового поля
 - Отправка команд управления в grsim
 - Связь с кодом стратегии, использущим strategy-bridge через zmq
+- Получение данных Vision Trackers из Autoreferee
 
 ### SERVIZ
 - Отрисовка игрового поля с объектами на поле в реальном времени. Реализованные объекты:
     - [x] Роботы (с маркерами или номерами)
     - [x] Мяч
-    - [ ] Линии и стрелки
+    - [x] Стрелки скорости
+    - [ ] Произвольные линии и стрелки
     - [ ] Кривые
     - [ ] Точки
 - Поддержка множества слоев с настройкой видимости для каждого слоя

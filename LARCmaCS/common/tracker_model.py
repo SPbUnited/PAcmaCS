@@ -18,8 +18,8 @@ class Vector3:
 
 class TeamColor(Enum):
     TEAM_COLOR_UNKNOWN = 0
-    TEAM_COLOR_BLUE = 1
-    TEAM_COLOR_YELLOW = 2
+    TEAM_COLOR_YELLOW = 1
+    TEAM_COLOR_BLUE = 2
 
 
 @define
