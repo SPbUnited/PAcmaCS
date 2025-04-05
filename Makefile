@@ -70,7 +70,7 @@ build:
 	docker compose build
 
 up: up-message
-	docker compose up serviz larcmacs
+	docker compose up core
 
 up-grsim: up-message
 	docker compose up grsim
