@@ -54,15 +54,16 @@ from common.tracker_model import (
 
 
 def convert_trackers_to_serviz(trackers: TrackerWrapperPacketModel):
+    layer_name = trackers.source_name + "_tracker_feed"
     data = {
-        "tracker_feed": {
+        layer_name: {
             "data": [],
             "is_visible": True,
         }
     }
 
     for ball in trackers.tracked_frame.balls:
-        data["tracker_feed"]["data"].append(
+        data[layer_name]["data"].append(
             {
                 "type": "ball",
                 "x": ball.pos.x * 1000,
@@ -78,7 +79,7 @@ def convert_trackers_to_serviz(trackers: TrackerWrapperPacketModel):
             sprite_type = "robot_blu"
         elif robot.robot_id.team_color == TeamColor.TEAM_COLOR_YELLOW.value:
             sprite_type = "robot_yel"
-        data["tracker_feed"]["data"].append(
+        data[layer_name]["data"].append(
             {
                 "type": sprite_type,
                 "robot_id": robot.robot_id.id,
