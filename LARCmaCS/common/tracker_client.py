@@ -1,4 +1,5 @@
 import multiprocessing
+from typing import Dict
 from attrs import define, field
 
 from common.sockets import SocketReader
@@ -17,7 +18,7 @@ class TrackerClient:
         default=TrackerWrapperPacket(), init=False
     )
 
-    _tracking_data: TrackerWrapperPacketModel = field(init=False)
+    _tracking_data: Dict = field(init=False)
     _reader: multiprocessing.Process = field(init=False)
 
     def __attrs_post_init__(self) -> None:
@@ -25,10 +26,7 @@ class TrackerClient:
             ip=self.multicast_ip, port=self.multicast_port
         )
         manager = multiprocessing.Manager()
-        self._tracking_data = manager.Value(
-            TrackerWrapperPacketModel,
-            TrackerWrapperPacketModel(uuid="", source_name=None, tracked_frame=None),
-        )
+        self._tracking_data = manager.dict()
         self._reader = multiprocessing.Process(target=self._read_loop)
 
     def init(self) -> None:
@@ -47,10 +45,10 @@ class TrackerClient:
             source_name=tracking_data_parser.source_name,
             tracked_frame=tracking_data_parser.tracked_frame,
         )
-        self._tracking_data.value = tracking_data
+        self._tracking_data[tracking_data.uuid] = tracking_data
 
     def get_detection(self) -> TrackerWrapperPacketModel:
-        return self._tracking_data.value
+        return self._tracking_data.copy()
 
     def close(self) -> None:
         self._reader.terminate()

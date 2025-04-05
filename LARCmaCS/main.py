@@ -108,9 +108,6 @@ if __name__ == "__main__":
 
     tracker_client.init()
 
-    trackers_list = set()
-    trackers_list_buf = set()
-
     while True:
 
         # Process vision
@@ -120,14 +117,9 @@ if __name__ == "__main__":
         socket.send_json(data)
 
         trackers = tracker_client.get_detection()
-
-        trackers_list.add(trackers.source_name)
-        if len(trackers_list) != len(trackers_list_buf):
-            print("Received trackers: ", trackers_list)
-        trackers_list_buf.add(trackers.source_name)
-
-        data = convert_trackers_to_serviz(trackers)
-        socket.send_json(data)
+        for tracker_key in trackers:
+            data = convert_trackers_to_serviz(trackers[tracker_key])
+            socket.send_json(data)
 
         for i in range(100):
             # Process incoming signals
