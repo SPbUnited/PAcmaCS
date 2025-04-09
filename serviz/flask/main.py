@@ -98,6 +98,8 @@ def update_sprites(sio, manager, sprite_data, state_lock):
     socket = context.socket(zmq.PULL)
     socket.bind(config["ether"]["s_draw_url"])
 
+    num = 0
+
     while True:
         sio.sleep(0.001)
         for _ in range(100):
@@ -116,6 +118,8 @@ def update_sprites(sio, manager, sprite_data, state_lock):
 
         data = sprite_data
         sio.emit("update_sprites", copy.deepcopy(data.copy()))
+        sio.emit("update_telemetry", {"test": "test" + str(num)})
+        num += 1
 
 
 # Run the app

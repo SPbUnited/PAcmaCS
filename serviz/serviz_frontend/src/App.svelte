@@ -13,12 +13,12 @@
 
     let showTop = $state(false);
     let showRight = $state(true);
-    let showBottom = $state(false);
+    let showBottom = $state(true);
     let showLeft = $state(false);
 
     let topHeight = $state(150);
     let rightWidth = $state(200);
-    let bottomHeight = $state(150);
+    let bottomHeight = $state(200);
     let leftWidth = $state(150);
 
     let offsetLeft = $derived(showLeft ? leftWidth : 0);
@@ -60,7 +60,11 @@
     };
     let currentVersion = $state("undefined");
 
-    let layer_data = $state([]);
+    let layer_data = $state({});
+    let telemetry_data = $state({})
+    let telemetry_to_display = $state("")
+
+    // $inspect(layer_data)
 
     class Camera {
         panX = $state(0);
@@ -509,6 +513,10 @@
             layer_data = data;
         });
 
+        socket.on("update_telemetry", (data: any) => {
+            telemetry_data = data;
+        });
+
         resizeCanvas();
         draw(0);
 
@@ -553,8 +561,8 @@
                 ctx,
                 startBallX,
                 startBallY,
-                Math.atan2(deltaBallY, deltaBallX),
-                ballVel,
+                deltaBallX,
+                deltaBallY,
             );
         }
 
@@ -598,15 +606,14 @@
         ></canvas>
     </div>
 
-    <div
-        class="panel right"
+    <div class="panel right"
         style="
         --card-background-color:#ffffffcc;
         --card-box-shadow: 0 0 10px 5px rgba(0, 0, 0, 0.1);
-        --right-width:{rightWidth}px;
-        --right-pos:{showRight ? 0 : -rightWidth}px;
-        --panel-bottom:{showBottom ? bottomHeight : 0}px;
-        --panel-top:{showTop ? topHeight : 0}px;
+        top: {showTop ? topHeight : 0}px;
+        bottom: {showBottom ? bottomHeight : 0}px;
+        width: {rightWidth}px;
+        right: {showRight ? 0 : -rightWidth}px;
     "
     >
         <div style="display: flex; justify-content: space-between;">
@@ -741,6 +748,34 @@
             </div>
         {/if}
     </div>
+
+    <div class="panel down"
+        style="
+        --card-background-color:#ffffffcc;
+        --card-box-shadow: 0 0 10px 5px rgba(0, 0, 0, 0.1);
+        width: {offsetWidth}px;
+        left: {offsetLeft}px;
+        top: {window.innerHeight - (showBottom ? bottomHeight : 0)}px;
+        bottom: {showBottom ? 0 : -bottomHeight}px;
+        display: grid;
+        grid-template: auto / auto auto
+    "
+    >
+        <div>
+            <h3>Telemetry</h3>
+            <select bind:value={telemetry_to_display}>
+                <option value="">None</option>
+                {#each Object.keys(telemetry_data) as key}
+                    <option value={key}>{key}</option>
+                {/each}
+            </select>
+        </div>
+        <pre>
+        <code>
+{telemetry_data[telemetry_to_display]}
+        </code>
+        </pre>
+    </div>
 </main>
 
 <style>
@@ -774,18 +809,18 @@
         display: flex;
         flex-direction: column;
         min-height: 100vh; /* or fixed height if needed */
+
+        /* top: var(--panel-top);
+        height: var(--panel-height);
+        bottom: var(--panel-bottom);
+        left: var(--panel-left);
+        width: var(--panel-width);
+        right: var(--panel-right); */
     }
 
     hr {
         /* flex-grow: 1; */
         width: 100%; /* or this */
-    }
-
-    .right {
-        top: var(--panel-top);
-        bottom: var(--panel-bottom);
-        width: var(--right-width);
-        right: var(--right-pos);
     }
 
     .help-menu {

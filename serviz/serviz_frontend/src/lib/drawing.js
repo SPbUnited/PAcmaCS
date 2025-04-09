@@ -78,6 +78,95 @@ function drawBall(ctx, x, y) {
     ctx.drawImage(ball, Math.floor(x - ball.width / 2), Math.floor(y - ball.height / 2));
 }
 
+function drawLine(ctx, x_list, y_list, color, width) {
+    let x = x_list[0];
+    let y = y_list[0];
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+
+    for (let i = 1; i < x_list.length; i++) {
+        x = x_list[i];
+        y = y_list[i];
+        ctx.lineTo(x, y);
+    }
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.stroke();
+}
+
+function drawPolygon(ctx, x_list, y_list, color, width) {
+    let x = x_list[0];
+    let y = y_list[0];
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+
+    for (let i = 1; i < x_list.length; i++) {
+        x = x_list[i];
+        y = y_list[i];
+        ctx.lineTo(x, y);
+    }
+
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.stroke();
+}
+
+function drawRect(ctx, x, y, width, height, color) {
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, width, height);
+}
+
+/**
+ * Drawing API Reference
+ *
+ * sprite.type
+ * - robot_yel
+ * - robot_blu
+ * - ball
+ * - line
+ * - polygon
+ * - rect
+ *
+ * expected fields:
+ * # robot_yel
+ *      - robot_id
+ *      - x
+ *      - y
+ *      - rotation
+ * # robot_blu
+ *      - robot_id
+ *      - x
+ *      - y
+ *      - rotation
+ *
+ * # ball
+ *      - x
+ *      - y
+ *
+ * # line
+ *      - x_list
+ *      - y_list
+ *      - color
+ *      - width
+ *
+ * # polygon
+ *      - x_list
+ *      - y_list
+ *      - color
+ *      - width
+ *
+ * # rect
+ *      - x
+ *      - y
+ *      - width
+ *      - height
+ *      - color
+ */
 function drawSingleSprite(ctx, sprite, use_number_ids) {
     switch (sprite.type) {
         case "robot_yel":
@@ -89,6 +178,14 @@ function drawSingleSprite(ctx, sprite, use_number_ids) {
         case "ball":
             drawBall(ctx, sprite.x, -sprite.y);
             break;
+        case "line":
+            drawLine(ctx, sprite.x_list, sprite.y_list, sprite.color, sprite.width);
+            break;
+        case "polygon":
+            drawPolygon(ctx, sprite.x_list, sprite.y_list, sprite.color, sprite.width);
+            break;
+        case "rect":
+            drawRect(ctx, sprite.x, sprite.y, sprite.width, sprite.height, sprite.color);
         default:
             break;
     }
@@ -101,8 +198,8 @@ function drawSingleSprite(ctx, sprite, use_number_ids) {
             drawArrow(ctx,
                 sprite.x,
                 -sprite.y,
-                Math.atan2(-sprite.vy, sprite.vx),
-                Math.sqrt(sprite.vx * sprite.vx + sprite.vy * sprite.vy) * k);
+                sprite.vx * k,
+                -sprite.vy * k);
         }
     }
 }
@@ -123,18 +220,19 @@ export function iterateLayers(ctx, layers, use_number_ids) {
     }
 }
 
-export function drawArrow(ctx, x, y, angle, length) {
+export function drawArrow(ctx, x, y, dx, dy) {
     ctx.beginPath();
     ctx.lineCap = "round";
 
     ctx.moveTo(x, y);
-    ctx.lineTo(x + Math.cos(angle) * length, y + Math.sin(angle) * length);
+    ctx.lineTo(x + dx, y + dy);
 
-    const tipX = x + Math.cos(angle) * length;
-    const tipY = y + Math.sin(angle) * length;
+    const tipX = x + dx;
+    const tipY = y + dy;
 
     const arrowFactor = 40;
     // Arrowhead
+    const angle = Math.atan2(dy, dx);
     ctx.moveTo(tipX, tipY);
     ctx.lineTo(
         tipX - Math.cos(angle - Math.PI / 6) * arrowFactor,
