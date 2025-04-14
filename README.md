@@ -1,4 +1,4 @@
-[![Version](https://img.shields.io/badge/version-v0.11.1-informational)](https://github.com/SPBUnited/serviz/actions/workflows/auto-semver.yml)
+[![Version](https://img.shields.io/badge/version-v0.11.2-informational)](https://github.com/SPBUnited/serviz/actions/workflows/auto-semver.yml)
 
 # SERVIZ - vizualisation server
 
@@ -14,7 +14,7 @@
 
 <!-- ![](images/system_architecture.svg) -->
 
-![](docs/architecture.drawio.svg)
+![](docs/architecture.drawio.png)
 
 ## Мотивация
 
