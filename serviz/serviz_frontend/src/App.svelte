@@ -7,6 +7,9 @@
 
     import { iterateLayers, drawArrow } from "./lib/drawing.js";
     import type { Socket, SocketOptions } from "socket.io-client";
+    import FpsLed from "./lib/FpsLed.svelte";
+
+    let fpsLed: FpsLed;
 
     let showTop = $state(false);
     let showRight = $state(true);
@@ -563,6 +566,7 @@
 
         dt = timestamp - lastUpdate;
         lastUpdate = timestamp;
+        fpsLed.addDt(dt);
 
         requestAnimationFrame(draw);
     }
@@ -608,6 +612,7 @@
         <div style="display: flex; justify-content: space-between;">
             <span>dt: {dt}</span>
             <span>FPS: {Math.round(1000 / dt)} </span>
+            <FpsLed bind:this={fpsLed}></FpsLed>
         </div>
         <h3>Controls</h3>
         <div class="controls">
