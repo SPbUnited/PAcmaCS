@@ -61,8 +61,8 @@
     let currentVersion = $state("undefined");
 
     let layer_data = $state({});
-    let telemetry_data = $state({})
-    let telemetry_to_display = $state("")
+    let telemetry_data = $state({});
+    let telemetry_to_display = $state("");
 
     // $inspect(layer_data)
 
@@ -416,7 +416,7 @@
     }
 
     onMount(() => {
-        ctx = canvas.getContext("2d", {alpha: true})!;
+        ctx = canvas.getContext("2d", { alpha: true })!;
 
         window.addEventListener("resize", resizeCanvas);
 
@@ -557,13 +557,7 @@
             const ballVel = Math.sqrt(
                 Math.pow(deltaBallX, 2) + Math.pow(deltaBallY, 2),
             );
-            drawArrow(
-                ctx,
-                startBallX,
-                startBallY,
-                deltaBallX,
-                deltaBallY,
-            );
+            drawArrow(ctx, startBallX, startBallY, deltaBallX, deltaBallY);
         }
 
         ctx.restore();
@@ -606,7 +600,8 @@
         ></canvas>
     </div>
 
-    <div class="panel right"
+    <div
+        class="panel right"
         style="
         --card-background-color:#ffffffcc;
         --card-box-shadow: 0 0 10px 5px rgba(0, 0, 0, 0.1);
@@ -749,7 +744,8 @@
         {/if}
     </div>
 
-    <div class="panel down"
+    <div
+        class="panel down"
         style="
         --card-background-color:#ffffffcc;
         --card-box-shadow: 0 0 10px 5px rgba(0, 0, 0, 0.1);
@@ -845,6 +841,14 @@
         margin-top: auto;
         text-align: right;
         padding: 0.5rem;
+    }
+
+    pre {
+        white-space: pre-wrap; /* Since CSS 2.1 */
+        white-space: -moz-pre-wrap; /* Mozilla, since 1999 */
+        white-space: -pre-wrap; /* Opera 4-6 */
+        white-space: -o-pre-wrap; /* Opera 7 */
+        word-wrap: break-word; /* Internet Explorer 5.5+ */
     }
 
     /* ==========================================================================
