@@ -121,6 +121,13 @@ function drawRect(ctx, x, y, width, height, color) {
     ctx.fillRect(x, y, width, height);
 }
 
+function drawCircle(ctx, x, y, radius, color) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, 2 * Math.PI);
+    ctx.fill();
+}
+
 /**
  * Drawing API Reference
  *
@@ -138,19 +145,33 @@ function drawRect(ctx, x, y, width, height, color) {
  *      - x
  *      - y
  *      - rotation
+ *      -* vx
+ *      -* vy
  * # robot_blu
  *      - robot_id
  *      - x
  *      - y
  *      - rotation
+ *      -* vx
+ *      -* vy
  *
  * # ball
  *      - x
  *      - y
+ *      -* vx
+ *      -* vy
  *
  * # line
  *      - x_list
  *      - y_list
+ *      - color
+ *      - width
+ *
+ * # arrow
+ *      - x
+ *      - y
+ *      - dx
+ *      - dy
  *      - color
  *      - width
  *
@@ -165,6 +186,12 @@ function drawRect(ctx, x, y, width, height, color) {
  *      - y
  *      - width
  *      - height
+ *      - color
+ *
+ * # circle
+ *      - x
+ *      - y
+ *      - radius
  *      - color
  */
 function drawSingleSprite(ctx, sprite, use_number_ids) {
@@ -181,11 +208,18 @@ function drawSingleSprite(ctx, sprite, use_number_ids) {
         case "line":
             drawLine(ctx, sprite.x_list, sprite.y_list, sprite.color, sprite.width);
             break;
+        case "arrow":
+            drawArrow(ctx, sprite.x, sprite.y, sprite.dx, sprite.dy, sprite.color, sprite.width);
+            break;
         case "polygon":
             drawPolygon(ctx, sprite.x_list, sprite.y_list, sprite.color, sprite.width);
             break;
         case "rect":
             drawRect(ctx, sprite.x, sprite.y, sprite.width, sprite.height, sprite.color);
+            break;
+        case "circle":
+            drawCircle(ctx, sprite.x, sprite.y, sprite.radius, sprite.color);
+            break;
         default:
             break;
     }
@@ -220,7 +254,7 @@ export function iterateLayers(ctx, layers, use_number_ids) {
     }
 }
 
-export function drawArrow(ctx, x, y, dx, dy) {
+export function drawArrow(ctx, x, y, dx, dy, color = "#E8D743", width = 10) {
     ctx.beginPath();
     ctx.lineCap = "round";
 
@@ -230,7 +264,7 @@ export function drawArrow(ctx, x, y, dx, dy) {
     const tipX = x + dx;
     const tipY = y + dy;
 
-    const arrowFactor = 40;
+    const arrowFactor = 4 * width;
     // Arrowhead
     const angle = Math.atan2(dy, dx);
     ctx.moveTo(tipX, tipY);
@@ -245,8 +279,8 @@ export function drawArrow(ctx, x, y, dx, dy) {
     );
 
     // ctx.strokeStyle = "#ff0000";
-    ctx.strokeStyle = "#E8D743";
-    ctx.lineWidth = 10;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
     ctx.stroke();
 }
 

@@ -1,0 +1,141 @@
+vars: {
+  d2-config: {
+    layout-engine: elk
+    # Terminal theme code
+    # theme-id: 300
+  }
+}
+
+direction: right
+
+**: {
+  style.font-size: 40
+}
+(** -> **)[*]: {
+  style.font-size: 30
+  style.stroke-width: 4
+}
+(** <-> **)[*]: {
+  style.font-size: 30
+  style.stroke-width: 4
+}
+(** <- **)[*]: {
+  style.font-size: 30
+  style.stroke-width: 4
+}
+
+classes: {
+  # # BLOCKS ##
+  processor: {
+    style: {
+      stroke-width: 1
+      fill: yellow
+      shadow: true
+      border-radius: 2
+      multiple: false
+    }
+  }
+  # # LINES ##
+  ether: {
+    label: DrawTelSig
+    style: {
+      stroke: blue
+      stroke-width: 4
+    }
+  }
+  telemetry: {
+    label: Telemetry
+    style: {
+      stroke: red
+      stroke-width: 4
+    }
+  }
+  draw: {
+    label: Draw commands
+    style: {
+      stroke: violet
+      stroke-width: 4
+    }
+  }
+  ssl: {
+    label: SSL data
+    style: {
+      stroke: orange
+    }
+  }
+  robot_commands: {
+    label: Robot commands
+    style: {
+      stroke: purple
+      # stroke: "#8717ff"
+    }
+  }
+  signals: {
+    label: Signals
+    style: {
+      stroke: green
+    }
+  }
+  radio_wire: {
+    label: Radio wired
+    style: {
+      stroke: gray
+    }
+  }
+  radio: {
+    label: Radio
+    style: {
+      stroke: gray
+      stroke-dash: 5
+    }
+  }
+}
+
+title: |md
+  # Выигрыватель
+| {near: top-center}
+
+strategy
+
+user -> viscont.serviz
+
+viscont: {
+    serviz
+
+    strategy
+
+    packetorium
+
+    telsink
+
+    # serviz <- packetorium: {class: draw}
+    # serviz <- packetorium: {class: telemetry}
+
+    # serviz <- strategy: {class: draw}
+    # serviz <- strategy: {class: telemetry}
+
+    # packetorium <- serviz: {class: signals}
+
+    # strategy <- serviz: {class: signals}
+
+    serviz <-> strategy: {class: ether}
+    serviz <-> packetorium: {class: ether}
+
+    strategy <- packetorium: {class: ssl}
+}
+
+viscont.strategy -> control_box: {class: robot_commands}
+
+robots
+
+# viscont.packetorium -> control_box: {class: robot_commands}
+control_box -> robots: {class: radio}
+
+SSL: {
+  icon: https://ssl.robocup.org/wp-content/uploads/2018/12/RoboCupFederation-300x173-300x173.jpg
+  vision
+  game_controller
+  autoreffery
+}
+
+viscont.packetorium <- SSL: {class: ssl}

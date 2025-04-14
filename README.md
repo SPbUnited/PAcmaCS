@@ -1,4 +1,4 @@
-[![Version](https://img.shields.io/badge/version-v0.11.0-informational)](https://github.com/SPBUnited/serviz/actions/workflows/auto-semver.yml)
+[![Version](https://img.shields.io/badge/version-v0.11.1-informational)](https://github.com/SPBUnited/serviz/actions/workflows/auto-semver.yml)
 
 # SERVIZ - vizualisation server
 
@@ -12,7 +12,9 @@
 
 Итоговая структура системы выглядит примерно так:
 
-![](images/system_architecture.svg)
+<!-- ![](images/system_architecture.svg) -->
+
+![](docs/architecture.drawio.svg)
 
 ## Мотивация
 
@@ -41,15 +43,15 @@
     - [x] Роботы (с маркерами или номерами)
     - [x] Мяч
     - [x] Стрелки скорости
-    - [ ] Произвольные линии и стрелки
+    - [x] Произвольные линии и стрелки
     - [ ] Кривые
-    - [ ] Точки
+    - [x] Точки
 - Поддержка множества слоев с настройкой видимости для каждого слоя
 - Возможность управления роботами через клавиатуру
 
 ## Документация
 
-[Справка по формату межпроцессных сообщений](docs/zmq_api.md)
+[Справка по формату межпроцессных сообщений](docs/zmq_api_v2.md)
 
 ## Зависимости
 

@@ -1,51 +1,33 @@
 # Описание связи между модулями через zmq
 
-## Используемые сокеты
+## Serviz
 
-### Serviz
+- `ipc:///tmp/ether.draw :: PULL`
+- `ipc:///tmp/ether.telemetry :: PULL`
+- `ipc:///tmp/ether.signals :: PUB`
 
-#### `ipc:///tmp/serviz.sock :: PULL`
+#### `ipc:///tmp/ether.draw :: PULL`
 
-Принимает данные о слоях для отрисовки. Пример данных:
+Принимает данные о слое для отрисовки. Пример данных:
 
 ```json
 {
   "test_vision": {
     "data": [
-      {
-        "type": "robot_yel",
-        "x": -1000,
-        "y": 100,
-        "rotation": 0
-      },
-      {
-        "type": "robot_blu",
-        "x": 1400,
-        "y": 100,
-        "rotation": 3.14
-      },
-      {
-        "type": "robot_blu",
-        "x": -1400,
-        "y": -100,
-        "rotation": 0
-      },
-      {
-        "type": "ball",
-        "x": 200,
-        "y": 400
-      }
+      <objects to draw>
     ],
     "is_visible": true // Read only on first update
   }
 }
 ```
 
+Пример со всеми возможными объектами можно посмотреть в [спецификации](serviz_draw_api.md).
+
 Пример работы:
 
 ```python
 socket = context.socket(zmq.PUSH)
-socket.connect("ipc:///tmp/serviz.sock")
+socket.connect("ipc:///tmp/ether.draw")
 
 data = {
     "test_vision": {
@@ -56,16 +38,38 @@ data = {
 socket.send_json(data)
 ```
 
-При обновлении данных о слое все данные заменяются на новые. Таким образом отрисовывается всегда самые последние данные.
+При обновлении данных о слое все данные заменяются на новые.
 
-#### `ipc:///tmp/serviz.pub.sock :: PUB`
+#### `ipc:///tmp/ether.telemetry :: PULL`
+
+Принимает данные о телеметрии модуля. Пример данных:
+
+```json
+{
+  "test_telemetry": "test telemetry value\nit is just a string"
+}
+```
+
+Пример работы:
+
+```python
+socket = context.socket(zmq.PULL)
+socket.connect("ipc:///tmp/ether.telemetry")
+
+data = {"test_telemetry": "test telemetry value\nit is just a string"}
+socket.send_json(data)
+```
+
+#### `ipc:///tmp/ether.signals :: PUB`
 
 Публикует сигналы для других модулей. Сигналы имеют следующий формат:
 
 ```json
 {
-    "<recipient>": "<signal_name>",
-    "data": { /* ... */ } // optional
+  "<recipient>": "<signal_name>",
+  "data": {
+    /* ... */
+  } // optional
 }
 ```
 
@@ -75,7 +79,7 @@ socket.send_json(data)
 
 ```python
 signal_socket = context.socket(zmq.SUB)
-signal_socket.connect("ipc:///tmp/serviz.pub.sock")
+signal_socket.connect("ipc:///tmp/ether.signals")
 # Требуется дважды подписаться, т.к. кавычки могут быть любыми
 signal_socket.setsockopt_string(zmq.SUBSCRIBE, '{"larcmacs":')
 signal_socket.setsockopt_string(zmq.SUBSCRIBE, "{'larcmacs':")
