@@ -6,22 +6,34 @@ from common.tracker_client import TrackerClient
 from common.tracker_model import TeamColor
 from grsim.client import GrSimClient
 
+from argparse import ArgumentParser
+import yaml
+
+parser = ArgumentParser()
+parser.add_argument("--config", default="config.yml")
+args = parser.parse_args()
+
+config = yaml.safe_load(open(args.config))
+
+if config["ether"]["api_version"] != 2:
+    raise Exception("Only Ether v2 is supported")
+
 context = zmq.Context()
-socket = context.socket(zmq.PUSH)
-socket.connect("ipc:///tmp/serviz.sock")
+s_draw = context.socket(zmq.PUSH)
+s_draw.connect(config["ether"]["s_draw_url"])
 
-signal_socket = context.socket(zmq.SUB)
-signal_socket.connect("ipc:///tmp/serviz.pub.sock")
-signal_socket.setsockopt_string(zmq.SUBSCRIBE, '{"larcmacs":')
-signal_socket.setsockopt_string(zmq.SUBSCRIBE, "{'larcmacs':")
+s_signals = context.socket(zmq.SUB)
+s_signals.connect(config["ether"]["s_signals_url"])
+s_signals.setsockopt_string(zmq.SUBSCRIBE, '{"larcmacs":')
+s_signals.setsockopt_string(zmq.SUBSCRIBE, "{'larcmacs':")
 
-command_socket = context.socket(zmq.SUB)
-command_socket.connect("tcp://localhost:5667")
-command_socket.setsockopt_string(zmq.SUBSCRIBE, "")
+s_command_sink = context.socket(zmq.SUB)
+s_command_sink.connect(config["larcmacs"]["s_command_sink_url"])
+s_command_sink.setsockopt_string(zmq.SUBSCRIBE, "")
 
 poller = zmq.Poller()
-poller.register(signal_socket, zmq.POLLIN)
-poller.register(command_socket, zmq.POLLIN)
+poller.register(s_signals, zmq.POLLIN)
+poller.register(s_command_sink, zmq.POLLIN)
 
 from common.vision_model import Team
 from viscont import (
@@ -41,7 +53,7 @@ class zmqVisionRelayTemplate:
     def __attrs_post_init__(self):
         self.context = zmq.Context()
         self.relay = self.context.socket(zmq.PUB)
-        self.relay.bind("tcp://*:4242")
+        self.relay.bind(config["larcmacs"]["s_vision_fan_url"])
         print("Relay init")
 
     def send(self, raw_frame):
@@ -114,12 +126,12 @@ if __name__ == "__main__":
         vision.update_vision()
         field_info = vision.get_field_info()
         data = {"grsim_feed": {"data": field_info, "is_visible": True}}
-        socket.send_json(data)
+        s_draw.send_json(data)
 
         trackers = tracker_client.get_detection()
         for tracker_key in trackers:
             data = convert_trackers_to_serviz(trackers[tracker_key])
-            socket.send_json(data)
+            s_draw.send_json(data)
 
         for i in range(100):
             # Process incoming signals
@@ -131,8 +143,8 @@ if __name__ == "__main__":
             if socks == {}:
                 break
 
-            if signal_socket in socks:
-                signal = signal_socket.recv_json()
+            if s_signals in socks:
+                signal = s_signals.recv_json()
                 # print(signal)
                 is_signal_valid = False
                 is_signal_valid |= simControl.signal_handler(signal)
@@ -141,9 +153,9 @@ if __name__ == "__main__":
                 if not is_signal_valid:
                     print("Invalid signal: ", signal)
 
-            if command_socket in socks:
+            if s_command_sink in socks:
                 # print("Command socket received something")
-                commands = command_socket.recv()
+                commands = s_command_sink.recv()
                 # print(len(commands))
                 # print("============")
                 robotControl.apply_commands(robotControl.decypher_commands(commands))

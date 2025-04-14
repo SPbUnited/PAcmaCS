@@ -1,0 +1,12 @@
+serviz:
+
+larcmacs:
+  api_version: 1
+  s_command_sink_url: tcp://localhost:5667
+  s_vision_fan_url: tcp://*:4242
+
+ether:
+  api_version: 2
+  s_draw_url: ipc:///tmp/ether.draw
+  s_telemetry_url: ipc:///tmp/ether.telemetry
+  s_signals_url: ipc:///tmp/ether.signals

@@ -4,6 +4,18 @@ from flask_socketio import SocketIO
 import threading
 from multiprocessing import Manager
 
+from argparse import ArgumentParser
+import yaml
+
+parser = ArgumentParser()
+parser.add_argument("--config", default="config.yml")
+args = parser.parse_args()
+
+config = yaml.safe_load(open(args.config))
+
+if config["ether"]["api_version"] != 2:
+    raise Exception("Only Ether v2 is supported")
+
 app = Flask(
     __name__,
     template_folder="static",
@@ -30,8 +42,8 @@ sprite_data = manager.dict({})
 state_lock = manager.Lock()
 
 context = zmq.Context()
-socket = context.socket(zmq.PUB)
-socket.bind("ipc:///tmp/serviz.pub.sock")
+s_signals = context.socket(zmq.PUB)
+s_signals.bind(config["ether"]["s_signals_url"])
 
 
 def update_layer(layer_name, data):
@@ -69,7 +81,7 @@ def update_ui_state(data):
 @sio.on("send_signal")
 def send_signal(data):
     # print("Send signal")
-    socket.send_json(data)
+    s_signals.send_json(data)
 
 
 @sio.on("toggle_layer_visibility")
@@ -84,7 +96,7 @@ def update_sprites(sio, manager, sprite_data, state_lock):
 
     context = zmq.Context()
     socket = context.socket(zmq.PULL)
-    socket.bind("ipc:///tmp/serviz.sock")
+    socket.bind(config["ether"]["s_draw_url"])
 
     while True:
         sio.sleep(0.001)
