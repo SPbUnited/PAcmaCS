@@ -120,18 +120,24 @@ if __name__ == "__main__":
 
     tracker_client.init()
 
+    s_telemetry = context.socket(zmq.PUSH)
+    s_telemetry.connect(config["ether"]["s_telemetry_url"])
+
     while True:
 
         # Process vision
         vision.update_vision()
         field_info = vision.get_field_info()
-        data = {"grsim_feed": {"data": field_info, "is_visible": True}}
+        data = {"vision_feed": {"data": field_info, "is_visible": True}}
         s_draw.send_json(data)
+
+        s_telemetry.send_json({list(data.keys())[0]: data.__str__()})
 
         trackers = tracker_client.get_detection()
         for tracker_key in trackers:
             data = convert_trackers_to_serviz(trackers[tracker_key])
             s_draw.send_json(data)
+            s_telemetry.send_json({list(data.keys())[0]: data.__str__()})
 
         for i in range(100):
             # Process incoming signals

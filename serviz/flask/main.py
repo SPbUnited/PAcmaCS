@@ -39,7 +39,10 @@ import copy
 manager = Manager()
 # Shared sprite data
 sprite_data = manager.dict({})
-state_lock = manager.Lock()
+sprite_lock = manager.Lock()
+
+telemetry_data = manager.dict({})
+telemetry_lock = manager.Lock()
 
 context = zmq.Context()
 s_signals = context.socket(zmq.PUB)
@@ -47,11 +50,17 @@ s_signals.bind(config["ether"]["s_signals_url"])
 
 
 def update_layer(layer_name, data):
-    with state_lock:
+    with sprite_lock:
         if layer_name not in sprite_data:
             sprite_data[layer_name] = manager.dict(data)
         else:
             sprite_data[layer_name]["data"] = data["data"]
+
+
+def update_telemetry(data):
+    with telemetry_lock:
+        for key in data:
+            telemetry_data[key] = data[key]
 
 
 @app.route("/")
@@ -87,7 +96,7 @@ def send_signal(data):
 @sio.on("toggle_layer_visibility")
 def toggle_layer_visibility(data):
     # print(data)
-    with state_lock:
+    with sprite_lock:
         sprite_data[data]["is_visible"] = not sprite_data[data]["is_visible"]
 
 
@@ -95,31 +104,36 @@ def update_sprites(sio, manager, sprite_data, state_lock):
     print("Update sprites enter")
 
     context = zmq.Context()
-    socket = context.socket(zmq.PULL)
-    socket.bind(config["ether"]["s_draw_url"])
-
-    num = 0
+    s_draw = context.socket(zmq.PULL)
+    s_telemetry = context.socket(zmq.PULL)
+    s_draw.bind(config["ether"]["s_draw_url"])
+    s_telemetry.bind(config["ether"]["s_telemetry_url"])
 
     while True:
         sio.sleep(0.001)
         for _ in range(100):
             try:
-                message = socket.recv_json(flags=zmq.NOBLOCK)
-                # print("Received:", message)
-                # Update sprite_data with new_data
+                message = s_draw.recv_json(flags=zmq.NOBLOCK)
                 for key, value in message.items():
                     update_layer(key, value)
             except zmq.ZMQError as e:
                 if e.errno == zmq.EAGAIN:
-                    # print("No messages available.")
                     break
                 else:
                     raise
 
-        data = sprite_data
-        sio.emit("update_sprites", copy.deepcopy(data.copy()))
-        sio.emit("update_telemetry", {"test": "test" + str(num)})
-        num += 1
+        for _ in range(100):
+            try:
+                message = s_telemetry.recv_json(flags=zmq.NOBLOCK)
+                update_telemetry(message)
+            except zmq.ZMQError as e:
+                if e.errno == zmq.EAGAIN:
+                    break
+                else:
+                    raise
+
+        sio.emit("update_sprites", copy.deepcopy(sprite_data.copy()))
+        sio.emit("update_telemetry", copy.deepcopy(telemetry_data.copy()))
 
 
 # Run the app
@@ -131,7 +145,7 @@ if __name__ == "__main__":
     # import os
     # if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
     sio.start_background_task(
-        target=lambda: update_sprites(sio, manager, sprite_data, state_lock)
+        target=lambda: update_sprites(sio, manager, sprite_data, sprite_lock)
     )
     sio.run(
         app, host="0.0.0.0", port=8000, debug=False, allow_unsafe_werkzeug=True
