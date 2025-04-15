@@ -47,7 +47,7 @@ class TrackerClient:
         )
         self._tracking_data[tracking_data.uuid] = tracking_data
 
-    def get_detection(self) -> TrackerWrapperPacketModel:
+    def get_detections(self) -> TrackerWrapperPacketModel:
         return self._tracking_data.copy()
 
     def close(self) -> None:

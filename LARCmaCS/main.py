@@ -9,6 +9,8 @@ from grsim.client import GrSimClient
 from argparse import ArgumentParser
 import yaml
 
+import pprint
+
 parser = ArgumentParser()
 parser.add_argument("--config", default="config.yml")
 args = parser.parse_args()
@@ -131,13 +133,17 @@ if __name__ == "__main__":
         data = {"vision_feed": {"data": field_info, "is_visible": True}}
         s_draw.send_json(data)
 
-        s_telemetry.send_json({list(data.keys())[0]: data.__str__()})
+        s_telemetry.send_json({list(data.keys())[0]: pprint.pformat(data, width=400)})
 
-        trackers = tracker_client.get_detection()
+        trackers = tracker_client.get_detections()
         for tracker_key in trackers:
             data = convert_trackers_to_serviz(trackers[tracker_key])
             s_draw.send_json(data)
-            s_telemetry.send_json({list(data.keys())[0]: data.__str__()})
+            data_str = pprint.pformat(
+                data,
+                width=400,
+            )
+            s_telemetry.send_json({list(data.keys())[0]: data_str})
 
         for i in range(100):
             # Process incoming signals

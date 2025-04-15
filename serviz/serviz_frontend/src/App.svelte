@@ -16,9 +16,11 @@
     let showBottom = $state(true);
     let showLeft = $state(false);
 
+    let maximizeBottom = $state(false);
+
     let topHeight = $state(150);
     let rightWidth = $state(200);
-    let bottomHeight = $state(200);
+    let bottomHeight = $derived(maximizeBottom ? window.innerHeight * 0.8 : 200);
     let leftWidth = $state(150);
 
     let offsetLeft = $derived(showLeft ? leftWidth : 0);
@@ -606,7 +608,7 @@
         --card-background-color:#ffffffcc;
         --card-box-shadow: 0 0 10px 5px rgba(0, 0, 0, 0.1);
         top: {showTop ? topHeight : 0}px;
-        bottom: {showBottom ? bottomHeight : 0}px;
+        bottom: {0}px;
         width: {rightWidth}px;
         right: {showRight ? 0 : -rightWidth}px;
     "
@@ -751,13 +753,14 @@
         --card-box-shadow: 0 0 10px 5px rgba(0, 0, 0, 0.1);
         width: {offsetWidth}px;
         left: {offsetLeft}px;
-        top: {window.innerHeight - (showBottom ? bottomHeight : 0)}px;
+        height: {bottomHeight}px;
         bottom: {showBottom ? 0 : -bottomHeight}px;
         display: grid;
-        grid-template: auto / auto auto
+        grid-template: auto / 100px auto
     "
     >
-        <div>
+        <!-- top: {window.innerHeight - (showBottom ? bottomHeight : 0)}px; -->
+        <div style="display: flex; flex-direction: column;">
             <h3>Telemetry</h3>
             <select bind:value={telemetry_to_display}>
                 <option value="">None</option>
@@ -765,6 +768,14 @@
                     <option value={key}>{key}</option>
                 {/each}
             </select>
+            <button class="button-4" onclick={() => {maximizeBottom = !maximizeBottom}}>
+                {maximizeBottom ? "Restore" : "Maximize"}
+            </button>
+            <div style="margin-top: auto;">
+                <button class="button-4" onclick={() => {maximizeBottom = !maximizeBottom}}>
+                    {maximizeBottom ? "Restore" : "Maximize"}
+                </button>
+            </div>
         </div>
         <pre>
         <code>
@@ -804,7 +815,7 @@
 
         display: flex;
         flex-direction: column;
-        min-height: 100vh; /* or fixed height if needed */
+        /* min-height: 100vh; */ /* or fixed height if needed */
 
         /* top: var(--panel-top);
         height: var(--panel-height);
