@@ -56,10 +56,28 @@ class zmqVisionRelayTemplate:
         self.context = zmq.Context()
         self.relay = self.context.socket(zmq.PUB)
         self.relay.bind(config["larcmacs"]["s_vision_fan_url"])
-        print("Relay init")
+        print("Vision relay init")
 
     def send(self, raw_frame):
         self.relay.send(raw_frame)
+
+
+@define
+class zmqTrackerRelayTemplate:
+    context: zmq.Context = field(init=False)
+    relay: zmq.Socket = field(init=False)
+
+    def __attrs_post_init__(self):
+        self.context = zmq.Context()
+        self.relay = self.context.socket(zmq.PUB)
+        self.relay.bind(config["larcmacs"]["s_tracker_fan_url"])
+        print("Tracker relay init on ", config["larcmacs"]["s_tracker_fan_url"])
+        self.relay.send_json({"Tracker relay init": True})
+
+    def send(self, processed_frame):
+        self.relay.send_json(processed_frame)
+        # self.relay.send_json({"Updated": True})
+        pass
 
 
 from common.tracker_model import (
@@ -89,9 +107,9 @@ def convert_trackers_to_serviz(trackers: TrackerWrapperPacketModel):
 
     for robot in trackers.tracked_frame.robots:
         sprite_type = "ball"
-        if robot.robot_id.team_color == TeamColor.TEAM_COLOR_BLUE.value:
+        if robot.robot_id.team_color == TeamColor.TEAM_COLOR_BLUE:
             sprite_type = "robot_blu"
-        elif robot.robot_id.team_color == TeamColor.TEAM_COLOR_YELLOW.value:
+        elif robot.robot_id.team_color == TeamColor.TEAM_COLOR_YELLOW:
             sprite_type = "robot_yel"
         data[layer_name]["data"].append(
             {
@@ -112,7 +130,7 @@ if __name__ == "__main__":
     print("Enter LARCmaCS")
 
     client = GrSimClient(zmq_relay_template=zmqVisionRelayTemplate)
-    tracker_client = TrackerClient()
+    tracker_client = TrackerClient(zmq_relay_template=zmqTrackerRelayTemplate)
 
     vision = SSLVision(client=client)
     simControl = SimControl(client=client)
@@ -125,6 +143,7 @@ if __name__ == "__main__":
     s_telemetry = context.socket(zmq.PUSH)
     s_telemetry.connect(config["ether"]["s_telemetry_url"])
 
+    start = 0
     while True:
 
         # Process vision
@@ -134,6 +153,11 @@ if __name__ == "__main__":
         s_draw.send_json(data)
 
         s_telemetry.send_json({list(data.keys())[0]: pprint.pformat(data, width=400)})
+
+        end = time.time()
+        # print((end - start) * 1000)
+
+        start = time.time()
 
         trackers = tracker_client.get_detections()
         for tracker_key in trackers:
@@ -182,4 +206,4 @@ if __name__ == "__main__":
         #     )
         # )
 
-        time.sleep(0.005)
+        time.sleep(0.001)

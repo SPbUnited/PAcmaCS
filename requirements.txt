@@ -4,10 +4,11 @@ watchdog
 
 # Common
 pyyaml
+attrs
+cattrs
 
 # LARCmaCS
 zmq
-attrs
 protobuf
 protoletariat
 

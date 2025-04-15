@@ -4,7 +4,7 @@ services:
     network_mode: host
     volumes:
       - .:/app
-      - ipc:/tmp
+      - /tmp:/tmp
     environment:
       - VERSION=${VERSION}
       - DIV=${DIV}
@@ -23,6 +23,3 @@ services:
     # image: tigersmannheim/auto-referee
     image: roboticserlangen/autoref
     network_mode: host
-
-volumes:
-  ipc:
