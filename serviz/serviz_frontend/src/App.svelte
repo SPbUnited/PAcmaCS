@@ -614,7 +614,7 @@
     "
     >
         <div style="display: flex; justify-content: space-between;">
-            <span>dt: {dt}</span>
+            <span>dt: {Math.round(dt)}</span>
             <span>FPS: {Math.round(1000 / dt)} </span>
             <FpsLed bind:this={fpsLed}></FpsLed>
         </div>
