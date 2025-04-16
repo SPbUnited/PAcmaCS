@@ -10,6 +10,8 @@ services:
       - DIV=${DIV}
     init: true
     tty: true
+    userns_mode: "host"
+    user: "${UID}:${GID}"
 
   grsim:
     image: robocupssl/grsim:latest

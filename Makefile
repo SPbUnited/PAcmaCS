@@ -1,6 +1,10 @@
 export VERSION := $(shell jq '.version' package.json)
 export DIV:= divB
 
+# https://stackoverflow.com/a/78547267
+export UID=$(shell id -u)
+export GID=$(shell id -g)
+
 # Colorful output
 # https://stackoverflow.com/questions/5947742/how-to-change-the-output-color-of-echo-in-linux
 
@@ -79,8 +83,6 @@ up-autoreferee: up-message
 	docker compose up autoreferee
 
 up-all: up-message
-	echo "VERSION=${VERSION}"
-	echo "DIVISION=${DIV}"
 	# docker compose up serviz larcmacs grsim
 	docker compose up core grsim autoreferee
 
@@ -88,6 +90,10 @@ up-message:
 	@echo "${PURPLE}============="
 	@echo "|    UP     |"
 	@echo "=============${NC}"
+	@echo "VERSION=${VERSION}"
+	@echo "DIVISION=${DIV}"
+	@echo "UID=${UID}"
+	@echo "GID=${GID}"
 
 npm-dev:
 	@echo "${CYAN}============="
