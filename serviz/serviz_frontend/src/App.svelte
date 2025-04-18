@@ -23,17 +23,13 @@
 
     let topHeight = $state(150);
     let rightWidth = $state(200);
-    let bottomHeight = $derived(
-        maximizeBottom ? innerHeight * 0.8 : 200,
-    );
+    let bottomHeight = $derived(maximizeBottom ? innerHeight * 0.8 : 200);
     let leftWidth = $state(150);
 
     let offsetLeft = $derived(showLeft ? leftWidth : 0);
     let offsetTop = $derived(showTop ? topHeight : 0);
     let offsetWidth = $derived(
-        innerWidth -
-            (showLeft ? leftWidth : 0) -
-            (showRight ? rightWidth : 0),
+        innerWidth - (showLeft ? leftWidth : 0) - (showRight ? rightWidth : 0),
     );
     let offsetHeight = $derived(
         innerHeight -
@@ -684,34 +680,36 @@
             <input type="checkbox" bind:checked={isRobotControlEnabled} />
             Robot control
         </div>
-        <div>
-            <select bind:value={robotControlTeam}>
-                <option value="blue">Blue</option>
-                <option value="yellow">Yellow</option>
-            </select>
-        </div>
-        <div>
-            <p>
-                Linear vel [mm/s]: {vel_xy}
-                <input
-                    type="range"
-                    bind:value={vel_xy}
-                    min="0"
-                    max="2000"
-                    step="100"
-                />
-            </p>
-            <p>
-                Angular vel [rad/s]: {vel_r}
-                <input
-                    type="range"
-                    bind:value={vel_r}
-                    min="0"
-                    max="4"
-                    step="0.1"
-                />
-            </p>
-        </div>
+        {#if isRobotControlEnabled}
+            <div>
+                <select bind:value={robotControlTeam}>
+                    <option value="blue">Blue</option>
+                    <option value="yellow">Yellow</option>
+                </select>
+            </div>
+            <div>
+                <p>
+                    Linear vel [mm/s]: {vel_xy}
+                    <input
+                        type="range"
+                        bind:value={vel_xy}
+                        min="0"
+                        max="2000"
+                        step="100"
+                    />
+                </p>
+                <p>
+                    Angular vel [rad/s]: {vel_r}
+                    <input
+                        type="range"
+                        bind:value={vel_r}
+                        min="0"
+                        max="4"
+                        step="0.1"
+                    />
+                </p>
+            </div>
+        {/if}
 
         <hr />
 
