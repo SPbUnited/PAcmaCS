@@ -11,6 +11,9 @@
 
     let fpsLed: FpsLed;
 
+    let innerWidth = $state(window.innerWidth);
+    let innerHeight = $state(window.innerHeight);
+
     let showTop = $state(false);
     let showRight = $state(true);
     let showBottom = $state(true);
@@ -20,24 +23,31 @@
 
     let topHeight = $state(150);
     let rightWidth = $state(200);
-    let bottomHeight = $derived(maximizeBottom ? window.innerHeight * 0.8 : 200);
+    let bottomHeight = $derived(
+        maximizeBottom ? innerHeight * 0.8 : 200,
+    );
     let leftWidth = $state(150);
 
     let offsetLeft = $derived(showLeft ? leftWidth : 0);
     let offsetTop = $derived(showTop ? topHeight : 0);
     let offsetWidth = $derived(
-        window.innerWidth -
+        innerWidth -
             (showLeft ? leftWidth : 0) -
             (showRight ? rightWidth : 0),
     );
     let offsetHeight = $derived(
-        window.innerHeight -
+        innerHeight -
             (showTop ? topHeight : 0) -
             (showBottom ? bottomHeight : 0),
     );
 
     let canvas: HTMLCanvasElement;
     let ctx: CanvasRenderingContext2D;
+
+    $effect(() => {
+        canvas.width = innerWidth;
+        canvas.height = innerHeight;
+    });
 
     let divFields: Record<string, HTMLImageElement> = {
         divB: new Image(),
@@ -537,8 +547,8 @@
     }
 
     function resizeCanvas() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        innerWidth = window.innerWidth;
+        innerHeight = window.innerHeight;
     }
 
     let lastUpdate = 0;
@@ -726,24 +736,6 @@
             <p><kbd>?</kbd> - Show help</p>
             <p>Version: {currentVersion}</p>
         </div>
-
-        {#if showHelp}
-            <div class="help-menu" transition:fade>
-                <h3>Hotkeys</h3>
-                {#each hotkeys as hotkey}
-                    {#if hotkey.description !== undefined}
-                        <p>
-                            <kbd>
-                                {#each hotkey.keys as key, index}
-                                    {index > 0 ? "/" : ""}{key}
-                                {/each}
-                            </kbd>
-                            - {hotkey.description}
-                        </p>
-                    {/if}
-                {/each}
-            </div>
-        {/if}
     </div>
 
     <div
@@ -759,7 +751,7 @@
         grid-template: auto / 100px auto
     "
     >
-        <!-- top: {window.innerHeight - (showBottom ? bottomHeight : 0)}px; -->
+        <!-- top: {innerHeight - (showBottom ? bottomHeight : 0)}px; -->
         <div style="display: flex; flex-direction: column;">
             <h3>Telemetry</h3>
             <select bind:value={telemetry_to_display}>
@@ -768,11 +760,21 @@
                     <option value={key}>{key}</option>
                 {/each}
             </select>
-            <button class="button-4" onclick={() => {maximizeBottom = !maximizeBottom}}>
+            <button
+                class="button-4"
+                onclick={() => {
+                    maximizeBottom = !maximizeBottom;
+                }}
+            >
                 {maximizeBottom ? "Restore" : "Maximize"}
             </button>
             <div style="margin-top: auto;">
-                <button class="button-4" onclick={() => {maximizeBottom = !maximizeBottom}}>
+                <button
+                    class="button-4"
+                    onclick={() => {
+                        maximizeBottom = !maximizeBottom;
+                    }}
+                >
                     {maximizeBottom ? "Restore" : "Maximize"}
                 </button>
             </div>
@@ -783,6 +785,24 @@
         </code>
         </pre>
     </div>
+
+    {#if showHelp}
+        <div class="help-menu" transition:fade>
+            <h3>Hotkeys</h3>
+            {#each hotkeys as hotkey}
+                {#if hotkey.description !== undefined}
+                    <p>
+                        <kbd>
+                            {#each hotkey.keys as key, index}
+                                {index > 0 ? "/" : ""}{key}
+                            {/each}
+                        </kbd>
+                        - {hotkey.description}
+                    </p>
+                {/if}
+            {/each}
+        </div>
+    {/if}
 </main>
 
 <style>
@@ -839,6 +859,8 @@
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         transition: all 0.3s ease;
+
+        z-index: 10;
     }
     kbd {
         background-color: #eee;
