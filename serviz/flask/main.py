@@ -93,6 +93,18 @@ def send_signal(data):
     s_signals.send_json(data)
 
 
+@sio.on("clear_layers")
+def clear_layers(data):
+    with sprite_lock:
+        sprite_data.clear()
+
+
+@sio.on("clear_telemetry")
+def clear_telemetry(data):
+    with telemetry_lock:
+        telemetry_data.clear()
+
+
 @sio.on("toggle_layer_visibility")
 def toggle_layer_visibility(data):
     # print(data)

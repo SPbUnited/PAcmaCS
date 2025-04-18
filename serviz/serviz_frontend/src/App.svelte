@@ -8,6 +8,7 @@
     import { iterateLayers, drawArrow } from "./lib/drawing.js";
     import type { Socket, SocketOptions } from "socket.io-client";
     import FpsLed from "./lib/FpsLed.svelte";
+    import Led from "./lib/Led.svelte";
 
     let fpsLed: FpsLed;
 
@@ -73,6 +74,35 @@
     let telemetry_to_display = $state("");
 
     // $inspect(layer_data)
+
+    class Connection {
+        currentTime = $state(0);
+        lastUpdateTime = $state(0);
+        connectionTimeout = 1000;
+        isOnline = $derived(this.currentTime - this.lastUpdateTime < this.connectionTimeout);
+        color = $derived(this.isOnline ? "#00ff00" : "#ff0000");
+
+        constructor() {
+            this.lastUpdateTime = 0;
+        }
+
+        update() {
+            this.currentTime = Date.now();
+        }
+
+        ping() {
+            this.lastUpdateTime = Date.now();
+        }
+    }
+
+    let servizConnection = new Connection();
+    let transnetConnection = new Connection();
+
+    // $inspect("serviz", servizConnection.currentTime, servizConnection.lastUpdateTime);
+    // $inspect(servizConnection.isOnline);
+
+    // $inspect("transnet", transnetConnection.currentTime, transnetConnection.lastUpdateTime);
+    // $inspect(transnetConnection.isOnline);
 
     class Camera {
         panX = $state(0);
@@ -423,6 +453,16 @@
         socketEmit("toggle_layer_visibility", layer_name);
     }
 
+    function clearLayers() {
+        socketEmit("clear_layers", {});
+        layer_data = {};
+    }
+
+    function clearTelemetry() {
+        socketEmit("clear_telemetry", {});
+        telemetry_data = {};
+    }
+
     onMount(() => {
         ctx = canvas.getContext("2d", { alpha: true })!;
 
@@ -519,6 +559,7 @@
 
         socket.on("update_sprites", (data: any) => {
             layer_data = data;
+            servizConnection.ping();
         });
 
         socket.on("update_telemetry", (data: any) => {
@@ -577,6 +618,8 @@
         dt = timestamp - lastUpdate;
         lastUpdate = timestamp;
         fpsLed.addDt(dt);
+        servizConnection.update();
+        transnetConnection.update();
 
         requestAnimationFrame(draw);
     }
@@ -623,6 +666,12 @@
             <span>dt: {Math.round(dt)}</span>
             <span>FPS: {Math.round(1000 / dt)} </span>
             <FpsLed bind:this={fpsLed}></FpsLed>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+            serviz
+            <Led bind:color={servizConnection.color} />
+            <!-- transnet
+            <Led bind:color={transnetConnection.color} /> -->
         </div>
         <h3>Controls</h3>
         <div class="controls">
@@ -727,6 +776,24 @@
                 {name}
             </div>
         {/each}
+        <div>
+            <button
+                class="button-4 wide"
+                onclick={() => {
+                    clearLayers();
+                }}
+            >
+                Clear layers
+            </button>
+            <button
+                class="button-4 wide"
+                onclick={() => {
+                    clearTelemetry();
+                }}
+            >
+                Clear telemetry
+            </button>
+        </div>
 
         <hr />
 

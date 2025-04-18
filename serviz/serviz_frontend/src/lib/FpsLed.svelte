@@ -1,7 +1,10 @@
 <script>
+    import Led from "./Led.svelte";
+
     let buffer = [];
     const alpha = 0.3;
     let filteredDt = $state(0);
+    let color = $state("#000000");
 
     export function addDt(dt) {
       filteredDt = alpha * filteredDt + (1 - alpha) * dt;
@@ -39,16 +42,11 @@
       }
       return `rgb(${r},${g},${b})`;
     }
+
+    $effect(() => {
+      color = getColor(filteredDt);
+    });
+
   </script>
 
-  <div class="led" style:background-color={getColor(filteredDt)} />
-
-  <style>
-    .led {
-      width: 0.8rem;
-      height: 0.8rem;
-      border-radius: 50%;
-      box-shadow: 0 0 10px rgba(0,0,0,0.2);
-      transition: background-color 0.1s ease;
-    }
-  </style>
+<Led bind:color/>
