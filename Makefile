@@ -74,7 +74,7 @@ build:
 	docker compose build
 
 up: up-message
-	docker compose up core
+	docker compose up pacmacs
 
 up-grsim: up-message
 	docker compose up grsim
@@ -83,8 +83,7 @@ up-autoreferee: up-message
 	docker compose up autoreferee
 
 up-all: up-message
-	# docker compose up serviz larcmacs grsim
-	docker compose up core grsim autoreferee
+	docker compose up pacmacs grsim autoreferee
 
 up-message:
 	@echo "${PURPLE}============="
@@ -111,5 +110,5 @@ purge:
 	@echo "${BIRED}============="
 	@echo "|   PURGE   |"
 	@echo "=============${NC}"
-	docker compose down -v
+	docker compose down -v --remove-orphans
 	docker compose rm -f

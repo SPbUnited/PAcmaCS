@@ -26,11 +26,11 @@ s_draw.connect(config["ether"]["s_draw_url"])
 
 s_signals = context.socket(zmq.SUB)
 s_signals.connect(config["ether"]["s_signals_url"])
-s_signals.setsockopt_string(zmq.SUBSCRIBE, '{"larcmacs":')
-s_signals.setsockopt_string(zmq.SUBSCRIBE, "{'larcmacs':")
+s_signals.setsockopt_string(zmq.SUBSCRIBE, '{"transnet":')
+s_signals.setsockopt_string(zmq.SUBSCRIBE, "{'transnet':")
 
 s_command_sink = context.socket(zmq.SUB)
-s_command_sink.connect(config["larcmacs"]["s_command_sink_url"])
+s_command_sink.connect(config["transnet"]["s_command_sink_url"])
 s_command_sink.setsockopt_string(zmq.SUBSCRIBE, "")
 
 poller = zmq.Poller()
@@ -55,7 +55,7 @@ class zmqVisionRelayTemplate:
     def __attrs_post_init__(self):
         self.context = zmq.Context()
         self.relay = self.context.socket(zmq.PUB)
-        self.relay.bind(config["larcmacs"]["s_vision_fan_url"])
+        self.relay.bind(config["transnet"]["s_vision_fan_url"])
         print("Vision relay init")
 
     def send(self, raw_frame):
@@ -70,8 +70,8 @@ class zmqTrackerRelayTemplate:
     def __attrs_post_init__(self):
         self.context = zmq.Context()
         self.relay = self.context.socket(zmq.PUB)
-        self.relay.bind(config["larcmacs"]["s_tracker_fan_url"])
-        print("Tracker relay init on ", config["larcmacs"]["s_tracker_fan_url"])
+        self.relay.bind(config["transnet"]["s_tracker_fan_url"])
+        print("Tracker relay init on ", config["transnet"]["s_tracker_fan_url"])
         self.relay.send_json({"Tracker relay init": True})
 
     def send(self, processed_frame):
@@ -127,7 +127,7 @@ def convert_trackers_to_serviz(trackers: TrackerWrapperPacketModel):
 
 if __name__ == "__main__":
 
-    print("Enter LARCmaCS")
+    print("Enter Transnet")
 
     client = GrSimClient(zmq_relay_template=zmqVisionRelayTemplate)
     tracker_client = TrackerClient(zmq_relay_template=zmqTrackerRelayTemplate)

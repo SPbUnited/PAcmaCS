@@ -1,5 +1,5 @@
 services:
-  core:
+  pacmacs:
     build: .
     network_mode: host
     volumes:

@@ -140,7 +140,7 @@ class SimControl:
         )
 
     def signal_handler(self, signal: Dict) -> bool:
-        signal_type = signal["larcmacs"]
+        signal_type = signal["transnet"]
 
         if signal_type == "test_signal":
             test_formation = {
@@ -294,7 +294,7 @@ class RobotControl:
                 )
 
     def signal_handler(self, signal: Dict) -> bool:
-        signal_type = signal["larcmacs"]
+        signal_type = signal["transnet"]
 
         if signal_type == "actuate_robot":
             self.apply_commands(signal["data"])

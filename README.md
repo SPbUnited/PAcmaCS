@@ -1,4 +1,4 @@
-[![Version](https://img.shields.io/badge/version-v0.11.5-informational)](https://github.com/SPBUnited/serviz/actions/workflows/auto-semver.yml)
+[![Version](https://img.shields.io/badge/version-v0.11.6-informational)](https://github.com/SPBUnited/serviz/actions/workflows/auto-semver.yml)
 
 # PAcmaCS - Programmatically Actionable multi-agent Cybernetic Studio
 
@@ -88,10 +88,10 @@ make up-all
 ## Более подробное описание реализованных инструкций:
 
 - `make init` - инициализирует виртуальное окружение и зависимости
-- `make build` - собирает образы для serviz и larcmacs
+- `make build` - собирает образы для serviz и transnet
 - `make up` - запускает все сервисы кроме grsim
 - `make up-grsim` - запускает headless grsim
-- `make up-all` - запускает все сервисы (serviz, larcmacs, grsim)
+- `make up-all` - запускает все сервисы (serviz, transnet, grsim)
 - `make npm-dev` - запуск фронтенда Сервиза в режиме live-server для разработки
 - `make down` - останавливает все сервисы
 - `make purge` - очищает все сервисы и их данные

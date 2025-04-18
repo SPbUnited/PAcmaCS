@@ -140,7 +140,7 @@ Serviz also can be used to broadcast signals to all other processes (for example
 
 ```python
 example_signal = {
-   "larcmacs": "set_ball",
+   "transnet": "set_ball",
    "data": {
       "x": 100,
       "y": 100,
@@ -163,8 +163,8 @@ import zmq
 
 signal_socket = context.socket(zmq.SUB)
 signal_socket.connect("ipc:///tmp/serviz.pub.sock")
-signal_socket.setsockopt_string(zmq.SUBSCRIBE, "{\"larcmacs\":")
-signal_socket.setsockopt_string(zmq.SUBSCRIBE, "{\'larcmacs\':")
+signal_socket.setsockopt_string(zmq.SUBSCRIBE, "{\"transnet\":")
+signal_socket.setsockopt_string(zmq.SUBSCRIBE, "{\'transnet\':")
 
 poller = zmq.Poller()
 poller.register(signal_socket, zmq.POLLIN)

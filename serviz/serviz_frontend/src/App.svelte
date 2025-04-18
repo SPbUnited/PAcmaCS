@@ -374,7 +374,7 @@
         speed_r: number,
     ) {
         let data = {
-            larcmacs: "actuate_robot",
+            transnet: "actuate_robot",
             data: {
                 [team]: [
                     {
@@ -400,7 +400,7 @@
     function testButton(e: Event) {
         console.log("test button");
         socketEmit("send_signal", {
-            larcmacs: "test_signal",
+            transnet: "test_signal",
         });
     }
 
@@ -474,7 +474,7 @@
                 const vx = deltaBallX * velScaleFactor;
                 const vy = deltaBallY * velScaleFactor;
                 socketEmit("send_signal", {
-                    larcmacs: "set_ball",
+                    transnet: "set_ball",
                     data: { x: x, y: -y, vx: vx, vy: -vy },
                 });
             }

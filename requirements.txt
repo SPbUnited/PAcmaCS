@@ -7,7 +7,7 @@ pyyaml
 attrs
 cattrs
 
-# LARCmaCS
+# Transnet
 zmq
 protobuf
 protoletariat

@@ -1,10 +1,10 @@
 serviz:
 
-larcmacs:
+transnet:
   api_version: 1
   s_command_sink_url: tcp://localhost:5667
   s_vision_fan_url: tcp://*:4242
-  s_tracker_fan_url: ipc:///tmp/larcmacs.tracker
+  s_tracker_fan_url: ipc:///tmp/transnet.tracker
 
 ether:
   api_version: 2

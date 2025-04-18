@@ -81,8 +81,8 @@ socket.send_json(data)
 signal_socket = context.socket(zmq.SUB)
 signal_socket.connect("ipc:///tmp/ether.signals")
 # Требуется дважды подписаться, т.к. кавычки могут быть любыми
-signal_socket.setsockopt_string(zmq.SUBSCRIBE, '{"larcmacs":')
-signal_socket.setsockopt_string(zmq.SUBSCRIBE, "{'larcmacs':")
+signal_socket.setsockopt_string(zmq.SUBSCRIBE, '{"transnet":')
+signal_socket.setsockopt_string(zmq.SUBSCRIBE, "{'transnet':")
 
 poller = zmq.Poller()
 poller.register(signal_socket, zmq.POLLIN)
