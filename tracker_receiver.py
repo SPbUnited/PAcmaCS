@@ -3,7 +3,7 @@ from typing import Any, Dict
 
 context = zmq.Context()
 s_tracker = context.socket(zmq.SUB)
-s_tracker.connect("tcp://localhost:4243")
+s_tracker.connect("ipc:///tmp/larcmacs.tracker")
 s_tracker.setsockopt_string(zmq.SUBSCRIBE, "")
 
 print("Tracker receiver init")

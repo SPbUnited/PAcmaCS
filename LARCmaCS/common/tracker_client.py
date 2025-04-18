@@ -10,6 +10,7 @@ from .pb.messages_robocup_ssl_wrapper_tracked_pb2 import (
 )
 from .tracker_model import TrackerWrapperPacket
 from .tracker_model import proto_to_wrapper_packet
+from . import tracker_model
 
 
 @define
@@ -40,24 +41,19 @@ class TrackerClient:
 
     def _read_loop(self) -> None:
         zmq_relay = self.zmq_relay_template()
-        import time
 
         start = 0
         while True:
 
             new_package = self._socket_reader.read_package()
+            self._socket_reader.read_package()
+            self._socket_reader.read_package()
+            self._socket_reader.read_package()
             processed_packet = self.process_packet(new_package)
             if processed_packet is None:
                 continue
 
-            # zmq_relay.send(unstructure(processed_packet))
-
-            end = time.time()
-            print((end - start) * 1000)
-            start = time.time()
-            print((time.time() - processed_packet.tracked_frame.timestamp) * 1000)
-            print(time.time())
-            print(processed_packet.tracked_frame.timestamp)
+            zmq_relay.send(unstructure(processed_packet))
 
     def process_packet(self, data) -> TrackerWrapperPacket:
         tracking_data_parser: TrackerWrapperPacket = TrackerWrapperPacketProto()
@@ -71,10 +67,6 @@ class TrackerClient:
         ):
             return None
 
-        # tracking_data = structure(
-        #     unstructure(tracking_data_parser), TrackerWrapperPacket
-        # )
-        # print(tracking_data)
         tracking_data: TrackerWrapperPacket = proto_to_wrapper_packet(
             tracking_data_parser
         )
