@@ -1,14 +1,14 @@
 [![Version](https://img.shields.io/badge/version-v0.11.5-informational)](https://github.com/SPBUnited/serviz/actions/workflows/auto-semver.yml)
 
-# SERVIZ - vizualisation server
+# PAcmaCS - Programmatically Actionable multi-agent Cybernetic Studio
 
 ![](images/2025-03-29-22-52-41.png)
 
 Данный монорепозиторий содержит набор модулей новой структуры системы управления команды SPbUnited:
 
-- SerViz (visualization server) - веб-интерфейс визуализации и управления стратегией
-- LARCmaCS - сервис-интерфейс между стратегией и внешним миром (SSL-Vision, SSL-GameController, управление роботами)
-- TelSink [WIP] - сервис управления логами и воспроизведения реплеев
+- SerViz (VIZualization SERver) - веб-интерфейс визуализации и управления стратегией
+- TransNet (NETwork TRANSformer) - сервис-интерфейс между стратегией и внешним миром (SSL-Vision, SSL-GameController, управление роботами)
+- TelSink (TELemetry SINK) [WIP] - сервис сбора телеметрии и воспроизведения реплеев
 
 Итоговая структура системы выглядит примерно так:
 
@@ -26,12 +26,12 @@
 
 ## Реализованные функции
 
-### CORE
+### PAcmaCS
 
 - Связь между модулями через zmq (ipc)
 - Автоматическая установка зависимостей, сборка и запуск сервисов
 
-### LARCMACS
+### TRANSNET
 
 - Чтение состояния игрового поля
 - Отправка команд управления в grsim
@@ -59,13 +59,14 @@
 - Node.js 18
 - Docker
 - Docker Compose
+- jq
 
 ## Установка и запуск
 
 Склонируйте репозиторий:
 
 ```bash
-git clone https://github.com/SPbUnited/serviz.git
+git clone https://github.com/SPbUnited/PAcmaCS.git
 cd serviz
 ```
 
