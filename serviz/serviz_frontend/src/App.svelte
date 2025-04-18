@@ -743,7 +743,7 @@
                         type="range"
                         bind:value={vel_xy}
                         min="0"
-                        max="2000"
+                        max="4000"
                         step="100"
                     />
                 </p>

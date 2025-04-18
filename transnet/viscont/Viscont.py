@@ -284,8 +284,8 @@ class RobotControl:
                     RobotActuateModel(
                         team=(Team.BLUE if team == "blue" else Team.YELLOW),
                         robot_id=n,
-                        vx_m_s=-robot["speed_y"],
-                        vy_m_s=robot["speed_x"],
+                        vx_m_s=-robot["speed_y"] / 1000,
+                        vy_m_s=robot["speed_x"] / 1000,
                         w_rad_s=robot["speed_r_or_angle"],
                         kicklow=robot["kick_forward"],
                         kickhigh=robot["kick_up"],
@@ -298,6 +298,7 @@ class RobotControl:
 
         if signal_type == "actuate_robot":
             self.apply_commands(signal["data"])
+            print(signal["data"])
 
             return True
 
