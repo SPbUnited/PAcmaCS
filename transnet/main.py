@@ -5,6 +5,7 @@ import time
 from common.tracker_client import TrackerClient
 from common.tracker_model import TeamColor
 from grsim.client import GrSimClient
+from common.game_controller_relay import GameControllerRelay
 
 from argparse import ArgumentParser
 import yaml
@@ -136,9 +137,14 @@ if __name__ == "__main__":
     simControl = SimControl(client=client)
     robotControl = RobotControl(client=GrSimRobotControl(client=client))
 
+    game_controller_relay = GameControllerRelay(
+        game_controller_fan_url=config["transnet"]["s_game_controller_fan_url"],
+    )
+
     time.sleep(2)
 
     tracker_client.init()
+    game_controller_relay.init()
 
     s_telemetry = context.socket(zmq.PUSH)
     s_telemetry.connect(config["ether"]["s_telemetry_url"])
