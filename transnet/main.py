@@ -189,6 +189,10 @@ if __name__ == "__main__":
 
     setup_proxy(context)
 
+    game_controller_relay = GameControllerRelay(
+        game_controller_fan_url=config["transnet"]["s_game_controller_fan_url"],
+    )
+
     time.sleep(2)
 
     tracker_client.init()
