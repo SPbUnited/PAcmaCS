@@ -187,6 +187,8 @@ if __name__ == "__main__":
         game_controller_fan_url=config["transnet"]["s_game_controller_fan_url"],
     )
 
+    setup_proxy(context)
+
     time.sleep(2)
 
     tracker_client.init()
