@@ -13,8 +13,8 @@ args = parser.parse_args()
 
 config = yaml.safe_load(open(args.config))
 
-if config["ether"]["api_version"] != 2:
-    raise Exception("Only Ether v2 is supported")
+if config["ether"]["api_version"] != 3:
+    raise Exception("Only Ether v3 is supported")
 
 app = Flask(
     __name__,
@@ -46,7 +46,7 @@ telemetry_lock = manager.Lock()
 
 context = zmq.Context()
 s_signals = context.socket(zmq.PUB)
-s_signals.bind(config["ether"]["s_signals_url"])
+s_signals.connect(config["ether"]["s_signals_sub_url"])
 
 
 def update_layer(layer_name, data):
@@ -116,10 +116,16 @@ def update_sprites(sio, manager, sprite_data, state_lock):
     print("Update sprites enter")
 
     context = zmq.Context()
-    s_draw = context.socket(zmq.PULL)
-    s_telemetry = context.socket(zmq.PULL)
-    s_draw.bind(config["ether"]["s_draw_url"])
-    s_telemetry.bind(config["ether"]["s_telemetry_url"])
+    s_draw = context.socket(zmq.SUB)
+    s_draw.connect(config["ether"]["s_draw_pub_url"])
+    s_draw.setsockopt_string(zmq.SUBSCRIBE, "")
+
+    s_telemetry = context.socket(zmq.SUB)
+    s_telemetry.connect(config["ether"]["s_telemetry_pub_url"])
+    s_telemetry.setsockopt_string(zmq.SUBSCRIBE, "")
+
+    print("Draw socket setup as SUB at ", config["ether"]["s_draw_pub_url"])
+    print("Telemetry socket setup as SUB at ", config["ether"]["s_telemetry_pub_url"])
 
     while True:
         sio.sleep(0.001)

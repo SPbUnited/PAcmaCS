@@ -1,3 +1,4 @@
+import threading
 from attrs import define, field
 import zmq
 import time
@@ -17,15 +18,16 @@ args = parser.parse_args()
 
 config = yaml.safe_load(open(args.config))
 
-if config["ether"]["api_version"] != 2:
-    raise Exception("Only Ether v2 is supported")
+if config["ether"]["api_version"] != 3:
+    raise Exception("Only Ether v3 is supported")
 
 context = zmq.Context()
-s_draw = context.socket(zmq.PUSH)
-s_draw.connect(config["ether"]["s_draw_url"])
+
+s_draw = context.socket(zmq.PUB)
+s_draw.connect(config["ether"]["s_draw_sub_url"])
 
 s_signals = context.socket(zmq.SUB)
-s_signals.connect(config["ether"]["s_signals_url"])
+s_signals.connect(config["ether"]["s_signals_pub_url"])
 s_signals.setsockopt_string(zmq.SUBSCRIBE, '{"transnet":')
 s_signals.setsockopt_string(zmq.SUBSCRIBE, "{'transnet':")
 
@@ -36,6 +38,54 @@ s_command_sink.setsockopt_string(zmq.SUBSCRIBE, "")
 poller = zmq.Poller()
 poller.register(s_signals, zmq.POLLIN)
 poller.register(s_command_sink, zmq.POLLIN)
+
+
+def setup_draw_proxy(context: zmq.Context):
+    print("DRAW proxy SETUP")
+
+    # DRAW proxy
+    s_proxy_draw_pub = context.socket(zmq.XPUB)
+    s_proxy_draw_pub.bind(config["ether"]["s_draw_pub_url"])
+
+    s_proxy_draw_sub = context.socket(zmq.XSUB)
+    s_proxy_draw_sub.bind(config["ether"]["s_draw_sub_url"])
+    zmq.proxy(s_proxy_draw_pub, s_proxy_draw_sub)
+
+
+def setup_telemetry_proxy(context: zmq.Context):
+    print("TELEMETRY proxy SETUP")
+
+    # TELEMETRY proxy
+    s_proxy_telemetry_pub = context.socket(zmq.XPUB)
+    s_proxy_telemetry_pub.bind(config["ether"]["s_telemetry_pub_url"])
+
+    s_proxy_telemetry_sub = context.socket(zmq.XSUB)
+    s_proxy_telemetry_sub.bind(config["ether"]["s_telemetry_sub_url"])
+    zmq.proxy(s_proxy_telemetry_pub, s_proxy_telemetry_sub)
+
+
+def setup_signals_proxy(context: zmq.Context):
+    print("SIGNALS proxy SETUP")
+
+    # SIGNALS proxy
+    s_proxy_signals_pub = context.socket(zmq.XPUB)
+    s_proxy_signals_pub.bind(config["ether"]["s_signals_pub_url"])
+
+    s_proxy_signals_sub = context.socket(zmq.XSUB)
+    s_proxy_signals_sub.bind(config["ether"]["s_signals_sub_url"])
+    zmq.proxy(s_proxy_signals_pub, s_proxy_signals_sub)
+
+
+def setup_proxy(context: zmq.Context):
+    print("Setting up proxy")
+    draw_proxy = threading.Thread(target=setup_draw_proxy, args=(context,))
+    telemetry_proxy = threading.Thread(target=setup_telemetry_proxy, args=(context,))
+    signals_proxy = threading.Thread(target=setup_signals_proxy, args=(context,))
+    draw_proxy.start()
+    telemetry_proxy.start()
+    signals_proxy.start()
+    print("Proxy UP")
+
 
 from common.vision_model import Team
 from viscont import (
@@ -136,14 +186,16 @@ if __name__ == "__main__":
     simControl = SimControl(client=client)
     robotControl = RobotControl(client=GrSimRobotControl(client=client))
 
+    setup_proxy(context)
+
     time.sleep(2)
 
     tracker_client.init()
 
-    s_telemetry = context.socket(zmq.PUSH)
-    s_telemetry.connect(config["ether"]["s_telemetry_url"])
+    s_telemetry = context.socket(zmq.PUB)
+    s_telemetry.connect(config["ether"]["s_telemetry_sub_url"])
 
-    start = 0
+    print("Transnet ready")
     while True:
 
         # Process vision
@@ -153,11 +205,6 @@ if __name__ == "__main__":
         s_draw.send_json(data)
 
         s_telemetry.send_json({list(data.keys())[0]: pprint.pformat(data, width=400)})
-
-        end = time.time()
-        # print((end - start) * 1000)
-
-        start = time.time()
 
         trackers = tracker_client.get_detections()
         for tracker_key in trackers:
