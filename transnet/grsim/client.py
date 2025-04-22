@@ -5,23 +5,27 @@ from common.vision_model import Team
 from common.sockets import SocketWriter
 from grsim.model import ActionCommand, BallReplacement, RobotReplacement
 
-from grsim.pb.grsim_commands_pb2 import grSim_Robot_Command as GrSimRobotCommand
-from grsim.pb.grsim_packet_pb2 import grSim_Packet as GrSimPacket
-from grsim.pb.grsim_replacement_pb2 import grSim_RobotReplacement as GrSimRobotReplacement
+from protopy.grsim.grSim_Commands_pb2 import grSim_Robot_Command as GrSimRobotCommand
+from protopy.grsim.grSim_Packet_pb2 import grSim_Packet as GrSimPacket
+from protopy.grsim.grSim_Replacement_pb2 import (
+    grSim_RobotReplacement as GrSimRobotReplacement,
+)
 
 
 # TODO: Refactor this class
 @attr.s(auto_attribs=True, kw_only=True)
 class GrSimClient(VisionClient):
 
-    grsim_listen_ip: str = '127.0.0.1'
+    grsim_listen_ip: str = "127.0.0.1"
     grsim_listen_port: int = 20011
 
     _socket_writer: SocketWriter = attr.ib(init=False)
 
     def __attrs_post_init__(self) -> None:
         super(GrSimClient, self).__attrs_post_init__()
-        self._socket_writer = SocketWriter(ip=self.grsim_listen_ip, port=self.grsim_listen_port)
+        self._socket_writer = SocketWriter(
+            ip=self.grsim_listen_ip, port=self.grsim_listen_port
+        )
 
     def send_action_command(self, command: ActionCommand) -> None:
         packet = GrSimPacket()

@@ -3,10 +3,10 @@ from attrs import define, field
 import zmq
 import time
 
+from game_controller import game_controller_relay as gcr
 from common.tracker_client import TrackerClient
-from common.tracker_model import TeamColor
+from common.tracker_model import Team
 from grsim.client import GrSimClient
-from common.game_controller_relay import GameControllerRelay
 
 from argparse import ArgumentParser
 import yaml
@@ -152,9 +152,9 @@ def convert_trackers_to_serviz(trackers: TrackerWrapperPacketModel):
 
     for robot in trackers.tracked_frame.robots:
         sprite_type = "ball"
-        if robot.robot_id.team_color == TeamColor.TEAM_COLOR_BLUE:
+        if robot.robot_id.team == Team.BLUE:
             sprite_type = "robot_blu"
-        elif robot.robot_id.team_color == TeamColor.TEAM_COLOR_YELLOW:
+        elif robot.robot_id.team == Team.YELLOW:
             sprite_type = "robot_yel"
         data[layer_name]["data"].append(
             {
@@ -183,13 +183,7 @@ if __name__ == "__main__":
 
     setup_proxy(context)
 
-    game_controller_relay = GameControllerRelay(
-        game_controller_fan_url=config["transnet"]["s_game_controller_fan_url"],
-    )
-
-    setup_proxy(context)
-
-    game_controller_relay = GameControllerRelay(
+    game_controller_relay = gcr.GameControllerRelay(
         game_controller_fan_url=config["transnet"]["s_game_controller_fan_url"],
     )
 

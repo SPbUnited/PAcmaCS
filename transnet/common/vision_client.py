@@ -11,12 +11,13 @@ from common.vision_model import (
     Geometry,
     FrameInfo,
 )
-from common.pb.messages_robocup_ssl_detection_pb2 import (
+from protopy.vision.ssl_vision_detection_pb2 import (
     SSL_DetectionFrame,
     SSL_DetectionRobot,
     SSL_DetectionBall,
 )
-from common.pb.messages_robocup_ssl_wrapper_pb2 import SSL_WrapperPacket
+
+from protopy.vision.ssl_vision_wrapper_pb2 import SSL_WrapperPacket
 
 from common.sockets import SocketReader
 

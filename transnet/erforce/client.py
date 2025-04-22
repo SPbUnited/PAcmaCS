@@ -5,9 +5,17 @@ import attr
 
 from common.sockets import SocketWriter
 from common.vision_client import VisionClient
-from erforce.model import RobotCommand, MoveWheelVelocity, MoveLocalVelocity, MoveGlobalVelocity
-from erforce.pb import RobotControl as ProtoRobotCommand, RobotCommand as ProtoRobotCommand, \
-    RobotControl as ProtoRobotControl
+from erforce.model import (
+    RobotCommand,
+    MoveWheelVelocity,
+    MoveLocalVelocity,
+    MoveGlobalVelocity,
+)
+from protopy.erforce.ssl_simulation_robot_control_pb2 import (
+    RobotControl as ProtoRobotCommand,
+    RobotCommand as ProtoRobotCommand,
+    RobotControl as ProtoRobotControl,
+)
 
 
 @attr.s(auto_attribs=True, kw_only=True)
@@ -15,7 +23,7 @@ class ErForceClient(VisionClient):
 
     should_loop_commands: bool = False
 
-    er_force_listen_ip: str = '127.0.0.1'
+    er_force_listen_ip: str = "127.0.0.1"
     er_force_listen_port: int = 10301
 
     _socket_writer: SocketWriter = attr.ib(init=False)
@@ -24,7 +32,9 @@ class ErForceClient(VisionClient):
 
     def __attrs_post_init__(self) -> None:
         super(ErForceClient, self).__attrs_post_init__()
-        self._socket_writer = SocketWriter(ip=self.er_force_listen_ip, port=self.er_force_listen_port)
+        self._socket_writer = SocketWriter(
+            ip=self.er_force_listen_ip, port=self.er_force_listen_port
+        )
         if self.should_loop_commands:
             manager = multiprocessing.Manager()
             self._last_packages = manager.dict()

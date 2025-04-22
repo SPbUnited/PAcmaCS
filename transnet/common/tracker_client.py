@@ -5,7 +5,7 @@ from cattrs import structure, unstructure
 
 from common.sockets import SocketReader
 
-from .pb.messages_robocup_ssl_wrapper_tracked_pb2 import (
+from protopy.tracker.ssl_vision_wrapper_tracked_pb2 import (
     TrackerWrapperPacket as TrackerWrapperPacketProto,
 )
 from .tracker_model import TrackerWrapperPacket

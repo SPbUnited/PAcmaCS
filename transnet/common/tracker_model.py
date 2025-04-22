@@ -16,16 +16,16 @@ class Vector3:
     z: float
 
 
-class TeamColor(Enum):
-    TEAM_COLOR_UNKNOWN = 0
-    TEAM_COLOR_YELLOW = 1
-    TEAM_COLOR_BLUE = 2
+class Team(Enum):
+    UNKNOWN = 0
+    YELLOW = 1
+    BLUE = 2
 
 
 @define
 class RobotId:
     id: int
-    team_color: TeamColor
+    team: Team
 
 
 class Capability(Enum):
@@ -89,7 +89,7 @@ def proto_to_vector3(proto) -> Vector3:
 
 
 def proto_to_robot_id(proto) -> RobotId:
-    return RobotId(id=proto.id, team_color=TeamColor(proto.team_color))
+    return RobotId(id=proto.id, team=Team(proto.team))
 
 
 def proto_to_tracked_ball(proto) -> TrackedBall:
