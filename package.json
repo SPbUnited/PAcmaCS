@@ -1,5 +1,5 @@
 {
-  "version": "0.13.0",
+  "version": "0.13.1",
   "dependencies": {
     "socket.io-client": "^4.8.1"
   }

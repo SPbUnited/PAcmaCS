@@ -182,41 +182,41 @@ class SimControl:
 class GrSimRobotControl:
     client: GrSimClient
 
-    def actuate_robot(self, command: rcm.RobotCommandExt):
-        action_command = ActionCommand(
-            team=Team.YELLOW if command.isteamyellow else Team.BLUE, robot_id=command.id
+    wheel_diameter: float = field(default=0.027)
+
+    def actuate_robot(self, cmd: rcm.RobotCommandExt):
+        ac = ActionCommand(
+            team=Team.YELLOW if cmd.isteamyellow else Team.BLUE, robot_id=cmd.id
         )
 
-        if command.move_command is not None:
-            if command.move_command.wheel_velocity is not None:
-                action_command.wheelsspeed = True
-                action_command.wheel1 = command.move_command.wheel_velocity.front_left
-                action_command.wheel2 = command.move_command.wheel_velocity.back_left
-                action_command.wheel3 = command.move_command.wheel_velocity.back_right
-                action_command.wheel4 = command.move_command.wheel_velocity.front_right
-            if command.move_command.local_velocity is not None:
-                action_command.velnormal = command.move_command.local_velocity.left
-                action_command.veltangent = command.move_command.local_velocity.forward
-                action_command.velangular = command.move_command.local_velocity.angular
-            if command.move_command.global_velocity is not None:
+        if cmd.move_command is not None:
+            if cmd.move_command.wheel_velocity is not None:
+                m_s_to_rad_s = 1 / self.wheel_diameter
+
+                ac.wheelsspeed = True
+                ac.wheel1 = cmd.move_command.wheel_velocity.front_left / m_s_to_rad_s
+                ac.wheel2 = cmd.move_command.wheel_velocity.back_left / m_s_to_rad_s
+                ac.wheel3 = cmd.move_command.wheel_velocity.back_right / m_s_to_rad_s
+                ac.wheel4 = cmd.move_command.wheel_velocity.front_right / m_s_to_rad_s
+            if cmd.move_command.local_velocity is not None:
+                ac.velnormal = cmd.move_command.local_velocity.left
+                ac.veltangent = cmd.move_command.local_velocity.forward
+                ac.velangular = cmd.move_command.local_velocity.angular
+            if cmd.move_command.global_velocity is not None:
                 raise Exception("Global velocity not implemented")
 
-        if command.kick_speed is not None:
-            if command.kick_angle is not None:
-                action_command.kickspeedx = command.kick_speed * math.cos(
-                    command.kick_angle
-                )
-                action_command.kickspeedz = command.kick_speed * math.sin(
-                    command.kick_angle
-                )
+        if cmd.kick_speed is not None:
+            if cmd.kick_angle is not None:
+                ac.kickspeedx = cmd.kick_speed * math.cos(cmd.kick_angle)
+                ac.kickspeedz = cmd.kick_speed * math.sin(cmd.kick_angle)
             else:
-                action_command.kickspeedx = command.kick_speed
-                action_command.kickspeedz = 0
+                ac.kickspeedx = cmd.kick_speed
+                ac.kickspeedz = 0
 
-        if command.dribbler_speed is not None:
-            action_command.spinner = command.dribbler_speed > 0
+        if cmd.dribbler_speed is not None:
+            ac.spinner = cmd.dribbler_speed > 0
 
-        self.client.send_action_command(action_command)
+        self.client.send_action_command(ac)
 
 
 @define
