@@ -88,13 +88,7 @@ def setup_proxy(context: zmq.Context):
 
 
 from common.vision_model import Team
-from viscont import (
-    SSLVision,
-    SimControl,
-    GrSimRobotControl,
-    RobotActuateModel,
-    RobotControl,
-)
+from viscont import Viscont as vc
 
 
 @define
@@ -182,9 +176,9 @@ if __name__ == "__main__":
     client = GrSimClient(zmq_relay_template=zmqVisionRelayTemplate)
     tracker_client = TrackerClient(zmq_relay_template=zmqTrackerRelayTemplate)
 
-    vision = SSLVision(client=client)
-    simControl = SimControl(client=client)
-    robotControl = RobotControl(client=GrSimRobotControl(client=client))
+    vision = vc.SSLVision(client=client)
+    simControl = vc.SimControl(client=client)
+    robotControl = vc.RobotControl(client=vc.GrSimRobotControl(client=client))
 
     setup_proxy(context)
 

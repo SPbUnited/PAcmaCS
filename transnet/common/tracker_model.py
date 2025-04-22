@@ -121,20 +121,9 @@ def proto_to_kicked_ball(proto) -> Optional[KickedBall]:
 
 def proto_to_tracked_robot(proto) -> TrackedRobot:
     return TrackedRobot(
-        # robot_id=RobotId(
-        #     id=proto.robot_id.id, team_color=TeamColor(proto.robot_id.team_color)
-        # ),
-        # pos=Vector2(x=proto.pos.x, y=proto.pos.y),
-        # orientation=proto.orientation,
-        # vel=Vector2(x=proto.vel.x, y=proto.vel.y),
-        # vel_angular=proto.vel_angular,
-        # visibility=proto.visibility,
         robot_id=proto_to_robot_id(proto.robot_id),
         pos=proto_to_vector2(proto.pos),
         orientation=proto.orientation,
-        # vel=proto_to_vector2(proto.vel),
-        # vel_angular=proto.vel_angular,
-        # visibility=proto.visibility,
         vel=proto_to_vector2(proto.vel) if proto.HasField("vel") else None,
         vel_angular=proto.vel_angular if proto.HasField("vel_angular") else None,
         visibility=proto.visibility if proto.HasField("visibility") else None,
@@ -167,11 +156,6 @@ def proto_to_wrapper_packet(proto) -> TrackerWrapperPacket:
             else None
         ),
     )
-    # return TrackerWrapperPacket(
-    #     uuid=proto.uuid,
-    #     source_name=proto.source_name,
-    #     tracked_frame=proto.tracked_frame,
-    # )
 
 
 # # Usage example:

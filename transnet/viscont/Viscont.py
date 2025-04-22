@@ -1,9 +1,13 @@
+import math
 from grsim.model import BallReplacement, RobotReplacement
 from grsim.client import GrSimClient, ActionCommand
 from common.vision_model import Team
 from attrs import define, field
 from typing import Any, Dict
 import struct
+from cattrs import structure, unstructure
+
+from . import robot_command_model as rcm
 
 
 @define
@@ -175,40 +179,44 @@ class SimControl:
 
 
 @define
-class RobotActuateModel:
-    team: Team = field(default=Team.YELLOW)
-    robot_id: int = field(default=0)
-    vx_m_s: float = field(default=0)
-    vy_m_s: float = field(default=0)
-    w_rad_s: float = field(default=0)
-    dribbler_enable: bool = field(default=False)
-    kicklow: bool = field(default=False)
-    kickhigh: bool = field(default=False)
-
-
-@define
 class GrSimRobotControl:
     client: GrSimClient
 
-    def actuate_robot(self, command: RobotActuateModel):
-        self.client.send_action_command(
-            ActionCommand(
-                team=command.team,
-                robot_id=command.robot_id,
-                timestamp=0,
-                kickspeedx=4 if command.kicklow or True else 0,
-                kickspeedz=0,
-                veltangent=command.vy_m_s,
-                velnormal=command.vx_m_s,
-                velangular=command.w_rad_s,
-                spinner=0,
-                wheelsspeed=False,
-                wheel1=None,
-                wheel2=None,
-                wheel3=None,
-                wheel4=None,
-            )
+    def actuate_robot(self, command: rcm.RobotCommandExt):
+        action_command = ActionCommand(
+            team=Team.YELLOW if command.isteamyellow else Team.BLUE, robot_id=command.id
         )
+
+        if command.move_command is not None:
+            if command.move_command.wheel_velocity is not None:
+                action_command.wheelsspeed = True
+                action_command.wheel1 = command.move_command.wheel_velocity.front_left
+                action_command.wheel2 = command.move_command.wheel_velocity.back_left
+                action_command.wheel3 = command.move_command.wheel_velocity.back_right
+                action_command.wheel4 = command.move_command.wheel_velocity.front_right
+            if command.move_command.local_velocity is not None:
+                action_command.velnormal = command.move_command.local_velocity.left
+                action_command.veltangent = command.move_command.local_velocity.forward
+                action_command.velangular = command.move_command.local_velocity.angular
+            if command.move_command.global_velocity is not None:
+                raise Exception("Global velocity not implemented")
+
+        if command.kick_speed is not None:
+            if command.kick_angle is not None:
+                action_command.kickspeedx = command.kick_speed * math.cos(
+                    command.kick_angle
+                )
+                action_command.kickspeedz = command.kick_speed * math.sin(
+                    command.kick_angle
+                )
+            else:
+                action_command.kickspeedx = command.kick_speed
+                action_command.kickspeedz = 0
+
+        if command.dribbler_speed is not None:
+            action_command.spinner = command.dribbler_speed > 0
+
+        self.client.send_action_command(action_command)
 
 
 @define
@@ -267,7 +275,7 @@ class RobotControl:
 
         return control_data
 
-    def apply_commands(self, commands: Dict):
+    def apply_commands(self, commands: rcm.RobotControlExt):
         """
         Send robot control commands to GrSim.
 
@@ -275,31 +283,27 @@ class RobotControl:
             commands (dict): {'blue': [robot0_dict, ...], 'yellow': [robot0_dict, ...]}
                 Each robot_dict contains control parameters for one robot.
         """
-        for team in commands:
-            for n, robot in enumerate(commands[team]):
-                # if n == 3 and team == "blue":
-                # print(robot["kick_forward"])
-                # print(robot)
-                self.client.actuate_robot(
-                    RobotActuateModel(
-                        team=(Team.BLUE if team == "blue" else Team.YELLOW),
-                        robot_id=n,
-                        vx_m_s=-robot["speed_y"] / 1000,
-                        vy_m_s=robot["speed_x"] / 1000,
-                        w_rad_s=robot["speed_r_or_angle"],
-                        kicklow=robot["kick_forward"],
-                        kickhigh=robot["kick_up"],
-                        dribbler_enable=robot["dribbler_enable"],
-                    )
-                )
+        team = Team.YELLOW if commands.isteamyellow else Team.BLUE
+
+        for robot_command in commands.robot_commands:
+            robot_command_ext = rcm.RobotCommandExt(
+                isteamyellow=commands.isteamyellow,
+                id=robot_command.id,
+                move_command=robot_command.move_command,
+                kick_speed=robot_command.kick_speed,
+                kick_angle=robot_command.kick_angle,
+                dribbler_speed=robot_command.dribbler_speed,
+            )
+            self.client.actuate_robot(robot_command_ext)
 
     def signal_handler(self, signal: Dict) -> bool:
         signal_type = signal["transnet"]
 
         if signal_type == "actuate_robot":
-            self.apply_commands(signal["data"])
-            print(signal["data"])
-
+            # print(signal["data"])
+            commands = structure(signal["data"], rcm.RobotControlExt)
+            self.apply_commands(commands)
+            # print(commands)
             return True
 
         return False
