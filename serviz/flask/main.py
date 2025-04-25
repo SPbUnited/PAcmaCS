@@ -1,8 +1,10 @@
+import time
 from flask import Flask, render_template
 from flask_socketio import SocketIO
 
 import threading
-from multiprocessing import Manager
+
+from blue_green_storage import BGStore
 
 from argparse import ArgumentParser
 import yaml
@@ -36,13 +38,9 @@ if os.environ.get("DIV"):
 import zmq
 import copy
 
-manager = Manager()
-# Shared sprite data
-sprite_data = manager.dict({})
-sprite_lock = manager.Lock()
-
-telemetry_data = manager.dict({})
-telemetry_lock = manager.Lock()
+sprite_store = BGStore()
+telemetry_store = BGStore()
+visibility = {}
 
 context = zmq.Context()
 s_signals = context.socket(zmq.PUB)
@@ -50,17 +48,15 @@ s_signals.connect(config["ether"]["s_signals_sub_url"])
 
 
 def update_layer(layer_name, data):
-    with sprite_lock:
-        if layer_name not in sprite_data:
-            sprite_data[layer_name] = manager.dict(data)
-        else:
-            sprite_data[layer_name]["data"] = data["data"]
+    if layer_name not in visibility:
+        visibility[layer_name] = data["is_visible"]
+    else:
+        data["is_visible"] = visibility[layer_name]
+    sprite_store.write({layer_name: data})
 
 
 def update_telemetry_data(data):
-    with telemetry_lock:
-        for key in data:
-            telemetry_data[key] = data[key]
+    telemetry_store.write(data)
 
 
 @app.route("/")
@@ -83,36 +79,31 @@ def disconnect():
 
 @sio.on("updated_ui_state")
 def update_ui_state(data):
-    # print(data)
     pass
 
 
 @sio.on("send_signal")
 def send_signal(data):
-    # print("Send signal")
     s_signals.send_json(data)
 
 
 @sio.on("clear_layers")
 def clear_layers(data):
-    with sprite_lock:
-        sprite_data.clear()
+    visibility.clear()
+    sprite_store.clear()
 
 
 @sio.on("clear_telemetry")
 def clear_telemetry(data):
-    with telemetry_lock:
-        telemetry_data.clear()
+    telemetry_store.clear()
 
 
 @sio.on("toggle_layer_visibility")
-def toggle_layer_visibility(data):
-    # print(data)
-    with sprite_lock:
-        sprite_data[data]["is_visible"] = not sprite_data[data]["is_visible"]
+def toggle_layer_visibility(key):
+    visibility[key] = not visibility[key]
 
 
-def update_sprites(manager, sprite_data, state_lock):
+def update_sprites():
     print("Update sprites enter")
 
     context = zmq.Context()
@@ -124,24 +115,23 @@ def update_sprites(manager, sprite_data, state_lock):
 
     while True:
         sio.sleep(0.01)
+
         for _ in range(100):
-            print("|", end="")
             try:
                 message = s_draw.recv_json(flags=zmq.NOBLOCK)
                 for key, value in message.items():
                     update_layer(key, value)
-                    print(":", end="")
+                    pass
             except zmq.ZMQError as e:
                 if e.errno == zmq.EAGAIN:
-                    print("!!!!!", end="")
                     break
                 else:
                     raise
 
-        print("\\//\\")
+        sprite_store.switch()
 
 
-def update_telemetry(manager, telemetry_data, telemetry_lock):
+def update_telemetry():
     print("Update telemetry enter")
 
     context = zmq.Context()
@@ -154,28 +144,29 @@ def update_telemetry(manager, telemetry_data, telemetry_lock):
 
     while True:
         sio.sleep(0.01)
+
         for _ in range(100):
-            # print("~", end="")
             try:
                 message = s_telemetry.recv_json(flags=zmq.NOBLOCK)
                 update_telemetry_data(message)
-                # print("=", end="")
             except zmq.ZMQError as e:
                 if e.errno == zmq.EAGAIN:
                     break
                 else:
                     raise
 
-        # print("/\\\\/")
+        telemetry_store.switch()
 
 
 def emit_data(sio):
+
+    print("Data emitter enter")
+
     while True:
         sio.sleep(0.01)
-        with sprite_lock:
-            sio.emit("update_sprites", copy.deepcopy(sprite_data.copy()))
-        with telemetry_lock:
-            sio.emit("update_telemetry", copy.deepcopy(telemetry_data.copy()))
+
+        sio.emit("update_sprites", sprite_store.fetch())
+        sio.emit("update_telemetry", telemetry_store.fetch())
 
 
 # Run the app
@@ -187,10 +178,10 @@ if __name__ == "__main__":
     # import os
     # if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
     sio.start_background_task(
-        target=lambda: update_sprites(manager, sprite_data, sprite_lock)
+        target=lambda: update_sprites()  # manager, sprite_data, sprite_lock)
     )
     sio.start_background_task(
-        target=lambda: update_telemetry(manager, telemetry_data, telemetry_lock)
+        target=lambda: update_telemetry()  # manager, telemetry_data, telemetry_lock)
     )
     sio.start_background_task(target=lambda: emit_data(sio))
     sio.run(
