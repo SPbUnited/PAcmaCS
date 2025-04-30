@@ -1,13 +1,15 @@
 import socket
 import struct
+from typing import Optional
 
 import attr
 
 
 @attr.s(auto_attribs=True, kw_only=True)
 class SocketReader:
-    ip: str = '224.5.23.2'
+    ip: str = "224.5.23.2"
     port: int = 10020
+    timeout: Optional[float] = None
     sock: socket.socket = attr.ib(init=False)
     msg_size: int = attr.ib(default=65536, init=False)
 
@@ -19,13 +21,15 @@ class SocketReader:
         mreq = struct.pack("4sl", socket.inet_aton(self.ip), socket.INADDR_ANY)
         self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
 
+        self.sock.settimeout(self.timeout)
+
     def read_package(self) -> bytes:
         return self.sock.recv(self.msg_size)
 
 
 @attr.s(auto_attribs=True, kw_only=True)
 class SocketWriter:
-    ip: str = '127.0.0.1'
+    ip: str = "127.0.0.1"
     port: int = 20011
     sock: socket.socket = attr.ib(init=False)
 
@@ -35,4 +39,3 @@ class SocketWriter:
 
     def send_package(self, msg: bytes) -> None:
         self.sock.sendto(msg, (self.ip, self.port))
-

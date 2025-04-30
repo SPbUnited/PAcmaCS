@@ -1,4 +1,5 @@
 import multiprocessing
+import time
 import typing
 
 import attr
@@ -28,6 +29,8 @@ class VisionClient:
     multicast_ip: str = "224.5.23.2"
     multicast_port: int = 10006
 
+    vision_timeout: float = 1
+
     zmq_relay_template: typing.Any = attr.ib(default=None, init=True)
 
     _socket_reader: SocketReader = attr.ib(init=False)
@@ -36,15 +39,17 @@ class VisionClient:
     _packages: typing.List[bytes] = attr.ib(init=False)
     _detections: typing.List[Detection] = attr.ib(init=False)
     _reader: multiprocessing.Process = attr.ib(init=False)
+    _robot_detection_time: dict = attr.ib(init=False)
 
     def __attrs_post_init__(self) -> None:
         self._socket_reader = SocketReader(
-            ip=self.multicast_ip, port=self.multicast_port
+            ip=self.multicast_ip, port=self.multicast_port, timeout=self.vision_timeout
         )
         manager = multiprocessing.Manager()
         self._packages = manager.list()
         self._detections = manager.list()
         self._reader = multiprocessing.Process(target=self._read_loop)
+        self._robot_detection_time = {}
 
     def init(self) -> None:
         self._reader.start()
@@ -82,12 +87,47 @@ class VisionClient:
         self._detections.append(detection)
         zmq_relay = self.zmq_relay_template()
         while True:
-            new_package = self._socket_reader.read_package()
-            new_detection = self._read_detection(new_package)
-            detection = self._merge_detections(detection, new_detection)
-            self._packages[0] = new_package
+            try:
+                new_package = self._socket_reader.read_package()
+                new_detection = self._read_detection(new_package)
+                detection = self._merge_detections(detection, new_detection)
+                self._packages[0] = new_package
+                zmq_relay.send(new_package)
+            except TimeoutError:
+                pass
+            detection = self._filter_timed_out_robots(detection)
             self._detections[0] = detection
-            zmq_relay.send(new_package)
+
+    def _robot2key(self, robot: RobotDetection) -> tuple:
+        return (robot.robot_id, robot.team)
+
+    def _filter_timed_out_robots(self, detection: Detection) -> Detection:
+        for i, robot in enumerate(detection.robots):
+            if self._robot2key(robot) not in self._robot_detection_time:
+                self._robot_detection_time[self._robot2key(robot)] = (
+                    time.time() - robot.frame_info.t_capture
+                )
+
+        detection.robots = [
+            robot
+            for robot in detection.robots
+            if time.time()
+            - (
+                self._robot_detection_time[self._robot2key(robot)]
+                + robot.frame_info.t_capture
+            )
+            < self.vision_timeout
+        ]
+
+        new_robot_detection_time = {
+            rkey: det_time
+            for rkey, det_time in self._robot_detection_time.items()
+            if rkey in [self._robot2key(r) for r in detection.robots]
+        }
+
+        self._robot_detection_time = new_robot_detection_time
+
+        return detection
 
     def read_last_package(self) -> bytes:
         return self._packages[0]
