@@ -9,6 +9,7 @@
     import type { Socket, SocketOptions } from "socket.io-client";
     import FpsLed from "./lib/FpsLed.svelte";
     import Led from "./lib/Led.svelte";
+    import TelemetryScreen from "./lib/TelemetryScreen.svelte";
 
     let fpsLed: FpsLed;
 
@@ -844,11 +845,7 @@
                 </button>
             </div>
         </div>
-        <pre>
-        <code>
-{telemetry_data[telemetry_to_display]}
-        </code>
-        </pre>
+        <TelemetryScreen bind:raw_telemetry={telemetry_data[telemetry_to_display]} />
     </div>
 
     {#if showHelp}
