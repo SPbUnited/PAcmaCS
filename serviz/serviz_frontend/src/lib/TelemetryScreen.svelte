@@ -1,12 +1,11 @@
 <script lang="ts">
-    let { raw_telemetry = $bindable() }: { raw_telemetry: string } = $props();
+
+    let { name, raw_telemetry, width_percent = 100 } = $props();
 
     function format_telemetry(text: string): string {
-        if(!text)
-            return text;
+        if (!text) return text;
 
-        const style = `
-<style>
+        const style = `<style>
     /* Scoped styles that only affect elements within .tq (telemetry output) */
     .tq r {
         color: red;
@@ -66,8 +65,7 @@
     .tq q {
         text-decoration: line-through;
     }
-</style>
-`;
+</style>`;
         // // Mapping of markdown emoji symbols to HTML Unicode entities
         // const emojiMap: Record<string, string> = {
         //     ':smile:': '&#x1F604;',
@@ -97,9 +95,20 @@
     }
 </script>
 
-<pre>
-<code class="tq">
-{@html format_telemetry(raw_telemetry)}
-</code>
+<pre class="tq" style="width: {width_percent}%;">
+<!-- <h6>{name}</h6> -->
+{@html "<x>[" + name + "]</x>\n" + format_telemetry(raw_telemetry)}
 </pre>
 
+<style>
+pre {
+    white-space: pre-wrap;       /* Since CSS 2.1 */
+    white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+    white-space: -pre-wrap;      /* Opera 4-6 */
+    white-space: -o-pre-wrap;    /* Opera 7 */
+    word-wrap: break-word;       /* Internet Explorer 5.5+ */
+    margin: 0.5rem;
+    padding: 0.5rem;
+    outline: dashed 1px #888;
+}
+</style>

@@ -72,7 +72,10 @@
 
     let layer_data = $state({});
     let telemetry_data = $state({});
-    let telemetry_to_display = $state("");
+    let telemetry_to_display = $state(["", "", ""]);
+    let telemetry_width = $derived(
+        100 / telemetry_to_display.filter((t) => t !== "").length,
+    );
 
     // $inspect(layer_data)
 
@@ -80,7 +83,9 @@
         currentTime = $state(0);
         lastUpdateTime = $state(0);
         connectionTimeout = 1000;
-        isOnline = $derived(this.currentTime - this.lastUpdateTime < this.connectionTimeout);
+        isOnline = $derived(
+            this.currentTime - this.lastUpdateTime < this.connectionTimeout,
+        );
         color = $derived(this.isOnline ? "#00ff00" : "#ff0000");
 
         constructor() {
@@ -819,13 +824,39 @@
     >
         <!-- top: {innerHeight - (showBottom ? bottomHeight : 0)}px; -->
         <div style="display: flex; flex-direction: column;">
-            <h3>Telemetry</h3>
-            <select bind:value={telemetry_to_display}>
-                <option value="">None</option>
-                {#each Object.keys(telemetry_data) as key}
-                    <option value={key}>{key}</option>
-                {/each}
-            </select>
+            <h3 style="margin: 0;">Telemetry</h3>
+            <span>
+                <button
+                    class="button-4"
+                    style="width: 45%;"
+                    onclick={() => {
+                        if (telemetry_to_display.length < 6) {
+                            telemetry_to_display.push("");
+                        }
+                    }}
+                >
+                    +
+                </button>
+                <button
+                    class="button-4"
+                    style="width: 45%;"
+                    onclick={() => {
+                        if (telemetry_to_display.length > 1) {
+                            telemetry_to_display.pop();
+                        }
+                    }}
+                >
+                    -
+                </button>
+            </span>
+            {#each telemetry_to_display as _, i}
+                <select bind:value={telemetry_to_display[i]}>
+                    <option value="">None</option>
+                    {#each Object.keys(telemetry_data) as key}
+                        <option value={key}>{key}</option>
+                    {/each}
+                </select>
+            {/each}
             <button
                 class="button-4"
                 onclick={() => {
@@ -845,7 +876,17 @@
                 </button>
             </div>
         </div>
-        <TelemetryScreen bind:raw_telemetry={telemetry_data[telemetry_to_display]} />
+        <div style="display: flex; flex-direction: row;">
+            {#each telemetry_to_display as _, i}
+                {#if telemetry_to_display[i] !== ""}
+                    <TelemetryScreen
+                        name={telemetry_to_display[i]}
+                        raw_telemetry={telemetry_data[telemetry_to_display[i]]}
+                        width_percent={telemetry_width}
+                    />
+                {/if}
+            {/each}
+        </div>
     </div>
 
     {#if showHelp}
@@ -971,7 +1012,7 @@
         font-weight: 500;
         line-height: 20px;
         list-style: none;
-        padding: 6px 16px;
+        padding: 2px 6px;
         position: relative;
         transition: background-color 0.2s cubic-bezier(0.3, 0, 0.5, 1);
         user-select: none;
