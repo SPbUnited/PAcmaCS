@@ -95,22 +95,25 @@ class SimControl:
     def set_formation(self, formation):
         graveyard = {"x": -2000, "y": 3000, "rotation": 0}
 
-        # Send all robots to the graveyard
-        for team in [Team.YELLOW, Team.BLUE]:
-            for i in range(16):
-                self.client.send_robot_replacement(
-                    RobotReplacement(
-                        x=graveyard["x"] / 1000,
-                        y=graveyard["y"] / 1000,
-                        direction=graveyard["rotation"],
-                        robot_id=i,
-                        team=team,
+        if "enable_graveyard" in formation and formation["enable_graveyard"] == True:
+            # Send all robots to the graveyard
+            for team in [Team.YELLOW, Team.BLUE]:
+                for i in range(16):
+                    self.client.send_robot_replacement(
+                        RobotReplacement(
+                            x=graveyard["x"] / 1000,
+                            y=graveyard["y"] / 1000,
+                            direction=graveyard["rotation"],
+                            robot_id=i,
+                            team=team,
+                        )
                     )
-                )
-                graveyard["x"] += 200
+                    graveyard["x"] += 200
 
-        # Send all known robots to the test formation
+        # Send all known robots to the required formation
         for team in [Team.YELLOW, Team.BLUE]:
+            if team.name not in formation:
+                continue
             for robot in formation[team.name]:
                 self.client.send_robot_replacement(
                     RobotReplacement(
@@ -121,6 +124,11 @@ class SimControl:
                         team=team,
                     )
                 )
+
+        # Send ball to the required position
+        if "BALL" in formation:
+            ball = formation["BALL"]
+            self.set_ball(ball["x"], ball["y"], ball["vx"], ball["vy"])
 
     def set_ball(self, x, y, vx, vy):
         self.client.send_ball_replacement(
@@ -158,11 +166,11 @@ class SimControl:
                     {"robot_id": 4, "x": 700, "y": 600, "rotation": 180},
                     {"robot_id": 5, "x": 700, "y": -600, "rotation": 180},
                 ],
+                "BALL": {"x": 1000, "y": 750, "vx": -2000, "vy": -2000},
+                "enable_graveyard": True,
             }
 
             self.set_formation(test_formation)
-
-            self.set_ball(1000, 750, -2000, -2000)
 
             return True
 
@@ -173,6 +181,11 @@ class SimControl:
             vy = signal["data"]["vy"]
             self.set_ball(x, y, vx, vy)
 
+            return True
+
+        elif signal_type == "set_formation":
+            formation = signal["data"]
+            self.set_formation(formation)
             return True
 
         return False
