@@ -3,8 +3,8 @@
 ## Пример рисования всех доступных объектов
 
 ```python
-socket = context.socket(zmq.PUSH)
-socket.connect("ipc:///tmp/ether.draw")
+socket = context.socket(zmq.PUB)
+socket.connect("ipc:///tmp/ether.draw.xsub")
 
 draw_test_data = {
     "draw_test": {
