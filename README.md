@@ -1,4 +1,4 @@
-[![Version](https://img.shields.io/badge/version-v0.16.1-informational)](https://github.com/SPBUnited/serviz/actions/workflows/auto-semver.yml)
+[![Version](https://img.shields.io/badge/version-v0.16.2-informational)](https://github.com/SPBUnited/serviz/actions/workflows/auto-semver.yml)
 
 # PAcmaCS - Programmatically Actionable multi-agent Cybernetic Studio
 
@@ -51,10 +51,10 @@
 
 ## Документация
 
-[Справка по формату межпроцессных сообщений](docs/zmq_api_v3.md)
-[Serviz draw API](docs/serviz_draw_api.md)
-[Serviz telemetry API](docs/serviz_telemetry_api.md)
-[Transnet signal API](docs/transnet_signal_api.md)
+- [Справка по формату межпроцессных сообщений](docs/zmq_api_v3.md)
+- [Serviz draw API](docs/serviz_draw_api.md)
+- [Serviz telemetry API](docs/serviz_telemetry_api.md)
+- [Transnet signal API](docs/transnet_signal_api.md)
 
 ## Зависимости
 
