@@ -152,10 +152,11 @@ def convert_trackers_to_serviz(trackers: TrackerWrapperPacketModel):
 
     for robot in trackers.tracked_frame.robots:
         sprite_type = "ball"
+        # WARN: This is a hack due to proto enum field swap in new ssl packets
         if robot.robot_id.team.value == Team.BLUE.value:
-            sprite_type = "robot_blu"
-        elif robot.robot_id.team.value == Team.YELLOW.value:
             sprite_type = "robot_yel"
+        elif robot.robot_id.team.value == Team.YELLOW.value:
+            sprite_type = "robot_blu"
         data[layer_name]["data"].append(
             {
                 "type": sprite_type,
