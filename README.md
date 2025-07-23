@@ -1,4 +1,4 @@
-[![Version](https://img.shields.io/badge/version-v0.16.3-informational)](https://github.com/SPBUnited/serviz/actions/workflows/auto-semver.yml)
+[![Version](https://img.shields.io/badge/version-v0.16.4-informational)](https://github.com/SPBUnited/serviz/actions/workflows/auto-semver.yml)
 
 # PAcmaCS - Programmatically Actionable multi-agent Cybernetic Studio
 
@@ -70,7 +70,7 @@
 
 ```bash
 git clone https://github.com/SPbUnited/PAcmaCS.git
-cd serviz
+cd PAcmaCS
 ```
 
 Установите зависимости и соберите проект:
