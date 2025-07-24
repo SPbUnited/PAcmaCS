@@ -1,4 +1,4 @@
-[![Version](https://img.shields.io/badge/version-v0.16.8-informational)](https://github.com/SPBUnited/serviz/actions/workflows/auto-semver.yml)
+[![Version](https://img.shields.io/badge/version-v0.16.9-informational)](https://github.com/SPBUnited/serviz/actions/workflows/auto-semver.yml)
 
 # PAcmaCS - Programmatically Actionable multi-agent Cybernetic Studio
 

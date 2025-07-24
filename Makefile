@@ -58,7 +58,7 @@ install_docker: no-sudo
 	# Add Docker's official GPG key:
 	sudo rm /etc/apt/sources.list.d/docker.list || true
 	sudo apt update || true
-	sudo apt install ca-certificates curl
+	sudo apt install -y ca-certificates curl
 	sudo install -m 0755 -d /etc/apt/keyrings
 	sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
 	sudo chmod a+r /etc/apt/keyrings/docker.asc
@@ -70,19 +70,20 @@ install_docker: no-sudo
 	sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 	sudo apt update || true
 
-	sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+	sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
 post_install_docker: no-sudo
 	sudo groupadd docker || true
 	sudo usermod -aG docker ${USER}
-	newgrp docker
+	@echo "newgrp docker"
+	@echo "\n${YELLOW}Reboot your machine now${NC} (ignore if using WSL)"
+	@newgrp docker
 
 install_misc: no-sudo
 	sudo apt update || true
-	sudo apt install python3-venv npm jq vite
+	sudo apt install -y python3-venv npm jq vite
 
 install: install_misc install_docker post_install_docker
-	@echo "\n${YELLOW}Reboot your machine now${NC} (ignore if using WSL)"
 
 install_wsl: install_misc
 
