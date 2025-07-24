@@ -78,6 +78,7 @@ post_install_docker: no-sudo
 	newgrp docker
 
 install_misc: no-sudo
+	sudo apt update
 	sudo apt install python3-venv npm jq vite
 
 # https://stackoverflow.com/questions/59867140/conditional-dependencies-in-gnu-make
