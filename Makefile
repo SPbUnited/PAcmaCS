@@ -86,6 +86,7 @@ install_misc: no-sudo
 install: install_misc install_docker post_install_docker
 
 install_wsl: install_misc
+	@echo "\n${YELLOW}Now please install Docker Desktop from ${WHITE}https://www.docker.com/products/docker-desktop/${NC}\n"
 
 init: init_py init_npm
 	@echo "\n${YELLOW}Don't forget to do ${WHITE}source venv/bin/activate${NC}"
