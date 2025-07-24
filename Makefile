@@ -49,6 +49,40 @@ BIRED=\033[1;91m
 
 NC=\033[0m # No Color
 
+ARCH=$(shell dpkg --print-architecture)
+# UBUNTU_CODENAME=$(shell . /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
+UBUNTU_CODENAME=$(shell cat /etc/*release | grep --color=never -oP '(?<=DISTRIB_CODENAME=).*')
+
+install_docker: no-sudo
+	echo "${UBUNTU_CODENAME}"
+	# Add Docker's official GPG key:
+	sudo rm /etc/apt/sources.list.d/docker.list || true
+	sudo apt update || true
+	sudo apt install ca-certificates curl
+	sudo install -m 0755 -d /etc/apt/keyrings
+	sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+	sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+	# Add the repository to Apt sources:
+	echo \
+	"deb [arch=${ARCH} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+	${UBUNTU_CODENAME} stable" | \
+	sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+	sudo apt update || true
+
+	sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+post_install_docker: no-sudo
+	sudo groupadd docker || true
+	sudo usermod -aG docker ${USER}
+	newgrp docker
+
+install_misc: no-sudo
+	sudo apt install python3-venv npm jq vite
+
+install: install_misc install_docker post_install_docker
+	@echo "\n${YELLOW}Reboot your machine now${NC}"
+
 init: init_py init_npm
 	@echo "\n${YELLOW}Don't forget to do ${WHITE}source venv/bin/activate${NC}"
 	@echo "                   ~~~~~~~~~~~~~~~~~~~~~~~~"
@@ -73,7 +107,7 @@ build:
 	cd serviz/serviz_frontend && npm run build
 	docker compose build
 
-up: up-message
+up: up-message no-sudo 
 	docker compose up pacmacs
 
 up-grsim: up-message
@@ -112,3 +146,12 @@ purge:
 	@echo "=============${NC}"
 	docker compose down -v --remove-orphans
 	docker compose rm -f
+
+no-sudo:
+	@{ \
+	if [ "${UID}" -eq 0 ]; \
+	then echo "${BIRED}Please run without SUDO${NC}"; \
+	exit 1; \
+	fi \
+	}
+
