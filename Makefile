@@ -80,27 +80,28 @@ post_install_docker: no-sudo
 install_misc: no-sudo
 	sudo apt install python3-venv npm jq vite
 
-install: install_misc install_docker post_install_docker
-	@echo "\n${YELLOW}Reboot your machine now${NC}"
+# https://stackoverflow.com/questions/59867140/conditional-dependencies-in-gnu-make
+install: install_misc $(if $(uname -r | sed -n 's/.*\( *Microsoft *\).*/\1/ip'), install_docker post_install_docker)
+	@echo "\n${YELLOW}Reboot your machine now${NC} (ignore if using WSL)"
 
 init: init_py init_npm
 	@echo "\n${YELLOW}Don't forget to do ${WHITE}source venv/bin/activate${NC}"
 	@echo "                   ~~~~~~~~~~~~~~~~~~~~~~~~"
 
-init_py:
+init_py: no-sudo
 	@echo "${GREEN}============="
 	@echo "| VENV INIT |"
 	@echo "=============${NC}"
 	python3 -m venv venv
 	. venv/bin/activate; pip install -r requirements.txt
 
-init_npm:
+init_npm: no-sudo
 	@echo "${GREEN}============="
 	@echo "| NPM  INIT |"
 	@echo "=============${NC}"
 	cd serviz/serviz_frontend && npm install
 
-build:
+build: no-sudo
 	@echo "${BLUE}============="
 	@echo "|   BUILD   |"
 	@echo "=============${NC}"
@@ -110,13 +111,13 @@ build:
 up: up-message no-sudo 
 	docker compose up pacmacs
 
-up-grsim: up-message
+up-grsim: up-message no-sudo
 	docker compose up grsim
 
-up-autoreferee: up-message
+up-autoreferee: up-message no-sudo
 	docker compose up autoreferee
 
-up-all: up-message
+up-all: up-message no-sudo
 	docker compose up pacmacs grsim autoreferee
 
 up-message:
@@ -128,7 +129,7 @@ up-message:
 	@echo "UID=${UID}"
 	@echo "GID=${GID}"
 
-npm-dev:
+npm-dev: no-sudo
 	@echo "${CYAN}============="
 	@echo "|  NPM DEV  |"
 	@echo "=============${NC}"
