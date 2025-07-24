@@ -78,12 +78,13 @@ post_install_docker: no-sudo
 	newgrp docker
 
 install_misc: no-sudo
-	sudo apt update
+	sudo apt update || true
 	sudo apt install python3-venv npm jq vite
 
-# https://stackoverflow.com/questions/59867140/conditional-dependencies-in-gnu-make
-install: install_misc $(if $(uname -r | sed -n 's/.*\( *Microsoft *\).*/\1/ip'), install_docker post_install_docker)
+install: install_misc install_docker post_install_docker
 	@echo "\n${YELLOW}Reboot your machine now${NC} (ignore if using WSL)"
+
+install_wsl: install_misc
 
 init: init_py init_npm
 	@echo "\n${YELLOW}Don't forget to do ${WHITE}source venv/bin/activate${NC}"
