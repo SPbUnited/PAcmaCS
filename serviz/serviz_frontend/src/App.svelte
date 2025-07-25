@@ -354,6 +354,7 @@
     let vel_xy = $state(1000);
     let vel_r = $state(2);
     let robotControlTeam = $state("blue");
+    let robotControlId = $state(0);
 
     function controlRobot() {
         let speed_x = 0;
@@ -407,11 +408,12 @@
             }
         }
 
-        actuateRobot(robotControlTeam, speed_x, speed_y, speed_r);
+        actuateRobot(robotControlTeam, robotControlId, speed_x, speed_y, speed_r);
     }
 
     function actuateRobot(
         team: string,
+        id: number,
         speed_x: number,
         speed_y: number,
         speed_r: number,
@@ -419,19 +421,20 @@
         let data = {
             transnet: "actuate_robot",
             data: {
-                [team]: [
+                isteamyellow: team === "yellow",
+                robot_commands: [
                     {
-                        speed_x: speed_x,
-                        speed_y: speed_y,
-                        speed_r_or_angle: speed_r,
-                        kick_up: 0,
-                        kick_forward: 0,
-                        // auto_kick: 0,
-                        // kicker_voltage: 0,
-                        dribbler_enable: 0,
-                        // dribbler_speed: 0,
-                        // kicker_charge_enable: 0,
-                        // beep: 0,
+                        id: id,
+                        move_command: {
+                            local_velocity: {
+                                forward: speed_x,
+                                left: -speed_y,
+                                angular: speed_r,
+                            },
+                        },
+                        kick_speed: 0,
+                        kick_angle: 0,
+                        dribbler_speed: 0,
                     },
                 ],
             },
@@ -737,11 +740,20 @@
             Robot control
         </div>
         {#if isRobotControlEnabled}
-            <div>
+            <div
+                style="display: grid; grid-template: auto / repeat(2, auto); grid-gap: 0.1rem; align-items: center"
+            >
                 <select bind:value={robotControlTeam}>
                     <option value="blue">Blue</option>
                     <option value="yellow">Yellow</option>
                 </select>
+                <input
+                    type="number"
+                    style:width="50px"
+                    min="0"
+                    max="15"
+                    bind:value={robotControlId}
+                />
             </div>
             <div>
                 <p>
