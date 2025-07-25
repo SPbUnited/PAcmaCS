@@ -6,7 +6,7 @@ export const socket = writable(null);
 
 export function initializeSocket() {
   console.log('Current url: ', window.location.href);
-  socketUrl = window.location.href;
+  let socketUrl = window.location.href;
   if(socketUrl.includes("5173/static")) {
     socketUrl = "http://localhost:8000";
   }
