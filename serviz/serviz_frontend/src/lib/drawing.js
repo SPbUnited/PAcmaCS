@@ -128,6 +128,14 @@ function drawCircle(ctx, x, y, radius, color) {
     ctx.fill();
 }
 
+function drawText(ctx, text, x, y, color = "black", modifiers = "42px", align = "left")
+{
+    ctx.font = modifiers + " Courier New";
+    ctx.fillStyle = color;
+    ctx.textAlign = align;
+    ctx.fillText(text, x, y);
+}
+
 /**
  * Drawing API Reference
  *
@@ -193,6 +201,13 @@ function drawCircle(ctx, x, y, radius, color) {
  *      - y
  *      - radius
  *      - color
+ * # text
+ *      - text
+ *      - x
+ *      - y
+ *      - color [black, white, etc.]
+ *      - modifiers [bold, italic, etc., size: 42px, 100px, etc.]
+ *      - align [left, center, right]
  */
 function drawSingleSprite(ctx, sprite, use_number_ids) {
     switch (sprite.type) {
@@ -219,6 +234,9 @@ function drawSingleSprite(ctx, sprite, use_number_ids) {
             break;
         case "circle":
             drawCircle(ctx, sprite.x, -sprite.y, sprite.radius, sprite.color);
+            break;
+        case "text":
+            drawText(ctx, sprite.text, sprite.x, -sprite.y, sprite.color, sprite.modifiers, sprite.align);
             break;
         default:
             break;

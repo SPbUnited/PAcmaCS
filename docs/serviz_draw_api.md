@@ -3,6 +3,8 @@
 ## Пример рисования всех доступных объектов
 
 ```python
+import zmq
+context = zmq.Context()
 socket = context.socket(zmq.PUB)
 socket.connect("ipc:///tmp/ether.draw.xsub")
 
@@ -11,12 +13,14 @@ draw_test_data = {
         "data": [
             {
                 "type": "robot_yel",
+                "robot_id": 3,
                 "x": -1000,
                 "y": 100,
                 "rotation": 0
             },
             {
                 "type": "robot_blu",
+                "robot_id": 4,
                 "x": 1400,
                 "y": 100,
                 "rotation": 3.14
@@ -64,10 +68,22 @@ draw_test_data = {
                 "radius": 50,
                 "color": "#FFFF00",
             },
+            {
+                "type": "text",
+                "text": "Hello World!",
+                "x": -500,
+                "y": -500,
+                "color": "#EEFF00",
+                "modifiers": "bold 100px",
+                "align": "center",
+            }
         ],
         "is_visible": True,
     }
 }
+
+import time
+time.sleep(1)
 
 socket.send_json(draw_test_data)
 ```
@@ -140,5 +156,12 @@ socket.send_json(draw_test_data)
  *      - y
  *      - radius
  *      - color
+ * # text
+ *      - text
+ *      - x
+ *      - y
+ *      - color [black, white, etc.]
+ *      - modifiers [bold, italic, etc., size: 42px, 100px, etc.]
+ *      - align [left, center, right]
  */
 ```
