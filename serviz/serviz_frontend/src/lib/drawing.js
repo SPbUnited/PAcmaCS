@@ -61,7 +61,7 @@ function drawRobot(ctx, team, robot_id, x, y, rotation, use_number_ids) {
             ctx.fillStyle = "white";
         }
         ctx.rotate(rotation);
-        ctx.font = "bold 100px Courier New";
+        ctx.font = "bold 100px Open Sans";
         ctx.textAlign = "center";
         ctx.fillText(robot_id, 0, 40);
     } else {
@@ -130,7 +130,7 @@ function drawCircle(ctx, x, y, radius, color) {
 
 function drawText(ctx, text, x, y, color = "black", modifiers = "42px", align = "left")
 {
-    ctx.font = modifiers + " Courier New";
+    ctx.font = modifiers + " Open Sans";
     ctx.fillStyle = color;
     ctx.textAlign = align;
     ctx.fillText(text, x, y);
