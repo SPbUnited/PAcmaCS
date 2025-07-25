@@ -11,7 +11,7 @@
     import Led from "./lib/Led.svelte";
     import TelemetryScreen from "./lib/TelemetryScreen.svelte";
     import { getFormationData, getFormationsCount } from "./lib/Formations.js";
-    import { getRobotControlDataControlDecoder } from "./lib/RobotControl.js";
+    import { getRobotControlDataControlDecoder, getRobotControlDataTransnet } from "./lib/RobotControl.js";
 
     let fpsLed: FpsLed;
 
@@ -419,7 +419,7 @@
         speed_y: number,
         speed_r: number,
     ) {
-        let data = getRobotControlDataControlDecoder(
+        let data = getRobotControlDataTransnet(
             team,
             id,
             speed_x,
