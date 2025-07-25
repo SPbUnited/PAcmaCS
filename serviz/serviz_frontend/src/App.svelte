@@ -11,6 +11,7 @@
     import Led from "./lib/Led.svelte";
     import TelemetryScreen from "./lib/TelemetryScreen.svelte";
     import { getFormationData, getFormationsCount } from "./lib/Formations.js";
+    import { getRobotControlDataControlDecoder } from "./lib/RobotControl.js";
 
     let fpsLed: FpsLed;
 
@@ -418,27 +419,13 @@
         speed_y: number,
         speed_r: number,
     ) {
-        let data = {
-            transnet: "actuate_robot",
-            data: {
-                isteamyellow: team === "yellow",
-                robot_commands: [
-                    {
-                        id: id,
-                        move_command: {
-                            local_velocity: {
-                                forward: speed_x,
-                                left: -speed_y,
-                                angular: speed_r,
-                            },
-                        },
-                        kick_speed: 0,
-                        kick_angle: 0,
-                        dribbler_speed: 0,
-                    },
-                ],
-            },
-        };
+        let data = getRobotControlDataControlDecoder(
+            team,
+            id,
+            speed_x,
+            speed_y,
+            speed_r
+        );
 
         socketEmit("send_signal", data);
     }

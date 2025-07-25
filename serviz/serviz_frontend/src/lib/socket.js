@@ -5,7 +5,12 @@ import io from 'socket.io-client';
 export const socket = writable(null);
 
 export function initializeSocket() {
-  const socketInstance = io('http://localhost:8000');
+  console.log('Current url: ', window.location.href);
+  socketUrl = window.location.href;
+  if(socketUrl.includes("5173/static")) {
+    socketUrl = "http://localhost:8000";
+  }
+  const socketInstance = io(socketUrl);
 
   socketInstance.on('connect', () => {
     console.log('Socket connected');

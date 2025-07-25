@@ -45,14 +45,14 @@ while True:
         signal = s_inbound.recv_json()
         signal_data = structure(signal["data"], cdcm.DecoderTeamCommand)
 
-        print(signal_data)
+        # print(signal_data)
 
         if config["control_decoder"]["is_sim"]:
             command = decoder.decoder2sim(signal_data)
         else:
             command = decoder.decoder2robot(signal_data)
 
-        print(command)
+        # print(command)
 
         s_outbound.send_json(
             {"transnet": "actuate_robot", "data": unstructure(command)}
