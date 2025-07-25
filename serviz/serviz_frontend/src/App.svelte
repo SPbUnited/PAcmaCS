@@ -10,6 +10,7 @@
     import FpsLed from "./lib/FpsLed.svelte";
     import Led from "./lib/Led.svelte";
     import TelemetryScreen from "./lib/TelemetryScreen.svelte";
+    import { getFormationData, getFormationsCount } from "./lib/Formations.js";
 
     let fpsLed: FpsLed;
 
@@ -765,6 +766,29 @@
                 </p>
             </div>
         {/if}
+
+        <hr />
+        
+        <h3>Formations</h3>
+        <div
+                style="display: grid; grid-template: auto / repeat({getFormationsCount()}, auto); grid-gap: 0.1rem; align-items: center"
+        >
+        {#each {length: getFormationsCount()} as _, i}
+            <button
+                class="button-4"
+                onclick={() => {
+                    socketEmit("send_signal", getFormationData(i));
+                }}
+            >{i}</button>
+        {/each}
+        </div>
+        
+        <button
+            class="button-4"
+            onclick={() => {
+                socketEmit("send_signal", getFormationData(-1));
+            }}
+        >Random formation</button>
 
         <hr />
 
