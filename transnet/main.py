@@ -32,13 +32,8 @@ s_signals.connect(config["ether"]["s_signals_pub_url"])
 s_signals.setsockopt_string(zmq.SUBSCRIBE, '{"transnet":')
 s_signals.setsockopt_string(zmq.SUBSCRIBE, "{'transnet':")
 
-s_command_sink = context.socket(zmq.SUB)
-s_command_sink.connect(config["transnet"]["s_command_sink_url"])
-s_command_sink.setsockopt_string(zmq.SUBSCRIBE, "")
-
 poller = zmq.Poller()
 poller.register(s_signals, zmq.POLLIN)
-poller.register(s_command_sink, zmq.POLLIN)
 
 
 def setup_draw_proxy(context: zmq.Context):
@@ -236,22 +231,5 @@ if __name__ == "__main__":
 
                 if not is_signal_valid:
                     print("Invalid signal: ", signal)
-
-            if s_command_sink in socks:
-                # print("Command socket received something")
-                commands = s_command_sink.recv()
-                # print(len(commands))
-                # print("============")
-                robotControl.apply_commands(robotControl.decypher_commands(commands))
-
-        # robotControl.actuate_robot(
-        #     RobotActuateModel(
-        #         team=Team.YELLOW,
-        #         robot_id=2,
-        #         vx=2,
-        #         vy=0,
-        #         w=2,
-        #     )
-        # )
 
         time.sleep(0.001)

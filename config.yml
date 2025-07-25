@@ -1,11 +1,15 @@
 serviz:
 
 transnet:
-  api_version: 1
-  s_command_sink_url: tcp://localhost:5667
+  api_version: 2
   s_vision_fan_url: tcp://*:4242
   s_game_controller_fan_url: tcp://*:4243
   s_tracker_fan_url: ipc:///tmp/transnet.tracker
+
+control_decoder:
+  api_version: 1
+  s_control_sink_url: tcp://*:5051
+  is_sim: true
 
 ether:
   api_version: 3
