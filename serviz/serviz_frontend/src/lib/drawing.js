@@ -80,13 +80,13 @@ function drawBall(ctx, x, y) {
 
 function drawLine(ctx, x_list, y_list, color, width) {
     let x = x_list[0];
-    let y = y_list[0];
+    let y = -y_list[0];
     ctx.beginPath();
     ctx.moveTo(x, y);
 
     for (let i = 1; i < x_list.length; i++) {
         x = x_list[i];
-        y = y_list[i];
+        y = -y_list[i];
         ctx.lineTo(x, y);
     }
 
@@ -97,13 +97,13 @@ function drawLine(ctx, x_list, y_list, color, width) {
 
 function drawPolygon(ctx, x_list, y_list, color, width) {
     let x = x_list[0];
-    let y = y_list[0];
+    let y = -y_list[0];
     ctx.beginPath();
     ctx.moveTo(x, y);
 
     for (let i = 1; i < x_list.length; i++) {
         x = x_list[i];
-        y = y_list[i];
+        y = -y_list[i];
         ctx.lineTo(x, y);
     }
 
@@ -209,16 +209,16 @@ function drawSingleSprite(ctx, sprite, use_number_ids) {
             drawLine(ctx, sprite.x_list, sprite.y_list, sprite.color, sprite.width);
             break;
         case "arrow":
-            drawArrow(ctx, sprite.x, sprite.y, sprite.dx, sprite.dy, sprite.color, sprite.width);
+            drawArrow(ctx, sprite.x, -sprite.y, sprite.dx, -sprite.dy, sprite.color, sprite.width);
             break;
         case "polygon":
             drawPolygon(ctx, sprite.x_list, sprite.y_list, sprite.color, sprite.width);
             break;
         case "rect":
-            drawRect(ctx, sprite.x, sprite.y, sprite.width, sprite.height, sprite.color);
+            drawRect(ctx, sprite.x, -sprite.y, sprite.width, -sprite.height, sprite.color);
             break;
         case "circle":
-            drawCircle(ctx, sprite.x, sprite.y, sprite.radius, sprite.color);
+            drawCircle(ctx, sprite.x, -sprite.y, sprite.radius, sprite.color);
             break;
         default:
             break;
