@@ -105,12 +105,19 @@ init_npm: no-sudo
 	@echo "=============${NC}"
 	cd serviz/serviz_frontend && npm install
 
-build: no-sudo
+build_docker: no-sudo
 	@echo "${BLUE}============="
-	@echo "|   BUILD   |"
+	@echo "|   BUILD DOCKER   |"
+	@echo "=============${NC}"
+	docker compose build
+
+build_npm: no-sudo
+	@echo "${BLUE}============="
+	@echo "|   BUILD NPM   |"
 	@echo "=============${NC}"
 	cd serviz/serviz_frontend && npm run build
-	docker compose build
+
+build: build_docker build_npm
 
 up: up-message no-sudo 
 	docker compose up pacmacs
