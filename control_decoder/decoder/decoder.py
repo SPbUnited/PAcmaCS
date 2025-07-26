@@ -23,12 +23,9 @@ class Decoder:
                 or decoder_command.auto_kick_up
                 or decoder_command.auto_kick_forward
             )
-            is_upper_kick = (
-                decoder_command.kick_up
-                or decoder_command.auto_kick_up
-            )
+            is_upper_kick = decoder_command.kick_up or decoder_command.auto_kick_up
 
-            kick_speed = 1 if is_kick else 0
+            kick_speed = decoder_command.kicker_setting * (6 / 15) if is_kick else 0  # real robot hits the ball at about 6 m/s at maximum voltage
             kick_angle = 30 if is_upper_kick else 0
 
             angular_vel = decoder_command.angular_vel
@@ -52,7 +49,7 @@ class Decoder:
             robot_team_command.robot_commands.append(robot_command)
 
         return robot_team_command
-    
+
     def decoder2robot(self, decoder_command: cdcm.DecoderCommand):
         """Convert the decoder command to a robot command"""
 

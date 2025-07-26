@@ -1,3 +1,4 @@
+import time
 import zmq
 
 from argparse import ArgumentParser
@@ -39,7 +40,9 @@ print("Control decoder ready")
 
 while True:
     socks = dict(poller.poll(timeout=0))
+    # print(socks.values())
     if socks == {}:
+        time.sleep(0.01)
         continue
     if s_inbound in socks:
         signal = s_inbound.recv_json()
@@ -54,6 +57,4 @@ while True:
 
         # print(command)
 
-        s_outbound.send_json(
-            {"transnet": "actuate_robot", "data": unstructure(command)}
-        )
+        s_outbound.send_json({"transnet": "actuate_robot", "data": unstructure(command)})
