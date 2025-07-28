@@ -8,6 +8,7 @@ services:
     environment:
       - VERSION=${VERSION}
       - DIV=${DIV}
+      - CTRL=${CTRL}
     init: true
     tty: true
     userns_mode: "host"

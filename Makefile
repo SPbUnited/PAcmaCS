@@ -1,5 +1,6 @@
 export VERSION := $(shell jq '.version' package.json)
-export DIV:= divB
+export DIV:= divB # divC
+export CTRL := SIM # REAL
 
 # https://stackoverflow.com/a/78547267
 export UID=$(shell id -u)
@@ -137,6 +138,7 @@ up-message:
 	@echo "=============${NC}"
 	@echo "VERSION=${VERSION}"
 	@echo "DIVISION=${DIV}"
+	@echo "CONTROL=${CTRL}"
 	@echo "UID=${UID}"
 	@echo "GID=${GID}"
 

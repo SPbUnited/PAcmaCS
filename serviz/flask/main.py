@@ -35,6 +35,7 @@ currentDivision = "divB"
 if os.environ.get("DIV"):
     currentDivision = os.environ.get("DIV")
 
+
 import zmq
 import copy
 
@@ -177,12 +178,8 @@ if __name__ == "__main__":
 
     # import os
     # if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
-    sio.start_background_task(
-        target=lambda: update_sprites()  # manager, sprite_data, sprite_lock)
-    )
-    sio.start_background_task(
-        target=lambda: update_telemetry()  # manager, telemetry_data, telemetry_lock)
-    )
+    sio.start_background_task(target=lambda: update_sprites())  # manager, sprite_data, sprite_lock)
+    sio.start_background_task(target=lambda: update_telemetry())  # manager, telemetry_data, telemetry_lock)
     sio.start_background_task(target=lambda: emit_data(sio))
     sio.run(
         app, host="0.0.0.0", port=8000, debug=False, allow_unsafe_werkzeug=True
