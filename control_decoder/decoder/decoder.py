@@ -38,8 +38,8 @@ class Decoder:
                 id=decoder_command.robot_id,
                 move_command=rcm.RobotMoveCommand(
                     local_velocity=rcm.MoveLocalVelocity(
-                        forward=decoder_command.forward_vel,
-                        left=decoder_command.left_vel,
+                        forward=decoder_command.forward_vel / 1000,
+                        left=decoder_command.left_vel / 1000,
                         angular=angular_vel,
                     ),
                 ),

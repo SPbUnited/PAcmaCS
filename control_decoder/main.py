@@ -102,9 +102,9 @@ while True:
             for packet in packets_high:
                 s_outbound_real_high.sendto(packet, real_robots_ip_port_high)
 
-        for cmd in packets_low + packets_high:
-            telemetry_text += create_telemetry(cmd)
-        last_update = time.time()
+            for cmd in packets_low + packets_high:
+                telemetry_text += create_telemetry(cmd)
+            last_update = time.time()
 
     if time.time() - last_update < 2:
         telemetry_socket.send_json(
