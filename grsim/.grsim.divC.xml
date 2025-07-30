@@ -12,7 +12,7 @@
 				</Var>
 			</Var>
 			<Var name="Robots Count" type="int" minval="" maxval="">
-				6
+				3
 			</Var>
 			<Var name="Color Robot Blue" type="string">
 				#0000ff
