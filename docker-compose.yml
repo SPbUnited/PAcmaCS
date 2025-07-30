@@ -28,3 +28,5 @@ services:
     # image: tigersmannheim/auto-referee
     image: roboticserlangen/autoref
     network_mode: host
+    volumes:
+      - ${PWD}/autoreferee/config:/home/default/config
