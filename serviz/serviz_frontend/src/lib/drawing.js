@@ -128,7 +128,7 @@ function drawCircle(ctx, x, y, radius, color) {
     ctx.fill();
 }
 
-function drawText(ctx, text, x, y, color = "black", modifiers = "42px", align = "left")
+export function drawText(ctx, text, x, y, color = "black", modifiers = "42px", align = "left")
 {
     ctx.font = modifiers + " Open Sans";
     ctx.fillStyle = color;

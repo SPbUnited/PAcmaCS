@@ -5,7 +5,7 @@
     import { socket, initializeSocket } from "./lib/socket.js";
     import { get } from "svelte/store";
 
-    import { iterateLayers, drawArrow } from "./lib/drawing.js";
+    import { iterateLayers, drawArrow, drawText} from "./lib/drawing.js";
     import type { Socket, SocketOptions } from "socket.io-client";
     import FpsLed from "./lib/FpsLed.svelte";
     import Led from "./lib/Led.svelte";
@@ -215,6 +215,9 @@
     let deltaBallX = 0;
     let deltaBallY = 0;
     const velScaleFactor = 4;
+
+    let isCursorPosShowEnabled = $state(false);
+    let cursorPos = [0, 0];
 
     let fieldOrientation = $state(false);
     let useNumberIds = $state(false);
@@ -492,6 +495,11 @@
         });
 
         canvas.addEventListener("mousemove", (e) => {
+
+            if (isCursorPosShowEnabled) {
+                cursorPos = camera.screen2field_mm(e.clientX, e.clientY);
+            }
+
             if (!isDragging) {
                 return;
             }
@@ -606,6 +614,10 @@
             drawArrow(ctx, startBallX, startBallY, deltaBallX, deltaBallY);
         }
 
+        if (isCursorPosShowEnabled) {
+            drawText(ctx, cursorPos[0].toFixed(0) + ", " + cursorPos[1].toFixed(0), cursorPos[0], cursorPos[1], "white", "100px", "center");
+        }
+
         ctx.restore();
 
         if (isRobotControlEnabled) {
@@ -718,7 +730,9 @@
             <input type="checkbox" bind:checked={useNumberIds} />
             Use number id's
         </div>
-
+        <div>
+            <input type="checkbox" bind:checked={isCursorPosShowEnabled} />
+            Show cursor position
         <hr />
 
         <h3>Robot control</h3>
@@ -1000,14 +1014,6 @@
         margin-top: auto;
         text-align: right;
         padding: 0.5rem;
-    }
-
-    pre {
-        white-space: pre-wrap; /* Since CSS 2.1 */
-        white-space: -moz-pre-wrap; /* Mozilla, since 1999 */
-        white-space: -pre-wrap; /* Opera 4-6 */
-        white-space: -o-pre-wrap; /* Opera 7 */
-        word-wrap: break-word; /* Internet Explorer 5.5+ */
     }
 
     /* ==========================================================================
