@@ -18,9 +18,11 @@ services:
     image: robocupssl/grsim:latest
     network_mode: host
     environment:
-      - HOME=/grsim
+      - VNC_PASSWORD=vnc
+      - VNC_GEOMETRY=1920x800
     volumes:
-      - ${PWD}/grsim/.grsim.${DIV}.xml:/grsim/.grsim.xml
+      - ${PWD}/grsim/.grsim.${DIV}.xml:/home/default/.grsim.xml
+    # command: vnc
 
   autoreferee:
     # image: tigersmannheim/auto-referee

@@ -12,7 +12,7 @@
 				</Var>
 			</Var>
 			<Var name="Robots Count" type="int" minval="" maxval="">
-				3
+				6
 			</Var>
 			<Var name="Color Robot Blue" type="string">
 				#0000ff
@@ -24,154 +24,116 @@
 		<Var name="Field" type="list">
 			<Var name="Division A" type="list">
 				<Var name="Line Thickness" type="double" minval="" maxval="">
-					0,010000
+					0.010000
 				</Var>
 				<Var name="Length" type="double" minval="" maxval="">
-					9,000000
+					9.000000
 				</Var>
 				<Var name="Width" type="double" minval="" maxval="">
-					6,000000
+					6.000000
 				</Var>
 				<Var name="Radius" type="double" minval="" maxval="">
-					0,500000
+					0.500000
 				</Var>
 				<Var name="Free Kick Distance From Defense Area" type="double" minval="" maxval="">
-					0,700000
+					0.700000
 				</Var>
 				<Var name="Penalty width" type="double" minval="" maxval="">
-					2,000000
+					2.000000
 				</Var>
 				<Var name="Penalty depth" type="double" minval="" maxval="">
-					1,000000
+					1.000000
 				</Var>
 				<Var name="Penalty point" type="double" minval="" maxval="">
-					6,000000
+					6.000000
 				</Var>
 				<Var name="Margin" type="double" minval="" maxval="">
-					0,300000
+					0.300000
 				</Var>
 				<Var name="Referee margin" type="double" minval="" maxval="">
-					0,000000
+					0.000000
 				</Var>
 				<Var name="Wall thickness" type="double" minval="" maxval="">
-					0,050000
+					0.050000
 				</Var>
 				<Var name="Goal thickness" type="double" minval="" maxval="">
-					0,020000
+					0.020000
 				</Var>
 				<Var name="Goal depth" type="double" minval="" maxval="">
-					0,180000
+					0.180000
 				</Var>
 				<Var name="Goal width" type="double" minval="" maxval="">
-					1,000000
+					1.000000
 				</Var>
 				<Var name="Goal height" type="double" minval="" maxval="">
-					0,160000
+					0.160000
 				</Var>
 			</Var>
 			<Var name="Division B" type="list">
 				<Var name="Line Thickness" type="double" minval="" maxval="">
-					0,010000
+					0.010000
 				</Var>
 				<Var name="Length" type="double" minval="" maxval="">
-					4,500000
+					4.500000
 				</Var>
 				<Var name="Width" type="double" minval="" maxval="">
-					3,000000
+					3.000000
 				</Var>
 				<Var name="Radius" type="double" minval="" maxval="">
-					0,500000
+					0.500000
 				</Var>
 				<Var name="Free Kick Distance From Defense Area" type="double" minval="" maxval="">
-					0,700000
+					0.700000
 				</Var>
 				<Var name="Penalty width" type="double" minval="" maxval="">
-					1,350000
+					1.350000
 				</Var>
 				<Var name="Penalty depth" type="double" minval="" maxval="">
-					0,500000
+					0.500000
 				</Var>
 				<Var name="Penalty point" type="double" minval="" maxval="">
-					3,000000
+					3.000000
 				</Var>
 				<Var name="Margin" type="double" minval="" maxval="">
-					0,300000
+					0.300000
 				</Var>
 				<Var name="Referee margin" type="double" minval="" maxval="">
-					0,000000
+					0.000000
 				</Var>
 				<Var name="Wall thickness" type="double" minval="" maxval="">
-					0,050000
+					0.050000
 				</Var>
 				<Var name="Goal thickness" type="double" minval="" maxval="">
-					0,020000
+					0.020000
 				</Var>
 				<Var name="Goal depth" type="double" minval="" maxval="">
-					0,180000
+					0.180000
 				</Var>
 				<Var name="Goal width" type="double" minval="" maxval="">
-					0,800000
+					0.800000
 				</Var>
 				<Var name="Goal height" type="double" minval="" maxval="">
-					0,160000
+					0.160000
 				</Var>
 			</Var>
 		</Var>
 		<Var name="Cameras" type="list">
 			<Var name="Height of all cameras" type="double" minval="" maxval="">
-				4,000000
+				4.000000
 			</Var>
 			<Var name="Focal length" type="double" minval="" maxval="">
-				390,000000
+				390.000000
 			</Var>
 			<Var name="Camera scaling limit" type="double" minval="" maxval="">
-				0,900000
+				0.000000
 			</Var>
 		</Var>
 		<Var name="Ball" type="list">
-			<Var name="Ball mass" type="double" minval="" maxval="">
-				0,043000
-			</Var>
-			<Var name="Ball-ground friction" type="double" minval="" maxval="">
-				0,050000
-			</Var>
-			<Var name="Ball-ground slip" type="double" minval="" maxval="">
-				1,000000
-			</Var>
-			<Var name="Ball-ground bounce factor" type="double" minval="" maxval="">
-				0,500000
-			</Var>
-			<Var name="Ball-ground bounce min velocity" type="double" minval="" maxval="">
-				0,100000
-			</Var>
-			<Var name="Ball linear damping" type="double" minval="" maxval="">
-				0,004000
-			</Var>
-			<Var name="Ball angular damping" type="double" minval="" maxval="">
-				0,004000
+			<Var name="Radius" type="double" minval="" maxval="">
+				0.021500
 			</Var>
 			<Var name="Project airborne balls" type="bool">
 				true
-			</Var>
-			<Var name="Models" type="list">
-				<Var name="Straight-two-phase sliding acceleration" type="double" minval="" maxval="">
-					-14,000000
-				</Var>
-				<Var name="Straight-two-phase rolling acceleration" type="double" minval="" maxval="">
-					-0,700000
-				</Var>
-				<Var name="Straight-two-phase switch factor k" type="double" minval="" maxval="">
-					0,700000
-				</Var>
-				<Var name="Chip-fixed-loss damping in xy-direction for first hop" type="double" minval="" maxval="">
-					0,600000
-				</Var>
-				<Var name="Chip-fixed-loss damping in xy-direction for other hops" type="double" minval="" maxval="">
-					0,960000
-				</Var>
-				<Var name="Chip-fixed-loss damping in z-direction" type="double" minval="" maxval="">
-					0,420000
-				</Var>
 			</Var>
 		</Var>
 		<Var name="Blue Team" type="stringenum">
@@ -199,19 +161,19 @@
 			</Var>
 		</Var>
 	</Var>
-	<!-- <Var name="Physics" type="list">
+	<Var name="Physics" type="list">
 		<Var name="World" type="list">
 			<Var name="Desired FPS" type="double" minval="" maxval="">
-				60,000000
+				60.000000
 			</Var>
 			<Var name="Synchronize ODE with OpenGL" type="bool">
 				false
 			</Var>
 			<Var name="ODE time step" type="double" minval="" maxval="">
-				0,016667
+				0.016667
 			</Var>
 			<Var name="Gravity" type="double" minval="" maxval="">
-				9,810000
+				9.810000
 			</Var>
 			<Var name="Auto reset turn-over" type="bool">
 				true
@@ -219,51 +181,51 @@
 		</Var>
 		<Var name="Ball" type="list">
 			<Var name="Ball mass" type="double" minval="" maxval="">
-				0,043000
+				0.043000
 			</Var>
 			<Var name="Ball-ground friction" type="double" minval="" maxval="">
-				0,050000
+				0.050000
 			</Var>
 			<Var name="Ball-ground slip" type="double" minval="" maxval="">
-				1,000000
+				1.000000
 			</Var>
 			<Var name="Ball-ground bounce factor" type="double" minval="" maxval="">
-				0,500000
+				0.500000
 			</Var>
 			<Var name="Ball-ground bounce min velocity" type="double" minval="" maxval="">
-				0,100000
+				0.100000
 			</Var>
 			<Var name="Ball linear damping" type="double" minval="" maxval="">
-				0,004000
+				0.004000
 			</Var>
 			<Var name="Ball angular damping" type="double" minval="" maxval="">
-				0,004000
+				0.004000
 			</Var>
 			<Var name="Project airborne balls" type="bool">
 				true
 			</Var>
 			<Var name="Models" type="list">
 				<Var name="Straight-two-phase sliding acceleration" type="double" minval="" maxval="">
-					-14,000000
+					-14.000000
 				</Var>
 				<Var name="Straight-two-phase rolling acceleration" type="double" minval="" maxval="">
-					-0,700000
+					-0.700000
 				</Var>
 				<Var name="Straight-two-phase switch factor k" type="double" minval="" maxval="">
-					0,700000
+					0.700000
 				</Var>
 				<Var name="Chip-fixed-loss damping in xy-direction for first hop" type="double" minval="" maxval="">
-					0,600000
+					0.600000
 				</Var>
 				<Var name="Chip-fixed-loss damping in xy-direction for other hops" type="double" minval="" maxval="">
-					0,960000
+					0.960000
 				</Var>
 				<Var name="Chip-fixed-loss damping in z-direction" type="double" minval="" maxval="">
-					0,420000
+					0.420000
 				</Var>
 			</Var>
 		</Var>
-	</Var> -->
+	</Var>
 	<Var name="Communication" type="list">
 		<Var name="Vision multicast address" type="string">
 			224.5.23.2
@@ -300,13 +262,13 @@
 				false
 			</Var>
 			<Var name="Deviation for x values" type="double" minval="" maxval="">
-				3,000000
+				3.000000
 			</Var>
 			<Var name="Deviation for y values" type="double" minval="" maxval="">
-				3,000000
+				3.000000
 			</Var>
 			<Var name="Deviation for angle values" type="double" minval="" maxval="">
-				2,000000
+				2.000000
 			</Var>
 			<Var name="Vanishing" type="bool">
 				false
@@ -314,13 +276,13 @@
 		</Var>
 		<Var name="Vanishing probability" type="list">
 			<Var name="Blue team" type="double" minval="" maxval="">
-				0,000000
+				0.000000
 			</Var>
 			<Var name="Yellow team" type="double" minval="" maxval="">
-				0,000000
+				0.000000
 			</Var>
 			<Var name="Ball" type="double" minval="" maxval="">
-				0,000000
+				0.000000
 			</Var>
 		</Var>
 	</Var>
