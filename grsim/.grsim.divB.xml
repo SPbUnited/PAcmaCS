@@ -3,7 +3,7 @@
 	<Var name="Geometry" type="list">
 		<Var name="Game" type="list">
 			<Var name="Division" type="stringenum">
-				Division B
+				Division A
 				<Var name="0" type="string">
 					Division A
 				</Var>
