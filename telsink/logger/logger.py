@@ -40,6 +40,7 @@ class Logger:
             print("Not recording")
             return
         self.is_recording = False
+        self.log_thread.terminate()
         self.log_thread.join()
         self.log_file_handler.close()
         print("Stopped recording to ", self.log_file_name)

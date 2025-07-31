@@ -1,10 +1,9 @@
 from argparse import ArgumentParser
 import time
 import yaml
-import zmq
 
 from logger.logger import Logger
-from event_bus.event_bus import EventBus
+from signal_bus.signal_bus import SignalBus
 
 
 def main():
@@ -22,10 +21,6 @@ def main():
     if config["telsink"]["log_format_version"] != 1:
         raise Exception("Only log format version 1 is supported")
 
-    context = zmq.Context()
-
-    log_poller = zmq.Poller()
-
     ether_topics = config["ether"]
     log_topic_list = [
         ether_topics["s_signals_pub_url"],
@@ -37,15 +32,7 @@ def main():
         log_path=config["telsink"]["log_path"], socket_url_list=log_topic_list
     )
 
-    s_signals = context.socket(zmq.SUB)
-    s_signals.connect(config["ether"]["s_signals_pub_url"])
-    s_signals.setsockopt_string(zmq.SUBSCRIBE, '{"telsink":')
-    s_signals.setsockopt_string(zmq.SUBSCRIBE, "{'telsink':")
-
-    signal_poller = zmq.Poller()
-    signal_poller.register(s_signals, zmq.POLLIN)
-
-    event_bus = EventBus(signal_poller)
+    event_bus = SignalBus("telsink", config["ether"]["s_signals_pub_url"])
 
     event_bus.on("start_recording", lambda signal: logger.start_recording())
     event_bus.on("stop_recording", lambda signal: logger.stop_recording())
