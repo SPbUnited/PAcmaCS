@@ -1,5 +1,9 @@
 serviz:
 
+telsink:
+  log_format_version: 1
+  log_path: logs/
+
 transnet:
   api_version: 2
   s_vision_fan_url: tcp://*:4242

@@ -719,6 +719,13 @@
         >
         <button class="button-4 wide" onclick={testButton}>Test button</button>
 
+        <button class="button-4 wide" onclick={() => {
+            socketEmit("send_signal", {"telsink": "start_recording"});
+        }}>Start recording</button>
+        <button class="button-4 wide" onclick={() => {
+            socketEmit("send_signal", {"telsink": "stop_recording"});
+        }}>Stop recording</button>
+
         <hr />
 
         <h3>Display parameters</h3>
