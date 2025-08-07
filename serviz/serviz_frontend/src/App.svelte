@@ -5,13 +5,16 @@
     import { socket, initializeSocket } from "./lib/socket.js";
     import { get } from "svelte/store";
 
-    import { iterateLayers, drawArrow, drawText} from "./lib/drawing.js";
+    import { iterateLayers, drawArrow, drawText } from "./lib/drawing.js";
     import type { Socket, SocketOptions } from "socket.io-client";
     import FpsLed from "./lib/FpsLed.svelte";
     import Led from "./lib/Led.svelte";
     import TelemetryScreen from "./lib/TelemetryScreen.svelte";
     import { getFormationData, getFormationsCount } from "./lib/Formations.js";
-    import { getRobotControlDataControlDecoder, getRobotControlDataTransnet } from "./lib/RobotControl.js";
+    import {
+        getRobotControlDataControlDecoder,
+        getRobotControlDataTransnet,
+    } from "./lib/RobotControl.js";
 
     let fpsLed: FpsLed;
 
@@ -426,7 +429,13 @@
             }
         }
 
-        actuateRobot(robotControlTeam, robotControlId, speed_x, speed_y, speed_r);
+        actuateRobot(
+            robotControlTeam,
+            robotControlId,
+            speed_x,
+            speed_y,
+            speed_r,
+        );
     }
 
     function actuateRobot(
@@ -441,7 +450,7 @@
             id,
             speed_x,
             speed_y,
-            speed_r
+            speed_r,
         );
 
         socketEmit("send_signal", data);
@@ -509,7 +518,6 @@
         });
 
         canvas.addEventListener("mousemove", (e) => {
-
             if (isCursorPosShowEnabled) {
                 cursorPos = camera.screen2field_mm(e.clientX, e.clientY);
             }
@@ -633,7 +641,15 @@
         }
 
         if (isCursorPosShowEnabled) {
-            drawText(ctx, cursorPos[0].toFixed(0) + ", " + cursorPos[1].toFixed(0), cursorPos[0], cursorPos[1], "white", "100px", "center");
+            drawText(
+                ctx,
+                cursorPos[0].toFixed(0) + ", " + cursorPos[1].toFixed(0),
+                cursorPos[0],
+                cursorPos[1],
+                "white",
+                "100px",
+                "center",
+            );
         }
 
         ctx.restore();
@@ -741,12 +757,30 @@
         >
         <button class="button-4 wide" onclick={testButton}>Test button</button>
 
-        <button class="button-4 wide" onclick={() => {
-            socketEmit("send_signal", {"telsink": "start_recording"});
-        }}>Start recording</button>
-        <button class="button-4 wide" onclick={() => {
-            socketEmit("send_signal", {"telsink": "stop_recording"});
-        }}>Stop recording</button>
+        <button
+            class="button-4 wide"
+            onclick={() => {
+                socketEmit("send_signal", { telsink: "start_recording" });
+            }}>Start recording</button
+        >
+        <button
+            class="button-4 wide"
+            onclick={() => {
+                socketEmit("send_signal", { telsink: "stop_recording" });
+            }}>Stop recording</button
+        >
+        <button
+            class="button-4 wide"
+            onclick={() => {
+                socketEmit("send_signal", { transnet: "ether_enable" });
+            }}>Ether enable</button
+        >
+        <button
+            class="button-4 wide"
+            onclick={() => {
+                socketEmit("send_signal", { transnet: "ether_disable" });
+            }}>Ether disable</button
+        >
 
         <hr />
 
@@ -762,122 +796,122 @@
         <div>
             <input type="checkbox" bind:checked={isCursorPosShowEnabled} />
             Show cursor position
-        <hr />
+            <hr />
 
-        <h3>Robot control</h3>
-        <div>
-            <input type="checkbox" bind:checked={isRobotControlEnabled} />
-            Robot control
-        </div>
-        {#if isRobotControlEnabled}
-            <div
-                style="display: grid; grid-template: auto / repeat(2, auto); grid-gap: 0.1rem; align-items: center"
-            >
-                <select bind:value={robotControlTeam}>
-                    <option value="blue">Blue</option>
-                    <option value="yellow">Yellow</option>
-                </select>
-                <input
-                    type="number"
-                    style:width="50px"
-                    min="0"
-                    max="15"
-                    bind:value={robotControlId}
-                />
-            </div>
+            <h3>Robot control</h3>
             <div>
-                <p>
-                    Linear vel [mm/s]: {vel_xy}
-                    <input
-                        type="range"
-                        bind:value={vel_xy}
-                        min="0"
-                        max="4000"
-                        step="100"
-                    />
-                </p>
-                <p>
-                    Angular vel [rad/s]: {vel_r}
-                    <input
-                        type="range"
-                        bind:value={vel_r}
-                        min="0"
-                        max="4"
-                        step="0.1"
-                    />
-                </p>
+                <input type="checkbox" bind:checked={isRobotControlEnabled} />
+                Robot control
             </div>
-        {/if}
+            {#if isRobotControlEnabled}
+                <div
+                    style="display: grid; grid-template: auto / repeat(2, auto); grid-gap: 0.1rem; align-items: center"
+                >
+                    <select bind:value={robotControlTeam}>
+                        <option value="blue">Blue</option>
+                        <option value="yellow">Yellow</option>
+                    </select>
+                    <input
+                        type="number"
+                        style:width="50px"
+                        min="0"
+                        max="15"
+                        bind:value={robotControlId}
+                    />
+                </div>
+                <div>
+                    <p>
+                        Linear vel [mm/s]: {vel_xy}
+                        <input
+                            type="range"
+                            bind:value={vel_xy}
+                            min="0"
+                            max="4000"
+                            step="100"
+                        />
+                    </p>
+                    <p>
+                        Angular vel [rad/s]: {vel_r}
+                        <input
+                            type="range"
+                            bind:value={vel_r}
+                            min="0"
+                            max="4"
+                            step="0.1"
+                        />
+                    </p>
+                </div>
+            {/if}
 
-        <hr />
-        
-        <h3>Formations</h3>
-        <div
+            <hr />
+
+            <h3>Formations</h3>
+            <div
                 style="display: grid; grid-template: auto / repeat({getFormationsCount()}, auto); grid-gap: 0.1rem; align-items: center"
-        >
-        {#each {length: getFormationsCount()} as _, i}
+            >
+                {#each { length: getFormationsCount() } as _, i}
+                    <button
+                        class="button-4"
+                        onclick={() => {
+                            socketEmit("send_signal", getFormationData(i));
+                        }}>{i}</button
+                    >
+                {/each}
+            </div>
+
             <button
                 class="button-4"
                 onclick={() => {
-                    socketEmit("send_signal", getFormationData(i));
-                }}
-            >{i}</button>
-        {/each}
-        </div>
-        
-        <button
-            class="button-4"
-            onclick={() => {
-                socketEmit("send_signal", getFormationData(-1));
-            }}
-        >Random formation</button>
+                    socketEmit("send_signal", getFormationData(-1));
+                }}>Random formation</button
+            >
 
-        <hr />
+            <hr />
 
-        <h3>Layers</h3>
-        {#each Object.entries(layer_data) as [name, data], i}
+            <h3>Layers</h3>
+            {#each Object.entries(layer_data) as [name, data], i}
+                <div>
+                    <input
+                        type="checkbox"
+                        bind:checked={data.is_visible}
+                        onchange={() => {
+                            toggleLayerVisibility(name);
+                        }}
+                    />
+                    [{i + 1}]
+                    {name}
+                </div>
+            {/each}
             <div>
-                <input
-                    type="checkbox"
-                    bind:checked={data.is_visible}
-                    onchange={() => {
-                        toggleLayerVisibility(name);
+                <button
+                    class="button-4 wide"
+                    onclick={() => {
+                        clearLayers();
                     }}
-                />
-                [{i + 1}]
-                {name}
+                >
+                    Clear layers
+                </button>
+                <button
+                    class="button-4 wide"
+                    onclick={() => {
+                        clearTelemetry();
+                    }}
+                >
+                    Clear telemetry
+                </button>
             </div>
-        {/each}
-        <div>
-            <button
-                class="button-4 wide"
-                onclick={() => {
-                    clearLayers();
-                }}
-            >
-                Clear layers
-            </button>
-            <button
-                class="button-4 wide"
-                onclick={() => {
-                    clearTelemetry();
-                }}
-            >
-                Clear telemetry
-            </button>
+
+            <hr />
+
+            <div class="version-info">
+                <p><kbd>?</kbd> - Show help</p>
+                <p>Version: {currentVersion}</p>
+            </div>
         </div>
 
-        <hr />
-
-        <div class="version-info">
-            <p><kbd>?</kbd> - Show help</p>
-            <p>Version: {currentVersion}</p>
-        </div>
-    </div>
-
-    <div
-        class="panel down"
-        style="
+        <div
+            class="panel down"
+            style="
         --card-background-color:#ffffffcc;
         --card-box-shadow: 0 0 10px 5px rgba(0, 0, 0, 0.1);
         width: {offsetWidth}px;
@@ -887,51 +921,42 @@
         display: grid;
         grid-template: auto / 100px auto
     "
-    >
-        <!-- top: {innerHeight - (showBottom ? bottomHeight : 0)}px; -->
-        <div style="display: flex; flex-direction: column;">
-            <h3 style="margin: 0;">Telemetry</h3>
-            <span>
-                <button
-                    class="button-4"
-                    style="width: 45%;"
-                    onclick={() => {
-                        if (telemetry_to_display.length < 6) {
-                            telemetry_to_display.push("");
-                        }
-                    }}
-                >
-                    +
-                </button>
-                <button
-                    class="button-4"
-                    style="width: 45%;"
-                    onclick={() => {
-                        if (telemetry_to_display.length > 1) {
-                            telemetry_to_display.pop();
-                        }
-                    }}
-                >
-                    -
-                </button>
-            </span>
-            {#each telemetry_to_display as _, i}
-                <select bind:value={telemetry_to_display[i]}>
-                    <option value="">None</option>
-                    {#each Object.keys(telemetry_data) as key}
-                        <option value={key}>{key}</option>
-                    {/each}
-                </select>
-            {/each}
-            <button
-                class="button-4"
-                onclick={() => {
-                    maximizeBottom = !maximizeBottom;
-                }}
-            >
-                {maximizeBottom ? "Restore" : "Maximize"}
-            </button>
-            <div style="margin-top: auto;">
+        >
+            <!-- top: {innerHeight - (showBottom ? bottomHeight : 0)}px; -->
+            <div style="display: flex; flex-direction: column;">
+                <h3 style="margin: 0;">Telemetry</h3>
+                <span>
+                    <button
+                        class="button-4"
+                        style="width: 45%;"
+                        onclick={() => {
+                            if (telemetry_to_display.length < 6) {
+                                telemetry_to_display.push("");
+                            }
+                        }}
+                    >
+                        +
+                    </button>
+                    <button
+                        class="button-4"
+                        style="width: 45%;"
+                        onclick={() => {
+                            if (telemetry_to_display.length > 1) {
+                                telemetry_to_display.pop();
+                            }
+                        }}
+                    >
+                        -
+                    </button>
+                </span>
+                {#each telemetry_to_display as _, i}
+                    <select bind:value={telemetry_to_display[i]}>
+                        <option value="">None</option>
+                        {#each Object.keys(telemetry_data) as key}
+                            <option value={key}>{key}</option>
+                        {/each}
+                    </select>
+                {/each}
                 <button
                     class="button-4"
                     onclick={() => {
@@ -940,38 +965,50 @@
                 >
                     {maximizeBottom ? "Restore" : "Maximize"}
                 </button>
+                <div style="margin-top: auto;">
+                    <button
+                        class="button-4"
+                        onclick={() => {
+                            maximizeBottom = !maximizeBottom;
+                        }}
+                    >
+                        {maximizeBottom ? "Restore" : "Maximize"}
+                    </button>
+                </div>
+            </div>
+            <div style="display: flex; flex-direction: row;">
+                {#each telemetry_to_display as _, i}
+                    {#if telemetry_to_display[i] !== ""}
+                        <TelemetryScreen
+                            name={telemetry_to_display[i]}
+                            raw_telemetry={telemetry_data[
+                                telemetry_to_display[i]
+                            ]}
+                            width_percent={telemetry_width}
+                        />
+                    {/if}
+                {/each}
             </div>
         </div>
-        <div style="display: flex; flex-direction: row;">
-            {#each telemetry_to_display as _, i}
-                {#if telemetry_to_display[i] !== ""}
-                    <TelemetryScreen
-                        name={telemetry_to_display[i]}
-                        raw_telemetry={telemetry_data[telemetry_to_display[i]]}
-                        width_percent={telemetry_width}
-                    />
-                {/if}
-            {/each}
-        </div>
-    </div>
 
-    {#if showHelp}
-        <div class="help-menu" transition:fade>
-            <h3>Hotkeys</h3>
-            {#each hotkeys as hotkey}
-                {#if hotkey.description !== undefined}
-                    <p>
-                        <kbd>
-                            {#each hotkey.keys as key, index}
-                                {index > 0 ? "/" : ""}{key}
-                            {/each}
-                        </kbd>
-                        - {hotkey.description}
-                    </p>
-                {/if}
-            {/each}
-        </div>
-    {/if}
+        {#if showHelp}
+            <div class="help-menu" transition:fade>
+                <h3>Hotkeys</h3>
+                {#each hotkeys as hotkey}
+                    {#if hotkey.description !== undefined}
+                        <p>
+                            <kbd>
+                                {#each hotkey.keys as key, index}
+                                    {index > 0 ? "/" : ""}{key}
+                                {/each}
+                            </kbd>
+                            - {hotkey.description}
+                        </p>
+                    {/if}
+                {/each}
+            </div>
+        {/if}
+    </div>
 </main>
 
 <style>
