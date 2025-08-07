@@ -701,7 +701,7 @@
             <Led bind:color={transnetConnection.color} /> -->
         </div>
         <div style="display: flex; justify-content: space-between;">
-            telsink[recording]
+            telsink[{telsinkRecordingStatus.isRecording ? "recording" : "idle"}]
             <Led bind:color={telsinkRecordingStatus.color} />
         </div>
         <h3>Controls</h3>
