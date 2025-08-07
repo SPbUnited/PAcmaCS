@@ -103,8 +103,22 @@
         }
     }
 
+    class Recording {
+        isRecording = $state(false);
+        color = $derived(this.isRecording ? "#ff0000" : "#000000");
+
+        constructor() {
+            this.isRecording = false;
+        }
+
+        update(isRecording: boolean) {
+            this.isRecording = isRecording;
+        }
+    }
+
     let servizConnection = new Connection();
     let transnetConnection = new Connection();
+    let telsinkRecordingStatus = new Recording();
 
     // $inspect("serviz", servizConnection.currentTime, servizConnection.lastUpdateTime);
     // $inspect(servizConnection.isOnline);
@@ -571,6 +585,10 @@
             telemetry_data = data;
         });
 
+        socket.on("update_telsink_recording_status", (data: any) => {
+            telsinkRecordingStatus.update(data);
+        });
+
         resizeCanvas();
         draw(0);
 
@@ -681,6 +699,10 @@
             <Led bind:color={servizConnection.color} />
             <!-- transnet
             <Led bind:color={transnetConnection.color} /> -->
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+            telsink[recording]
+            <Led bind:color={telsinkRecordingStatus.color} />
         </div>
         <h3>Controls</h3>
         <div class="controls">

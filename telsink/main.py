@@ -32,7 +32,11 @@ def main():
         log_path=config["telsink"]["log_path"], socket_url_list=log_topic_list
     )
 
-    event_bus = SignalBus("telsink", config["ether"]["s_signals_pub_url"])
+    event_bus = SignalBus(
+        "telsink",
+        config["ether"]["s_signals_pub_url"],
+        config["ether"]["s_signals_sub_url"],
+    )
 
     event_bus.on("start_recording", lambda signal: logger.start_recording())
     event_bus.on("stop_recording", lambda signal: logger.stop_recording())
@@ -43,7 +47,21 @@ def main():
 
     while True:
         try:
-            time.sleep(1)
+            time.sleep(0.1)
+
+            event_bus.s_signals_out.send_json(
+                {
+                    "serviz": "update_telsink_recording_status",
+                    "data": logger.is_recording,
+                }
+            )
+            # print(
+            #     "Sent: ",
+            #     {
+            #         "serviz": "update_telsink_recording_status",
+            #         "data": logger.is_recording,
+            #     },
+            # )
         except KeyboardInterrupt:
             # event_bus.stop()
             break

@@ -159,12 +159,29 @@ def update_telemetry():
         telemetry_store.switch()
 
 
-def emit_data(sio):
+def relay_data(sio):
+    print("Data relay enter")
 
-    print("Data emitter enter")
+    context = zmq.Context()
+
+    s_signals = context.socket(zmq.SUB)
+    s_signals.connect(config["ether"]["s_signals_pub_url"])
+    s_signals.setsockopt_string(zmq.SUBSCRIBE, '{"serviz":')
+    s_signals.setsockopt_string(zmq.SUBSCRIBE, "{'serviz':")
 
     while True:
         sio.sleep(0.01)
+
+        for _ in range(100):
+            try:
+                message = s_signals.recv_json(flags=zmq.NOBLOCK)
+                # print("Signal received: ", message)
+                sio.emit(message["serviz"], message["data"])
+            except zmq.ZMQError as e:
+                if e.errno == zmq.EAGAIN:
+                    break
+                else:
+                    raise
 
         sio.emit("update_sprites", sprite_store.fetch())
         sio.emit("update_telemetry", telemetry_store.fetch())
@@ -178,9 +195,13 @@ if __name__ == "__main__":
 
     # import os
     # if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
-    sio.start_background_task(target=lambda: update_sprites())  # manager, sprite_data, sprite_lock)
-    sio.start_background_task(target=lambda: update_telemetry())  # manager, telemetry_data, telemetry_lock)
-    sio.start_background_task(target=lambda: emit_data(sio))
+    sio.start_background_task(
+        target=lambda: update_sprites()
+    )  # manager, sprite_data, sprite_lock)
+    sio.start_background_task(
+        target=lambda: update_telemetry()
+    )  # manager, telemetry_data, telemetry_lock)
+    sio.start_background_task(target=lambda: relay_data(sio))
     sio.run(
         app, host="0.0.0.0", port=8000, debug=False, allow_unsafe_werkzeug=True
     )  # , host='localhost', port=8000, debug=True)
