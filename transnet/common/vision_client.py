@@ -41,6 +41,8 @@ class VisionClient:
     _reader: multiprocessing.Process = attr.ib(init=False)
     _robot_detection_time: dict = attr.ib(init=False)
 
+    is_blue_on_positive_side: bool = True
+
     def __attrs_post_init__(self) -> None:
         self._socket_reader = SocketReader(
             ip=self.multicast_ip, port=self.multicast_port, timeout=self.vision_timeout
@@ -157,8 +159,16 @@ class VisionClient:
         geometry = None
         if package.HasField("geometry"):
             raw_geometry = package.geometry
-            # TODO: Implement
-            geometry = Geometry()
+            geometry = Geometry(
+                width=raw_geometry.field.field_width,
+                height=raw_geometry.field.field_length,
+                goalWidth=raw_geometry.field.goal_width,
+                goalDepth=raw_geometry.field.goal_depth,
+                penaltyAreaWidth=raw_geometry.field.penalty_area_width,
+                penaltyAreaDepth=raw_geometry.field.penalty_area_depth,
+                centerCircleRadius=raw_geometry.field.center_circle_radius,
+                borderSize=raw_geometry.field.boundary_width
+            )
 
         return Detection(balls, robots, geometry)
 

@@ -46,8 +46,14 @@ class BallDetection:
 
 @attr.s(auto_attribs=True)
 class Geometry:
-    # TODO: Implement
-    pass
+    width: int
+    height: int
+    goalWidth: int
+    goalDepth: int
+    penaltyAreaWidth: int
+    penaltyAreaDepth: int
+    centerCircleRadius: int
+    borderSize: int
 
 
 @attr.s(auto_attribs=True)

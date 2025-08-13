@@ -27,6 +27,9 @@ context = zmq.Context()
 s_draw = context.socket(zmq.PUB)
 s_draw.connect(config["ether"]["s_draw_sub_url"])
 
+s_geometry = context.socket(zmq.PUB)
+s_geometry.connect(config["ether"]["s_geometry_sub_url"])
+
 s_signals = context.socket(zmq.SUB)
 s_signals.connect(config["ether"]["s_signals_pub_url"])
 s_signals.setsockopt_string(zmq.SUBSCRIBE, '{"transnet":')
@@ -199,6 +202,10 @@ if __name__ == "__main__":
         field_info = vision.get_field_info()
         data = {"vision_feed": {"data": field_info, "is_visible": True}}
         s_draw.send_json(data)
+
+        field_geometry = client.get_detection().geometry
+        if field_geometry is not None:
+            s_geometry.send_json()
 
         s_telemetry.send_json({list(data.keys())[0]: pprint.pformat(data, width=400)})
 
