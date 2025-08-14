@@ -805,6 +805,18 @@
                 socketEmit("send_signal", { transnet: "phantom_select" });
             }}>Phantom select</button
         >
+        <button
+            class="button-4 wide"
+            onclick={() => {
+                socketEmit("send_signal", { telsink: "start_playback" });
+            }}>Start playback</button
+        >
+        <button
+            class="button-4 wide"
+            onclick={() => {
+                socketEmit("send_signal", { telsink: "stop_playback" });
+            }}>Stop playback</button
+        >
 
         <hr />
 

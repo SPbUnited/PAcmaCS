@@ -76,7 +76,9 @@ def setup_proxy(context: zmq.Context, signal_bus: SignalBus = None):
         config["ether"]["s_signals_sub_url"] + config["ether"]["phantom_suffix"]
     )
     signals_proxy.bind_out(config["ether"]["s_signals_pub_url"])
-    # signals_proxy.bind_monitor(config["ether"]["s_signals_pub_url"])
+    signals_proxy.bind_monitor(
+        config["ether"]["s_signals_pub_url"] + config["ether"]["monitor_suffix"]
+    )
     signals_proxy.connect_ctrl(config["transnet"]["s_signals_ctrl_url"])
 
     signals_proxy.start()
@@ -91,7 +93,9 @@ def setup_proxy(context: zmq.Context, signal_bus: SignalBus = None):
         config["ether"]["s_telemetry_sub_url"] + config["ether"]["phantom_suffix"]
     )
     telemetry_proxy.bind_out(config["ether"]["s_telemetry_pub_url"])
-    # telemetry_proxy.bind_monitor(config["ether"]["s_telemetry_pub_url"])
+    telemetry_proxy.bind_monitor(
+        config["ether"]["s_telemetry_pub_url"] + config["ether"]["monitor_suffix"]
+    )
     telemetry_proxy.connect_ctrl(config["transnet"]["s_telemetry_ctrl_url"])
     telemetry_proxy.start()
 
@@ -105,7 +109,9 @@ def setup_proxy(context: zmq.Context, signal_bus: SignalBus = None):
         config["ether"]["s_draw_sub_url"] + config["ether"]["phantom_suffix"]
     )
     draw_proxy.bind_out(config["ether"]["s_draw_pub_url"])
-    # draw_proxy.bind_monitor(config["ether"]["s_draw_pub_url"])
+    draw_proxy.bind_monitor(
+        config["ether"]["s_draw_pub_url"] + config["ether"]["monitor_suffix"]
+    )
     draw_proxy.connect_ctrl(config["transnet"]["s_draw_ctrl_url"])
     draw_proxy.start()
 

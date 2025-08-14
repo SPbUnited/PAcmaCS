@@ -29,3 +29,4 @@ ether:
   s_signals_pub_url: ipc:///tmp/ether.signals.xpub
   s_signals_sub_url: ipc:///tmp/ether.signals.xsub
   phantom_suffix: ".phantom"
+  monitor_suffix: ".monitor"

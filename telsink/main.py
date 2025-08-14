@@ -3,6 +3,7 @@ import time
 import yaml
 
 from logger.logger import Logger
+from player.player import Player
 from ether.signal_bus import SignalBus
 from ether.drawty import Drawty
 
@@ -22,16 +23,29 @@ def main():
     if config["telsink"]["log_format_version"] != 1:
         raise Exception("Only log format version 1 is supported")
 
-    ether_topics = config["ether"]
+    ether_config = config["ether"]
     log_topic_list = [
-        ether_topics["s_signals_pub_url"],
-        ether_topics["s_draw_pub_url"],
-        ether_topics["s_telemetry_pub_url"],
+        ether_config["s_signals_pub_url"] + ether_config["monitor_suffix"],
+        ether_config["s_draw_pub_url"] + ether_config["monitor_suffix"],
+        ether_config["s_telemetry_pub_url"] + ether_config["monitor_suffix"],
     ]
 
     logger = Logger(
         log_path=config["telsink"]["log_path"], socket_url_list=log_topic_list
     )
+
+    player_url_mapping = {
+        ether_config["s_signals_pub_url"]
+        + ether_config["monitor_suffix"]: "ipc:///tmp/dev.null",
+        ether_config["s_draw_pub_url"]
+        + ether_config["monitor_suffix"]: config["ether"]["s_draw_sub_url"]
+        + config["ether"]["phantom_suffix"],
+        ether_config["s_telemetry_pub_url"]
+        + ether_config["monitor_suffix"]: config["ether"]["s_telemetry_sub_url"]
+        + config["ether"]["phantom_suffix"],
+    }
+
+    player = Player(socket_url_mapping=player_url_mapping)
 
     event_bus = SignalBus(
         "telsink",
@@ -52,10 +66,16 @@ def main():
 
     event_bus.on("start_recording", lambda signal: logger.start_recording())
     event_bus.on("stop_recording", lambda signal: logger.stop_recording())
+    event_bus.on(
+        "start_playback", lambda signal: player.start_playback("logs/1755180879.log")
+    )  # signal.data))
+    event_bus.on("stop_playback", lambda signal: player.stop_playback())
 
     event_bus.start()
 
     print("Telsink online")
+
+    # player.start_playback("logs/1755180879.log")
 
     while True:
         try:
@@ -76,6 +96,7 @@ def main():
                     "Telsink status": f"Phantom data: {logger.is_recording}, {time.time()}"
                 }
             )
+
             # print(
             #     "Sent: ",
             #     {

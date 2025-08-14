@@ -73,6 +73,8 @@ class ThreadProxySwitch:
         self.thread.start()
 
     def _relay_loop(self):
+        # https://stackoverflow.com/questions/72324903/xsub-not-receiving-in-zeromq-xsub-pub-setup
+
         mode = "ETHER"
 
         while True:
@@ -107,15 +109,3 @@ class ThreadProxySwitch:
             if self.monitor in socks and socks[self.monitor] == zmq.POLLIN:
                 data = self.monitor.recv_multipart()
                 self.real.send_multipart(data)
-
-            # if self.out.poll(0):
-            #     print("polling out")
-            #     data = self.out.recv_multipart()
-            #     self.real.send_multipart(data)
-            #     self.phantom.send_multipart(data)
-
-            # if self.real.poll(0):
-            #     print("polling")
-            #     data = self.real.recv_multipart()
-            #     self.monitor.send_multipart(data)
-            #     self.out.send_multipart(data)
