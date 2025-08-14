@@ -769,7 +769,7 @@
                 socketEmit("send_signal", { telsink: "stop_recording" });
             }}>Stop recording</button
         >
-        <button
+        <!-- <button
             class="button-4 wide"
             onclick={() => {
                 socketEmit("send_signal", { transnet: "ether_enable" });
@@ -780,6 +780,30 @@
             onclick={() => {
                 socketEmit("send_signal", { transnet: "ether_disable" });
             }}>Ether disable</button
+        >
+        <button
+            class="button-4 wide"
+            onclick={() => {
+                socketEmit("send_signal", { transnet: "ether_terminate" });
+            }}>Proxy terminate</button
+        >
+        <button
+            class="button-4 wide"
+            onclick={() => {
+                socketEmit("send_signal", { transnet: "ether_stats" });
+            }}>Proxy stats</button
+        > -->
+        <button
+            class="button-4 wide"
+            onclick={() => {
+                socketEmit("send_signal", { transnet: "ether_select" });
+            }}>Ether select</button
+        >
+        <button
+            class="button-4 wide"
+            onclick={() => {
+                socketEmit("send_signal", { transnet: "phantom_select" });
+            }}>Phantom select</button
         >
 
         <hr />

@@ -3,7 +3,8 @@ import time
 import yaml
 
 from logger.logger import Logger
-from signal_bus.signal_bus import SignalBus
+from ether.signal_bus import SignalBus
+from ether.drawty import Drawty
 
 
 def main():
@@ -38,6 +39,17 @@ def main():
         config["ether"]["s_signals_sub_url"],
     )
 
+    drawty = Drawty(
+        draw_out_url=config["ether"]["s_draw_sub_url"],
+        telemetry_out_url=config["ether"]["s_telemetry_sub_url"],
+    )
+    phantom_drawty = Drawty(
+        draw_out_url=config["ether"]["s_draw_sub_url"]
+        + config["ether"]["phantom_suffix"],
+        telemetry_out_url=config["ether"]["s_telemetry_sub_url"]
+        + config["ether"]["phantom_suffix"],
+    )
+
     event_bus.on("start_recording", lambda signal: logger.start_recording())
     event_bus.on("stop_recording", lambda signal: logger.stop_recording())
 
@@ -53,6 +65,15 @@ def main():
                 {
                     "serviz": "update_telsink_recording_status",
                     "data": logger.is_recording,
+                }
+            )
+
+            drawty.telemetry(
+                {"Telsink status": f"Real data: {logger.is_recording}, {time.time()}"}
+            )
+            phantom_drawty.telemetry(
+                {
+                    "Telsink status": f"Phantom data: {logger.is_recording}, {time.time()}"
                 }
             )
             # print(
