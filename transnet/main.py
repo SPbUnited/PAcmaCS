@@ -3,7 +3,7 @@ import threading
 from typing import Dict
 from attrs import define, field
 import zmq
-from zmq.devices import ThreadProxySteerable
+from thread_proxy_switch import ThreadProxySwitch
 import time
 
 from game_controller import game_controller_relay as gcr
@@ -39,14 +39,14 @@ s_signals.setsockopt_string(zmq.SUBSCRIBE, "{'transnet':")
 poller = zmq.Poller()
 poller.register(s_signals, zmq.POLLIN)
 
-s_ether_ctrl = context.socket(zmq.REQ)
-s_phantom_ctrl = context.socket(zmq.REQ)
+s_signals_ctrl = context.socket(zmq.REQ)
+s_draw_ctrl = context.socket(zmq.REQ)
+s_telemetry_ctrl = context.socket(zmq.REQ)
 
 
 class PhantomCtrl(Enum):
     ETHER = 0
     PHANTOM = 1
-    TERMINATE = 2
 
 
 def steer_send_cmd(sock: zmq.Socket, cmd: str):
@@ -55,77 +55,61 @@ def steer_send_cmd(sock: zmq.Socket, cmd: str):
 
 
 def ether_switch_handler(mode: PhantomCtrl):
-    if mode == PhantomCtrl.ETHER:
-        steer_send_cmd(s_ether_ctrl, "PAUSE")
-        steer_send_cmd(s_ether_ctrl, "PAUSE")
-        steer_send_cmd(s_phantom_ctrl, "RESUME")
-        steer_send_cmd(s_phantom_ctrl, "RESUME")
-    elif mode == PhantomCtrl.PHANTOM:
-        steer_send_cmd(s_ether_ctrl, "RESUME")
-        steer_send_cmd(s_ether_ctrl, "RESUME")
-        steer_send_cmd(s_phantom_ctrl, "PAUSE")
-        steer_send_cmd(s_phantom_ctrl, "PAUSE")
-    # elif mode == PhantomCtrl.TERMINATE:
-    #     steer_send_cmd(s_ether_ctrl, "RESUME")
-    #     steer_send_cmd(s_ether_ctrl, "RESUME")
-    #     steer_send_cmd(s_phantom_ctrl, "RESUME")
-    #     steer_send_cmd(s_phantom_ctrl, "RESUME")
+    # steer_send_cmd(s_signals_ctrl, mode.name)
+    steer_send_cmd(s_telemetry_ctrl, mode.name)
+    steer_send_cmd(s_draw_ctrl, mode.name)
 
 
 def setup_proxy(context: zmq.Context, signal_bus: SignalBus = None):
+
+    s_signals_ctrl.bind(config["transnet"]["s_signals_ctrl_url"])
+    s_draw_ctrl.bind(config["transnet"]["s_draw_ctrl_url"])
+    s_telemetry_ctrl.bind(config["transnet"]["s_telemetry_ctrl_url"])
+
     print("Setting up proxy")
 
-    signals_proxy = ThreadProxySteerable(zmq.XSUB, zmq.XPUB, ctrl_type=zmq.REP)
-    signals_proxy.bind_in(config["ether"]["s_signals_sub_url"])
+    signals_proxy = ThreadProxySwitch(
+        zmq.XSUB, zmq.XSUB, zmq.XPUB, zmq.XPUB, ctrl_type=zmq.REP
+    )
+    signals_proxy.bind_real(config["ether"]["s_signals_sub_url"])
+    signals_proxy.bind_phantom(
+        config["ether"]["s_signals_sub_url"] + config["ether"]["phantom_suffix"]
+    )
     signals_proxy.bind_out(config["ether"]["s_signals_pub_url"])
-    # signals_proxy.connect_ctrl(config["transnet"]["s_ether_switch_url"])
+    # signals_proxy.bind_monitor(config["ether"]["s_signals_pub_url"])
+    signals_proxy.connect_ctrl(config["transnet"]["s_signals_ctrl_url"])
+
     signals_proxy.start()
 
     print("Signal proxy UP")
-    print("Setting up steerable proxies")
 
-    s_ether_ctrl.bind(config["transnet"]["s_ether_switch_url"])
-    s_phantom_ctrl.bind(config["transnet"]["s_phantom_switch_url"])
-
-    ## DRAW PROXY
-    draw_proxy = ThreadProxySteerable(zmq.XSUB, zmq.XPUB, ctrl_type=zmq.REP)
-    draw_proxy.bind_in(config["ether"]["s_draw_sub_url"])
-    draw_proxy.bind_out(config["ether"]["s_draw_pub_url"])
-    draw_proxy.connect_ctrl(config["transnet"]["s_ether_switch_url"])
-    draw_proxy.start()
-
-    ## DRAW PHANTOM PROXY
-    draw_phantom_proxy = ThreadProxySteerable(
-        zmq.XSUB,
-        zmq.XPUB,
-        ctrl_type=zmq.REP,
+    telemetry_proxy = ThreadProxySwitch(
+        zmq.XSUB, zmq.XSUB, zmq.XPUB, zmq.XPUB, ctrl_type=zmq.REP
     )
-    draw_phantom_proxy.bind_in(
-        config["ether"]["s_draw_sub_url"] + config["ether"]["phantom_suffix"]
-    )
-    draw_phantom_proxy.bind_out(config["ether"]["s_draw_pub_url"])
-    draw_phantom_proxy.connect_ctrl(config["transnet"]["s_phantom_switch_url"])
-    # draw_phantom_proxy.start()
-
-    ## TELEMETRY PROXY
-    telemetry_proxy = ThreadProxySteerable(zmq.XSUB, zmq.XPUB, ctrl_type=zmq.REP)
-    telemetry_proxy.bind_in(config["ether"]["s_telemetry_sub_url"])
-    telemetry_proxy.bind_out(config["ether"]["s_telemetry_pub_url"])
-    telemetry_proxy.connect_ctrl(config["transnet"]["s_ether_switch_url"])
-    telemetry_proxy.start()
-
-    ## TELEMETRY PHANTOM PROXY
-    telemetry_phantom_proxy = ThreadProxySteerable(
-        zmq.XSUB,
-        zmq.XPUB,
-        ctrl_type=zmq.REP,
-    )
-    telemetry_phantom_proxy.bind_in(
+    telemetry_proxy.bind_real(config["ether"]["s_telemetry_sub_url"])
+    telemetry_proxy.bind_phantom(
         config["ether"]["s_telemetry_sub_url"] + config["ether"]["phantom_suffix"]
     )
-    telemetry_phantom_proxy.bind_out(config["ether"]["s_telemetry_pub_url"])
-    telemetry_phantom_proxy.connect_ctrl(config["transnet"]["s_phantom_switch_url"])
-    # telemetry_phantom_proxy.start()
+    telemetry_proxy.bind_out(config["ether"]["s_telemetry_pub_url"])
+    # telemetry_proxy.bind_monitor(config["ether"]["s_telemetry_pub_url"])
+    telemetry_proxy.connect_ctrl(config["transnet"]["s_telemetry_ctrl_url"])
+    telemetry_proxy.start()
+
+    print("Telemetry proxy UP")
+
+    draw_proxy = ThreadProxySwitch(
+        zmq.XSUB, zmq.XSUB, zmq.XPUB, zmq.XPUB, ctrl_type=zmq.REP
+    )
+    draw_proxy.bind_real(config["ether"]["s_draw_sub_url"])
+    draw_proxy.bind_phantom(
+        config["ether"]["s_draw_sub_url"] + config["ether"]["phantom_suffix"]
+    )
+    draw_proxy.bind_out(config["ether"]["s_draw_pub_url"])
+    # draw_proxy.bind_monitor(config["ether"]["s_draw_pub_url"])
+    draw_proxy.connect_ctrl(config["transnet"]["s_draw_ctrl_url"])
+    draw_proxy.start()
+
+    print("Draw proxy UP")
 
     ether_switch_handler(PhantomCtrl.ETHER)
 

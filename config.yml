@@ -9,8 +9,9 @@ transnet:
   s_vision_fan_url: tcp://*:4242
   s_game_controller_fan_url: tcp://*:4243
   s_tracker_fan_url: ipc:///tmp/transnet.tracker
-  s_ether_switch_url: ipc:///tmp/transnet.ether.ctrl
-  s_phantom_switch_url: ipc:///tmp/transnet.phantom.ctlr
+  s_signals_ctrl_url: ipc:///tmp/transnet.signals.ctrl
+  s_draw_ctrl_url: ipc:///tmp/transnet.draw.ctrl
+  s_telemetry_ctrl_url: ipc:///tmp/transnet.telemetry.ctrl
 
 control_decoder:
   api_version: 1
