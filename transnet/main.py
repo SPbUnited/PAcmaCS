@@ -220,7 +220,6 @@ if __name__ == "__main__":
 
         field_geometry = client.get_detection().geometry
         if field_geometry is not None:
-            print("sended", field_geometry.__dict__)
             s_geometry.send_json(field_geometry.__dict__)
 
         s_telemetry.send_json({list(data.keys())[0]: pprint.pformat(data, width=400)})

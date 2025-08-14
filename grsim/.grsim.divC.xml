@@ -80,7 +80,7 @@
 					3.000000
 				</Var>
 				<Var name="Radius" type="double" minval="" maxval="">
-					0.500000
+					0.300000
 				</Var>
 				<Var name="Free Kick Distance From Defense Area" type="double" minval="" maxval="">
 					0.700000

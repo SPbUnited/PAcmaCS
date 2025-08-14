@@ -47,7 +47,7 @@ class BallDetection:
 @attr.s(auto_attribs=True)
 class Geometry:
     width: int
-    height: int
+    length: int
     goalWidth: int
     goalDepth: int
     penaltyAreaWidth: int

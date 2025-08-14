@@ -179,7 +179,7 @@ class VisionClient:
 
             geometry = Geometry(
                 width=raw_geometry.field.field_width,
-                height=raw_geometry.field.field_length,
+                length=raw_geometry.field.field_length,
                 goalWidth=raw_geometry.field.goal_width,
                 goalDepth=raw_geometry.field.goal_depth,
                 penaltyAreaWidth=penalty_area_width,
