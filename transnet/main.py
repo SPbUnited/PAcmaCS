@@ -2,6 +2,7 @@ import threading
 from attrs import define, field
 import zmq
 import time
+import json
 
 from game_controller import game_controller_relay as gcr
 from common.tracker_client import TrackerClient
@@ -27,8 +28,6 @@ context = zmq.Context()
 s_draw = context.socket(zmq.PUB)
 s_draw.connect(config["ether"]["s_draw_sub_url"])
 
-s_geometry = context.socket(zmq.PUB)
-s_geometry.connect(config["ether"]["s_geometry_sub_url"])
 
 s_signals = context.socket(zmq.SUB)
 s_signals.connect(config["ether"]["s_signals_pub_url"])
@@ -62,6 +61,17 @@ def setup_telemetry_proxy(context: zmq.Context):
     s_proxy_telemetry_sub.bind(config["ether"]["s_telemetry_sub_url"])
     zmq.proxy(s_proxy_telemetry_pub, s_proxy_telemetry_sub)
 
+def setup_geometry_proxy(context: zmq.Context):
+    print("GEOMETRY proxy SETUP")
+
+    # GEOMETRY proxy
+    s_proxy_geometry_pub = context.socket(zmq.XPUB)
+    s_proxy_geometry_pub.bind(config["ether"]["s_geometry_pub_url"])
+
+    s_proxy_geometry_sub = context.socket(zmq.XSUB)
+    s_proxy_geometry_sub.bind(config["ether"]["s_geometry_sub_url"])
+    zmq.proxy(s_proxy_geometry_pub, s_proxy_geometry_sub)
+
 
 def setup_signals_proxy(context: zmq.Context):
     print("SIGNALS proxy SETUP")
@@ -79,9 +89,11 @@ def setup_proxy(context: zmq.Context):
     print("Setting up proxy")
     draw_proxy = threading.Thread(target=setup_draw_proxy, args=(context,))
     telemetry_proxy = threading.Thread(target=setup_telemetry_proxy, args=(context,))
+    geometry_proxy = threading.Thread(target=setup_geometry_proxy, args=(context,))
     signals_proxy = threading.Thread(target=setup_signals_proxy, args=(context,))
     draw_proxy.start()
     telemetry_proxy.start()
+    geometry_proxy.start()
     signals_proxy.start()
     print("Proxy UP")
 
@@ -194,6 +206,9 @@ if __name__ == "__main__":
     s_telemetry = context.socket(zmq.PUB)
     s_telemetry.connect(config["ether"]["s_telemetry_sub_url"])
 
+    s_geometry = context.socket(zmq.PUB)
+    s_geometry.connect(config["ether"]["s_geometry_sub_url"])
+
     print("Transnet ready")
     while True:
 
@@ -205,7 +220,8 @@ if __name__ == "__main__":
 
         field_geometry = client.get_detection().geometry
         if field_geometry is not None:
-            s_geometry.send_json()
+            print("sended", field_geometry.__dict__)
+            s_geometry.send_json(field_geometry.__dict__)
 
         s_telemetry.send_json({list(data.keys())[0]: pprint.pformat(data, width=400)})
 

@@ -159,14 +159,32 @@ class VisionClient:
         geometry = None
         if package.HasField("geometry"):
             raw_geometry = package.geometry
+            field = raw_geometry.field
+
+            penalty_area_width = 0
+            penalty_area_depth = 0
+            center_circle_radius = 0
+
+            for line in field.field_lines:
+                if "PenaltyStretch" in line.name:
+                    depth = abs(line.p1.x - line.p2.x)
+                    width = abs(line.p1.y - line.p2.y)
+                    penalty_area_depth = max(penalty_area_depth, depth)
+                    penalty_area_width = max(penalty_area_width, width)
+
+            for arc in field.field_arcs:
+                if arc.name == "CenterCircle":
+                    center_circle_radius = arc.radius
+                    break
+
             geometry = Geometry(
                 width=raw_geometry.field.field_width,
                 height=raw_geometry.field.field_length,
                 goalWidth=raw_geometry.field.goal_width,
                 goalDepth=raw_geometry.field.goal_depth,
-                penaltyAreaWidth=raw_geometry.field.penalty_area_width,
-                penaltyAreaDepth=raw_geometry.field.penalty_area_depth,
-                centerCircleRadius=raw_geometry.field.center_circle_radius,
+                penaltyAreaWidth=penalty_area_width,
+                penaltyAreaDepth=penalty_area_depth,
+                centerCircleRadius=center_circle_radius,
                 borderSize=raw_geometry.field.boundary_width
             )
 
