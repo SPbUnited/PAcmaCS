@@ -1,4 +1,5 @@
 import multiprocessing
+from ctypes import c_bool, c_float
 import zmq
 from attrs import define, field
 import time
@@ -13,38 +14,60 @@ class Player:
     playback_thread: multiprocessing.Process = field(init=False)
 
     is_playing: bool = field(init=False)
+    is_paused: bool = field(init=False)
     playback_speed: float = field(init=False)
 
     def __attrs_post_init__(self):
-        self.is_playing = False
-        self.playback_speed = 1.0
+        self.is_playing = multiprocessing.Value(c_bool, False)
+        self.is_paused = multiprocessing.Value(c_bool, False)
+        self.playback_speed = multiprocessing.Value(c_float, 1.0)
 
     def start_playback(self, playback_file_name):
         self.playback_file_name = playback_file_name
         self.playback_file_handler = open(self.playback_file_name, "rb")
-        self.is_playing = True
+
+        self.is_playing.value = True
+        self.is_paused.value = False
         self.playback_thread = multiprocessing.Process(
             target=self.__playback_loop,
             args=(
-                lambda: self.is_playing,
+                self.is_playing,
+                self.is_paused,
                 self.socket_url_mapping,
-                lambda: self.playback_speed,
+                self.playback_speed,
             ),
         )
         self.playback_thread.start()
         print("Started playback from ", self.playback_file_name)
 
     def stop_playback(self):
-        if not self.is_playing:
+        if not self.is_playing.value:
             print("Not playing")
             return
-        self.is_playing = False
+        self.is_playing.value = False
+        self.is_paused.value = False
         self.playback_thread.terminate()
         self.playback_thread.join()
         self.playback_file_handler.close()
         print("Stopped playback from ", self.playback_file_name)
 
-    def __playback_loop(self, is_playing, socket_url_mapping, playback_speed):
+    def toggle_pause(self):
+        self.is_paused.value = not self.is_paused.value
+
+    def set_playback_speed(self, speed):
+        if speed < 0 or speed > 10:
+            print("Invalid speed")
+            return
+        print("Set playback speed to ", speed)
+        self.playback_speed.value = speed
+
+    def __playback_loop(
+        self,
+        is_playing,
+        is_paused,
+        socket_url_mapping,
+        playback_speed,
+    ):
         context = zmq.Context()
 
         sockets = {}
@@ -56,7 +79,7 @@ class Player:
         dtime = 0
         offset_time = None
 
-        while is_playing():
+        while is_playing.value:
             line = self.playback_file_handler.readline()
             if line == b"":
                 break
@@ -68,7 +91,10 @@ class Player:
                 offset_time = timestamp
 
             while timestamp - offset_time > dtime:
-                dtime += (time.time() - start_time - dtime) * playback_speed()
+                while is_paused.value:
+                    time.sleep(0.001)
+                    start_time = time.time() - dtime
+                dtime += (time.time() - start_time - dtime) * playback_speed.value
 
             # print(offset_time, timestamp, timestamp - offset_time, dtime)
 

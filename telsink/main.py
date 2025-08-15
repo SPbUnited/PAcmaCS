@@ -1,6 +1,7 @@
 from argparse import ArgumentParser
 import time
 import yaml
+import os
 
 from logger.logger import Logger
 from player.player import Player
@@ -67,15 +68,22 @@ def main():
     event_bus.on("start_recording", lambda signal: logger.start_recording())
     event_bus.on("stop_recording", lambda signal: logger.stop_recording())
     event_bus.on(
-        "start_playback", lambda signal: player.start_playback("logs/1755180879.log")
-    )  # signal.data))
+        "start_playback",
+        lambda signal: (
+            player.start_playback("logs/" + signal["data"])
+            if os.path.isfile(config["telsink"]["log_path"] + "/" + signal["data"])
+            else print(f"File {signal['data']} does not exist")
+        ),
+    )
     event_bus.on("stop_playback", lambda signal: player.stop_playback())
+    event_bus.on(
+        "set_playback_speed", lambda signal: player.set_playback_speed(signal["data"])
+    )
+    event_bus.on("toggle_pause", lambda signal: player.toggle_pause())
 
     event_bus.start()
 
     print("Telsink online")
-
-    # player.start_playback("logs/1755180879.log")
 
     while True:
         try:
@@ -84,18 +92,28 @@ def main():
             event_bus.s_signals_out.send_json(
                 {
                     "serviz": "update_telsink_recording_status",
-                    "data": logger.is_recording,
+                    "data": {
+                        "isRecording": logger.is_recording,
+                        "isPlaying": player.is_playing.value,
+                    },
                 }
             )
 
-            drawty.telemetry(
-                {"Telsink status": f"Real data: {logger.is_recording}, {time.time()}"}
-            )
-            phantom_drawty.telemetry(
+            event_bus.s_signals_out.send_json(
                 {
-                    "Telsink status": f"Phantom data: {logger.is_recording}, {time.time()}"
+                    "serviz": "update_telsink_log_list",
+                    "data": os.listdir(config["telsink"]["log_path"]),
                 }
             )
+
+            # drawty.telemetry(
+            #     {"Telsink status": f"Real data: {logger.is_recording}, {time.time()}"}
+            # )
+            # phantom_drawty.telemetry(
+            #     {
+            #         "Telsink status": f"Phantom data: {logger.is_recording}, {time.time()}"
+            #     }
+            # )
 
             # print(
             #     "Sent: ",
