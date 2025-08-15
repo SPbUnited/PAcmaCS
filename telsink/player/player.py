@@ -16,11 +16,13 @@ class Player:
     is_playing: bool = field(init=False)
     is_paused: bool = field(init=False)
     playback_speed: float = field(init=False)
+    forward_override: float = field(init=False)
 
     def __attrs_post_init__(self):
         self.is_playing = multiprocessing.Value(c_bool, False)
         self.is_paused = multiprocessing.Value(c_bool, False)
         self.playback_speed = multiprocessing.Value(c_float, 1.0)
+        self.forward_override = multiprocessing.Value(c_float, 0.0)
 
     def start_playback(self, playback_file_name):
         self.playback_file_name = playback_file_name
@@ -61,6 +63,9 @@ class Player:
         print("Set playback speed to ", speed)
         self.playback_speed.value = speed
 
+    def move_forward(self, time_to_move: float):
+        self.forward_override.value += time_to_move
+
     def __playback_loop(
         self,
         is_playing,
@@ -90,7 +95,7 @@ class Player:
             if offset_time is None:
                 offset_time = timestamp
 
-            while timestamp - offset_time > dtime:
+            while timestamp - offset_time > dtime + self.forward_override.value:
                 while is_paused.value:
                     time.sleep(0.001)
                     start_time = time.time() - dtime

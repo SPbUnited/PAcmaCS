@@ -866,6 +866,17 @@
                 });
             }}
         />
+        <button
+            class="button-4"
+            onclick={() => {
+                socketEmit("send_signal", {
+                    telsink: "move_forward",
+                    data: 10,
+                });
+            }}
+        >
+            Move forward 10s
+        </button>
 
         <hr />
 

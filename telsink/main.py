@@ -80,6 +80,7 @@ def main():
         "set_playback_speed", lambda signal: player.set_playback_speed(signal["data"])
     )
     event_bus.on("toggle_pause", lambda signal: player.toggle_pause())
+    event_bus.on("move_forward", lambda signal: player.move_forward(signal["data"]))
 
     event_bus.start()
 
