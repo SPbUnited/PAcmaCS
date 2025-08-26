@@ -180,6 +180,30 @@ def convert_trackers_to_serviz(trackers: TrackerWrapperPacketModel):
         )
     return data
 
+def format_message(data: dict) -> str:
+    lines = []
+    for _, layer in data.items():
+        for obj in layer["data"]:
+            if obj["type"] == "ball":
+                lines.append(
+                    f"BALL: x={round(obj['x'])}, y={round(obj['y'])}, "
+                    + (f"vx={round(obj['vx'])}, vy={round(obj['vy'])}" if "vx" in obj else "")
+                )
+            elif obj["type"] in ("robot_blu", "robot_yel"):
+                    line = (
+                        f"{obj['type'].upper():<10} {obj['robot_id']:>2} | "
+                        f"x={obj['x']:>5.0f}  y={obj['y']:>5.0f}  "
+                    )
+                    if "vx" in obj and "vy" in obj:
+                        line += f"vx={obj['vx']:>5.0f}  vy={obj['vy']:>5.0f}  "
+                    line += f"rot={obj['rotation']:>5.2f}"
+                    lines.append(line)
+
+            else:
+                lines.append(str(obj))
+    return "\n".join(lines)
+
+
 
 if __name__ == "__main__":
 
@@ -222,17 +246,16 @@ if __name__ == "__main__":
         if field_geometry is not None:
             s_geometry.send_json(field_geometry.__dict__)
 
-        s_telemetry.send_json({list(data.keys())[0]: pprint.pformat(data, width=400)})
+        s_telemetry.send_json({list(data.keys())[0]: format_message(data)})
 
         trackers = tracker_client.get_detections()
         for tracker_key in trackers:
             data = convert_trackers_to_serviz(trackers[tracker_key])
             s_draw.send_json(data)
-            data_str = pprint.pformat(
-                data,
-                width=400,
-            )
+
+            data_str = format_message(data)
             s_telemetry.send_json({list(data.keys())[0]: data_str})
+
 
         for i in range(100):
             # Process incoming signals
