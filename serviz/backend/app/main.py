@@ -1,8 +1,8 @@
+from multiprocessing import Lock
 import time
+from typing import Optional
 from flask import Flask, render_template
 from flask_socketio import SocketIO
-
-import threading
 
 from blue_green_storage import BGStore
 
@@ -31,33 +31,45 @@ import os
 if os.environ.get("VERSION"):
     version = "v" + os.environ.get("VERSION").replace('"', "")
 
-currentDivision = "divB"
-if os.environ.get("DIV"):
-    currentDivision = os.environ.get("DIV")
-
 
 import zmq
-import copy
 
 sprite_store = BGStore()
 telemetry_store = BGStore()
 visibility = {}
+
+feed_lock = Lock()
+last_feed_update = time.time()
+
+geometry_lock = Lock()
+geometry_data: Optional[dict] = None
+geometry_data_updated: bool = True
 
 context = zmq.Context()
 s_signals = context.socket(zmq.PUB)
 s_signals.connect(config["ether"]["s_signals_sub_url"])
 
 
-def update_layer(layer_name, data):
+def update_layer(layer_name: str, data):
     if layer_name not in visibility:
         visibility[layer_name] = data["is_visible"]
     else:
         data["is_visible"] = visibility[layer_name]
     sprite_store.write({layer_name: data})
-
+    if layer_name == "vision_feed":
+        with feed_lock:
+            global last_feed_update
+            last_feed_update = time.time()
 
 def update_telemetry_data(data):
     telemetry_store.write(data)
+
+def update_geometry_data(data):
+    with geometry_lock:
+        global geometry_data, geometry_data_updated
+        if geometry_data != data:
+            geometry_data = data
+            geometry_data_updated = True
 
 
 @app.route("/")
@@ -69,7 +81,8 @@ def index():
 @sio.on("connect")
 def connect():
     print(f"Client connected")
-    sio.emit("update_division", currentDivision)
+    if geometry_data is not None:
+        sio.emit("update_geometry", geometry_data)
     sio.emit("update_version", version)
 
 
@@ -98,11 +111,9 @@ def clear_layers(data):
 def clear_telemetry(data):
     telemetry_store.clear()
 
-
 @sio.on("toggle_layer_visibility")
 def toggle_layer_visibility(key):
     visibility[key] = not visibility[key]
-
 
 def update_sprites():
     print("Update sprites enter")
@@ -158,8 +169,32 @@ def update_telemetry():
 
         telemetry_store.switch()
 
+def update_geometry():
+    print("Update geometry enter")
 
-def relay_data(sio):
+    context = zmq.Context()
+
+    s_geometry = context.socket(zmq.SUB)
+    s_geometry.connect(config["ether"]["s_geometry_pub_url"])
+    s_geometry.setsockopt_string(zmq.SUBSCRIBE, "")
+
+    print("Geometry socket setup as SUB at ", config["ether"]["s_geometry_pub_url"])
+
+    while True:
+        sio.sleep(0.01)
+
+        for _ in range(100):
+            try:
+                message = s_geometry.recv_json(flags=zmq.NOBLOCK)
+                update_geometry_data(message)
+            except zmq.ZMQError as e:
+                if e.errno == zmq.EAGAIN:
+                    break
+                else:
+                    raise
+
+
+def relay_data(sio: SocketIO):
     print("Data relay enter")
 
     context = zmq.Context()
@@ -182,26 +217,38 @@ def relay_data(sio):
                     break
                 else:
                     raise
+        
+        global last_feed_update
+        sprites_data = sprite_store.fetch()
+        for layer_name in visibility:
+            sprites_data[layer_name]["is_visible"] = visibility[layer_name]
+            
+        sprites_data["_time_from_update"] = time.time() - last_feed_update
+        sio.emit("update_sprites", sprites_data)
 
-        sio.emit("update_sprites", sprite_store.fetch())
         sio.emit("update_telemetry", telemetry_store.fetch())
+        
+        global geometry_data_updated, geometry_data
+        if geometry_data_updated:
+            sio.emit("update_geometry", geometry_data)
+            geometry_data_updated = False
 
 
 # Run the app
 if __name__ == "__main__":
     sio.sleep(1)
     print("Starting server")
-    # threading.Thread(target=update_sprites).start()
-
-    # import os
-    # if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+    
     sio.start_background_task(
         target=lambda: update_sprites()
-    )  # manager, sprite_data, sprite_lock)
+    )
     sio.start_background_task(
         target=lambda: update_telemetry()
-    )  # manager, telemetry_data, telemetry_lock)
+    )
+    sio.start_background_task(
+        target=lambda: update_geometry()
+    )
     sio.start_background_task(target=lambda: relay_data(sio))
     sio.run(
-        app, host="0.0.0.0", port=8000, debug=False, allow_unsafe_werkzeug=True
-    )  # , host='localhost', port=8000, debug=True)
+        app, host="0.0.0.0", port=8100, debug=False, allow_unsafe_werkzeug=True
+    )

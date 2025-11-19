@@ -1,0 +1,138 @@
+@import "golden-layout/dist/css/goldenlayout-base.css";
+@import "golden-layout/dist/css/themes/goldenlayout-dark-theme.css";
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #1a1a1a;
+  scrollbar-width: thin;
+  scrollbar-color: #555 #1e1e1e;
+  user-select: none;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  overflow-y: visible;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  list-style-type: none;
+}
+
+#menuContainer {
+  width: 170px;
+  height: calc(100% - 217px);
+  position: fixed;
+  top: 0;
+  left: 0;
+  background: #222;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+#bottomMenuContainer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 170px;
+  height: 217px;
+  background: #222;
+  border-top: 2px solid #333;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+* li,
+* button {
+  border-bottom: 1px solid #000;
+  border-top: 1px solid #333;
+
+  cursor: pointer;
+  padding: 10px 5px;
+  color: #bbb;
+  background: #1a1a1a;
+  font: 12px Arial, sans-serif;
+}
+
+* button:active {
+  border-bottom-color: #333;
+  border-top-color: #000;
+  border-left-color: #222;
+}
+
+* li:hover,
+* button:hover {
+  background: #111;
+  color: #ccc;
+}
+
+* button {
+  display: block;
+  margin: 5px 15px 5px;
+  padding: 5px;
+  width: 80%;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+#layoutContainer {
+  flex: 1;
+  width: calc(100% - 170px);
+  height: 100%;
+  position: fixed;
+  top: 0;
+  left: 170px;
+  box-shadow: -3px 0px 9px 0px rgba(0, 0, 0, 0.4);
+  box-sizing: border-box;
+}
+
+* pre {
+  overflow: auto;
+  width: 99.8%;
+  background: #1a1a1a;
+  color: #b0b0b0;
+  padding: 5px;
+  border: 1px solid #555;
+  margin: 0px;
+  box-sizing: border-box;
+  user-select: text;
+}
+
+* h3 {
+  color: #b0b0b0;
+  font: 17px Arial, sans-serif;
+  font-weight: 700;
+  padding: 5px;
+  background: #1f1f1f;
+}
+
+input[type="checkbox"] {
+  accent-color: #b0b0b0;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 200px;
+  height: 6px;
+  background: #666; /* цвет полосы */
+  border-radius: 3px;
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: #aaaaaa; /* цвет ползунка */
+  border-radius: 50%;
+  cursor: pointer;
+}

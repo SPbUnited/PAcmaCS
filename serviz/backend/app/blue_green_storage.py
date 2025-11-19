@@ -62,18 +62,3 @@ class BGStore:
             self.store[self.get_write_color()].clear()
             self.updated_entries.clear()
 
-
-# store = BGStore()
-
-# store.write({"data1": 123})
-# print(store.fetch())
-
-# store.write({"data1": 345, "data2": 536})
-# print(store.fetch())
-
-# store.switch()
-# print(store.fetch())
-
-# store.write({"data1": 345, "data2": 537})
-# store.switch()
-# print(store.fetch())
