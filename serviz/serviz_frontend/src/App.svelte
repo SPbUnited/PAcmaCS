@@ -108,20 +108,28 @@
 
     class Recording {
         isRecording = $state(false);
-        color = $derived(this.isRecording ? "#ff0000" : "#000000");
+        isPlaying = $state(false);
+        colorRecording = $derived(this.isRecording ? "#ff0000" : "#000000");
+        colorPlaying = $derived(this.isPlaying ? "#0000ff" : "#000000");
 
         constructor() {
             this.isRecording = false;
+            this.isPlaying = false;
         }
 
-        update(isRecording: boolean) {
-            this.isRecording = isRecording;
+        update(data: any) {
+            this.isRecording = data.isRecording;
+            this.isPlaying = data.isPlaying;
         }
     }
 
     let servizConnection = new Connection();
     let transnetConnection = new Connection();
     let telsinkRecordingStatus = new Recording();
+
+    let currentLog = $state("");
+    let logList = $state([]);
+    let playbackSpeed = $state(1);
 
     // $inspect("serviz", servizConnection.currentTime, servizConnection.lastUpdateTime);
     // $inspect(servizConnection.isOnline);
@@ -597,6 +605,10 @@
             telsinkRecordingStatus.update(data);
         });
 
+        socket.on("update_telsink_log_list", (data: any) => {
+            logList = data;
+        });
+
         resizeCanvas();
         draw(0);
 
@@ -718,7 +730,10 @@
         </div>
         <div style="display: flex; justify-content: space-between;">
             telsink[{telsinkRecordingStatus.isRecording ? "recording" : "idle"}]
-            <Led bind:color={telsinkRecordingStatus.color} />
+            <div style="display: flex; flex-direction: row;">
+                <Led bind:color={telsinkRecordingStatus.colorPlaying} />
+                <Led bind:color={telsinkRecordingStatus.colorRecording} />
+            </div>
         </div>
         <h3>Controls</h3>
         <div class="controls">
@@ -769,7 +784,7 @@
                 socketEmit("send_signal", { telsink: "stop_recording" });
             }}>Stop recording</button
         >
-        <button
+        <!-- <button
             class="button-4 wide"
             onclick={() => {
                 socketEmit("send_signal", { transnet: "ether_enable" });
@@ -781,6 +796,87 @@
                 socketEmit("send_signal", { transnet: "ether_disable" });
             }}>Ether disable</button
         >
+        <button
+            class="button-4 wide"
+            onclick={() => {
+                socketEmit("send_signal", { transnet: "ether_terminate" });
+            }}>Proxy terminate</button
+        >
+        <button
+            class="button-4 wide"
+            onclick={() => {
+                socketEmit("send_signal", { transnet: "ether_stats" });
+            }}>Proxy stats</button
+        > -->
+        <button
+            class="button-4 wide"
+            onclick={() => {
+                socketEmit("send_signal", { transnet: "ether_select" });
+            }}>Ether select</button
+        >
+        <button
+            class="button-4 wide"
+            onclick={() => {
+                socketEmit("send_signal", { transnet: "phantom_select" });
+            }}>Phantom select</button
+        >
+
+        <select bind:value={currentLog}>
+            {#each logList as log}
+                <option value={log}>{log}</option>
+            {/each}
+        </select>
+
+        <div
+            style="display: flex; flex-direction: row; justify-content: space-between;"
+        >
+            <button
+                class="button-4"
+                onclick={() => {
+                    socketEmit("send_signal", {
+                        telsink: "start_playback",
+                        data: currentLog,
+                    });
+                }}>Start</button
+            >
+            <button
+                class="button-4"
+                onclick={() => {
+                    socketEmit("send_signal", { telsink: "toggle_pause" });
+                }}>Pause</button
+            >
+            <button
+                class="button-4"
+                onclick={() => {
+                    socketEmit("send_signal", { telsink: "stop_playback" });
+                }}>Stop</button
+            >
+        </div>
+        Playback speed: {playbackSpeed}
+        <input
+            type="range"
+            bind:value={playbackSpeed}
+            min="0.2"
+            max="2"
+            step="0.2"
+            onchange={() => {
+                socketEmit("send_signal", {
+                    telsink: "set_playback_speed",
+                    data: playbackSpeed,
+                });
+            }}
+        />
+        <button
+            class="button-4"
+            onclick={() => {
+                socketEmit("send_signal", {
+                    telsink: "move_forward",
+                    data: 10,
+                });
+            }}
+        >
+            Move forward 10s
+        </button>
 
         <hr />
 

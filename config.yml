@@ -9,6 +9,10 @@ transnet:
   s_vision_fan_url: tcp://*:4242
   s_game_controller_fan_url: tcp://*:4243
   s_tracker_fan_url: ipc:///tmp/transnet.tracker
+  s_signals_ctrl_url: ipc:///tmp/transnet.signals.ctrl
+  s_draw_ctrl_url: ipc:///tmp/transnet.draw.ctrl
+  s_telemetry_ctrl_url: ipc:///tmp/transnet.telemetry.ctrl
+  s_geometry_ctrl_url: ipc:///tmp/transnet.geometry.ctrl
 
 control_decoder:
   api_version: 1
@@ -27,3 +31,5 @@ ether:
   s_signals_sub_url: ipc:///tmp/ether.signals.xsub
   s_geometry_pub_url: ipc:///tmp/ether.geometry.xpub
   s_geometry_sub_url: ipc:///tmp/ether.geometry.xsub
+  phantom_suffix: ".phantom"
+  monitor_suffix: ".monitor"

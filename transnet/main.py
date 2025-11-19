@@ -1,6 +1,9 @@
+from enum import Enum
 import threading
+from typing import Dict
 from attrs import define, field
 import zmq
+from thread_proxy_switch import ThreadProxySwitch
 import time
 import json
 
@@ -8,6 +11,7 @@ from game_controller import game_controller_relay as gcr
 from common.tracker_client import TrackerClient
 from common.tracker_model import Team
 from grsim.client import GrSimClient
+from ether.signal_bus import SignalBus
 
 from argparse import ArgumentParser
 import yaml
@@ -37,65 +41,153 @@ s_signals.setsockopt_string(zmq.SUBSCRIBE, "{'transnet':")
 poller = zmq.Poller()
 poller.register(s_signals, zmq.POLLIN)
 
-
-def setup_draw_proxy(context: zmq.Context):
-    print("DRAW proxy SETUP")
-
-    # DRAW proxy
-    s_proxy_draw_pub = context.socket(zmq.XPUB)
-    s_proxy_draw_pub.bind(config["ether"]["s_draw_pub_url"])
-
-    s_proxy_draw_sub = context.socket(zmq.XSUB)
-    s_proxy_draw_sub.bind(config["ether"]["s_draw_sub_url"])
-    zmq.proxy(s_proxy_draw_pub, s_proxy_draw_sub)
+s_signals_ctrl = context.socket(zmq.REQ)
+s_draw_ctrl = context.socket(zmq.REQ)
+s_telemetry_ctrl = context.socket(zmq.REQ)
+s_geometry_ctrl = context.socket(zmq.REQ)
 
 
-def setup_telemetry_proxy(context: zmq.Context):
-    print("TELEMETRY proxy SETUP")
-
-    # TELEMETRY proxy
-    s_proxy_telemetry_pub = context.socket(zmq.XPUB)
-    s_proxy_telemetry_pub.bind(config["ether"]["s_telemetry_pub_url"])
-
-    s_proxy_telemetry_sub = context.socket(zmq.XSUB)
-    s_proxy_telemetry_sub.bind(config["ether"]["s_telemetry_sub_url"])
-    zmq.proxy(s_proxy_telemetry_pub, s_proxy_telemetry_sub)
-
-def setup_geometry_proxy(context: zmq.Context):
-    print("GEOMETRY proxy SETUP")
-
-    # GEOMETRY proxy
-    s_proxy_geometry_pub = context.socket(zmq.XPUB)
-    s_proxy_geometry_pub.bind(config["ether"]["s_geometry_pub_url"])
-
-    s_proxy_geometry_sub = context.socket(zmq.XSUB)
-    s_proxy_geometry_sub.bind(config["ether"]["s_geometry_sub_url"])
-    zmq.proxy(s_proxy_geometry_pub, s_proxy_geometry_sub)
+class PhantomCtrl(Enum):
+    ETHER = 0
+    PHANTOM = 1
 
 
-def setup_signals_proxy(context: zmq.Context):
-    print("SIGNALS proxy SETUP")
-
-    # SIGNALS proxy
-    s_proxy_signals_pub = context.socket(zmq.XPUB)
-    s_proxy_signals_pub.bind(config["ether"]["s_signals_pub_url"])
-
-    s_proxy_signals_sub = context.socket(zmq.XSUB)
-    s_proxy_signals_sub.bind(config["ether"]["s_signals_sub_url"])
-    zmq.proxy(s_proxy_signals_pub, s_proxy_signals_sub)
+def steer_send_cmd(sock: zmq.Socket, cmd: str):
+    sock.send(cmd.encode())
+    return sock.recv()
 
 
-def setup_proxy(context: zmq.Context):
+def ether_switch_handler(mode: PhantomCtrl):
+    # steer_send_cmd(s_signals_ctrl, mode.name)
+    steer_send_cmd(s_telemetry_ctrl, mode.name)
+    steer_send_cmd(s_draw_ctrl, mode.name)
+
+
+def setup_proxy(context: zmq.Context, signal_bus: SignalBus = None):
+
+    s_signals_ctrl.bind(config["transnet"]["s_signals_ctrl_url"])
+    s_draw_ctrl.bind(config["transnet"]["s_draw_ctrl_url"])
+    s_telemetry_ctrl.bind(config["transnet"]["s_telemetry_ctrl_url"])
+    s_geometry_ctrl.bind(config["transnet"]["s_telemetry_ctrl_url"])
+
     print("Setting up proxy")
-    draw_proxy = threading.Thread(target=setup_draw_proxy, args=(context,))
-    telemetry_proxy = threading.Thread(target=setup_telemetry_proxy, args=(context,))
-    geometry_proxy = threading.Thread(target=setup_geometry_proxy, args=(context,))
-    signals_proxy = threading.Thread(target=setup_signals_proxy, args=(context,))
-    draw_proxy.start()
-    telemetry_proxy.start()
-    geometry_proxy.start()
+
+    signals_proxy = ThreadProxySwitch(
+        zmq.XSUB, zmq.XSUB, zmq.XPUB, zmq.XPUB, ctrl_type=zmq.REP
+    )
+    signals_proxy.bind_real(config["ether"]["s_signals_sub_url"])
+    signals_proxy.bind_phantom(
+        config["ether"]["s_signals_sub_url"] + config["ether"]["phantom_suffix"]
+    )
+    signals_proxy.bind_out(config["ether"]["s_signals_pub_url"])
+    signals_proxy.bind_monitor(
+        config["ether"]["s_signals_pub_url"] + config["ether"]["monitor_suffix"]
+    )
+    signals_proxy.connect_ctrl(config["transnet"]["s_signals_ctrl_url"])
+
     signals_proxy.start()
+
+    print("Signal proxy UP")
+
+    telemetry_proxy = ThreadProxySwitch(
+        zmq.XSUB, zmq.XSUB, zmq.XPUB, zmq.XPUB, ctrl_type=zmq.REP
+    )
+    telemetry_proxy.bind_real(config["ether"]["s_telemetry_sub_url"])
+    telemetry_proxy.bind_phantom(
+        config["ether"]["s_telemetry_sub_url"] + config["ether"]["phantom_suffix"]
+    )
+    telemetry_proxy.bind_out(config["ether"]["s_telemetry_pub_url"])
+    telemetry_proxy.bind_monitor(
+        config["ether"]["s_telemetry_pub_url"] + config["ether"]["monitor_suffix"]
+    )
+    telemetry_proxy.connect_ctrl(config["transnet"]["s_telemetry_ctrl_url"])
+    telemetry_proxy.start()
+
+    print("Telemetry proxy UP")
+
+    draw_proxy = ThreadProxySwitch(
+        zmq.XSUB, zmq.XSUB, zmq.XPUB, zmq.XPUB, ctrl_type=zmq.REP
+    )
+    draw_proxy.bind_real(config["ether"]["s_draw_sub_url"])
+    draw_proxy.bind_phantom(
+        config["ether"]["s_draw_sub_url"] + config["ether"]["phantom_suffix"]
+    )
+    draw_proxy.bind_out(config["ether"]["s_draw_pub_url"])
+    draw_proxy.bind_monitor(
+        config["ether"]["s_draw_pub_url"] + config["ether"]["monitor_suffix"]
+    )
+    draw_proxy.connect_ctrl(config["transnet"]["s_draw_ctrl_url"])
+    draw_proxy.start()
+
+    print("Draw proxy UP")
+
+
+    geometry_proxy = ThreadProxySwitch(
+        zmq.XSUB, zmq.XSUB, zmq.XPUB, zmq.XPUB, ctrl_type=zmq.REP
+    )
+    geometry_proxy.bind_real(config["ether"]["s_geometry_sub_url"])
+    geometry_proxy.bind_phantom(
+        config["ether"]["s_geometry_sub_url"] + config["ether"]["phantom_suffix"]
+    )
+    geometry_proxy.bind_out(config["ether"]["s_geometry_pub_url"])
+    geometry_proxy.bind_monitor(
+        config["ether"]["s_geometry_pub_url"] + config["ether"]["monitor_suffix"]
+    )
+    geometry_proxy.connect_ctrl(config["transnet"]["s_geometry_ctrl_url"])
+    geometry_proxy.start()
+
+    print("Geometry proxy UP")
+
+    ether_switch_handler(PhantomCtrl.ETHER)
+
+    # signal_bus.on("ether_disable",
+    #     lambda signal: s_ether_ctrl.send("PAUSE")
+    # )
+    # signal_bus.on("ether_enable",
+    #     lambda signal: s_ether_ctrl.send("RESUME")
+    # )
+
     print("Proxy UP")
+
+
+def proxy_ctrl_handler(signal: Dict):
+    signal_type = signal["transnet"]
+    print(signal)
+
+    if signal_type == "ether_select":
+        print("Ether select")
+        ether_switch_handler(PhantomCtrl.ETHER)
+        return True
+    elif signal_type == "phantom_select":
+        print("Phantom select")
+        ether_switch_handler(PhantomCtrl.PHANTOM)
+        return True
+    # if signal_type == "ether_enable":
+    #     print("Ether enable")
+    #     s_ether_ctrl.send("RESUME".encode())
+    #     print(s_ether_ctrl.recv_multipart())
+    #     s_ether_ctrl.send("RESUME".encode())
+    #     print(s_ether_ctrl.recv_multipart())
+    #     return True
+    # elif signal_type == "ether_disable":
+    #     print("Ether disable")
+    #     s_ether_ctrl.send("PAUSE".encode())
+    #     print(s_ether_ctrl.recv())
+    #     s_ether_ctrl.send("PAUSE".encode())
+    #     print(s_ether_ctrl.recv())
+    #     return True
+    # elif signal_type == "ether_terminate":
+    #     print("Ether disable")
+    #     s_ether_ctrl.send("TERMINATE".encode())
+    #     print(s_ether_ctrl.recv())
+    #     return True
+    # elif signal_type == "ether_stats":
+    #     print("Ether stats")
+    #     s_ether_ctrl.send("STATISTICS".encode())
+    #     print(s_ether_ctrl.recv_multipart())
+    #     return True
+
+    return False
 
 
 from common.vision_model import Team
@@ -216,7 +308,9 @@ if __name__ == "__main__":
     simControl = vc.SimControl(client=client)
     robotControl = vc.RobotControl(client=vc.GrSimRobotControl(client=client))
 
-    setup_proxy(context)
+    # signal_bus = SignalBus("transnet", config["ether"]["s_signals_pub_url"])
+
+    setup_proxy(context)  # , signal_bus)
 
     game_controller_relay = gcr.GameControllerRelay(
         game_controller_fan_url=config["transnet"]["s_game_controller_fan_url"],
@@ -273,6 +367,7 @@ if __name__ == "__main__":
                 is_signal_valid = False
                 is_signal_valid |= simControl.signal_handler(signal)
                 is_signal_valid |= robotControl.signal_handler(signal)
+                is_signal_valid |= proxy_ctrl_handler(signal)
 
                 if not is_signal_valid:
                     print("Invalid signal: ", signal)

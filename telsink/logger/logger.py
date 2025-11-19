@@ -26,17 +26,20 @@ class Logger:
         self.is_recording = False
 
     def start_recording(self):
-        self.log_file_name = self.log_path + str(int(self.__get_unix_timestamp())) + ".log"
-        self.log_file_handler = open(self.log_file_name, "w")
+        self.log_file_name = (
+            self.log_path + str(int(self.__get_unix_timestamp())) + ".log"
+        )
+        self.log_file_handler = open(self.log_file_name, "wb")
         self.is_recording = True
         self.log_thread = multiprocessing.Process(
-            target=self.__log_loop, args=(lambda: self.is_recording, self.socket_url_list)
+            target=self.__log_loop,
+            args=(lambda: self.is_recording, self.socket_url_list),
         )
         self.log_thread.start()
         print("Started recording to ", self.log_file_name)
 
     def stop_recording(self):
-        if(not self.is_recording):
+        if not self.is_recording:
             print("Not recording")
             return
         self.is_recording = False
@@ -72,7 +75,10 @@ class Logger:
 
     def __log_message(self, endpoint, message):
         timestamp = self.__get_unix_timestamp()
-        self.log_file_handler.write(f"{timestamp} {endpoint} {message}\n")
+        self.log_file_handler.write(
+            f"{timestamp} {endpoint} ".encode() + message + "\n".encode()
+        )
+        # self.log_file_handler.write(f"{timestamp} {endpoint} {message}\n")
 
     def __get_unix_timestamp(self):
         return float(time.time())
