@@ -73,7 +73,7 @@ def setup_proxy(context: zmq.Context, signal_bus: SignalBus = None):
     s_signals_ctrl.bind(config["transnet"]["s_signals_ctrl_url"])
     s_draw_ctrl.bind(config["transnet"]["s_draw_ctrl_url"])
     s_telemetry_ctrl.bind(config["transnet"]["s_telemetry_ctrl_url"])
-    s_geometry_ctrl.bind(config["transnet"]["s_telemetry_ctrl_url"])
+    s_geometry_ctrl.bind(config["transnet"]["s_geometry_ctrl_url"])
 
     print("Setting up proxy")
 
