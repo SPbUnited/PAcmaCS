@@ -2,6 +2,7 @@ import "./socketManager";
 import { GoldenLayout, LayoutConfig } from "golden-layout";
 import "./styles.css";
 import { loadComponents } from "./loadComponents.ts";
+import { loadLayouts } from "./layout_templates/load_layout.ts";
 
 const menuContainerElement = document.querySelector("#menuContainer");
 const layoutElement: HTMLElement | null =
@@ -30,7 +31,7 @@ if (menuContainerElement && layoutElement) {
   }
 
   const components = loadComponents();
-  
+
   console.log("All components that could be found:", components);
 
   components.forEach((c) => {
@@ -51,6 +52,8 @@ if (menuContainerElement && layoutElement) {
 
     goldenLayout.newDragSource(newItem, c.name, c.factory);
   });
+
+  loadLayouts(goldenLayout);
 
   window.addEventListener("resize", () => {
     goldenLayout.updateRootSize();

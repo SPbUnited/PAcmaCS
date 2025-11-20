@@ -1,0 +1,180 @@
+{
+  "root": {
+    "type": "column",
+    "content": [
+      {
+        "type": "stack",
+        "content": [
+          {
+            "type": "component",
+            "content": [],
+            "size": 1,
+            "sizeUnit": "fr",
+            "minSizeUnit": "px",
+            "id": "",
+            "maximised": false,
+            "isClosable": true,
+            "reorderEnabled": true,
+            "title": "Field",
+            "componentType": "Field",
+            "componentState": {}
+          }
+        ],
+        "size": 51.515151515151516,
+        "sizeUnit": "%",
+        "minSizeUnit": "px",
+        "id": "",
+        "isClosable": true,
+        "maximised": false,
+        "activeItemIndex": 0
+      },
+      {
+        "type": "row",
+        "content": [
+          {
+            "type": "row",
+            "content": [
+              {
+                "type": "column",
+                "content": [
+                  {
+                    "type": "stack",
+                    "content": [
+                      {
+                        "type": "component",
+                        "content": [],
+                        "size": 1,
+                        "sizeUnit": "fr",
+                        "minSizeUnit": "px",
+                        "id": "",
+                        "maximised": false,
+                        "isClosable": true,
+                        "reorderEnabled": true,
+                        "title": "Drawing layers",
+                        "componentType": "Drawing layers",
+                        "componentState": {}
+                      }
+                    ],
+                    "size": 37.37373737373738,
+                    "sizeUnit": "%",
+                    "minSizeUnit": "px",
+                    "id": "",
+                    "isClosable": true,
+                    "maximised": false,
+                    "activeItemIndex": 0
+                  },
+                  {
+                    "type": "stack",
+                    "content": [
+                      {
+                        "type": "component",
+                        "content": [],
+                        "size": 1,
+                        "sizeUnit": "fr",
+                        "minSizeUnit": "px",
+                        "id": "",
+                        "maximised": false,
+                        "isClosable": true,
+                        "reorderEnabled": true,
+                        "title": "Telemetry",
+                        "componentType": "Telemetry",
+                        "componentState": {}
+                      }
+                    ],
+                    "size": 62.62626262626263,
+                    "sizeUnit": "%",
+                    "minSizeUnit": "px",
+                    "id": "",
+                    "isClosable": true,
+                    "maximised": false,
+                    "activeItemIndex": 0
+                  }
+                ],
+                "size": 73.73737373737373,
+                "sizeUnit": "%",
+                "minSizeUnit": "px",
+                "id": "",
+                "isClosable": true
+              },
+              {
+                "type": "stack",
+                "content": [
+                  {
+                    "type": "component",
+                    "content": [],
+                    "size": 1,
+                    "sizeUnit": "fr",
+                    "minSizeUnit": "px",
+                    "id": "",
+                    "maximised": false,
+                    "isClosable": true,
+                    "reorderEnabled": true,
+                    "title": "SimControl",
+                    "componentType": "SimControl",
+                    "componentState": {}
+                  }
+                ],
+                "size": 26.262626262626267,
+                "sizeUnit": "%",
+                "minSizeUnit": "px",
+                "id": "",
+                "isClosable": true,
+                "maximised": false,
+                "activeItemIndex": 0
+              }
+            ],
+            "size": 100,
+            "sizeUnit": "%",
+            "minSizeUnit": "px",
+            "id": "",
+            "isClosable": true
+          }
+        ],
+        "size": 48.484848484848484,
+        "sizeUnit": "%",
+        "minSizeUnit": "px",
+        "id": "",
+        "isClosable": true
+      }
+    ],
+    "size": 1,
+    "sizeUnit": "fr",
+    "minSizeUnit": "px",
+    "id": "",
+    "isClosable": true
+  },
+  "openPopouts": [],
+  "settings": {
+    "constrainDragToContainer": true,
+    "reorderEnabled": true,
+    "popoutWholeStack": false,
+    "blockedPopoutsThrowError": true,
+    "closePopoutsOnUnload": true,
+    "responsiveMode": "none",
+    "tabOverlapAllowance": 0,
+    "reorderOnTabMenuClick": true,
+    "tabControlOffset": 10,
+    "popInOnClose": false
+  },
+  "dimensions": {
+    "borderWidth": 5,
+    "borderGrabWidth": 5,
+    "defaultMinItemHeight": 0,
+    "defaultMinItemHeightUnit": "px",
+    "defaultMinItemWidth": 10,
+    "defaultMinItemWidthUnit": "px",
+    "headerHeight": 20,
+    "dragProxyWidth": 300,
+    "dragProxyHeight": 200
+  },
+  "header": {
+    "show": "top",
+    "popout": "open in new window",
+    "dock": "dock",
+    "close": "close",
+    "maximise": "maximise",
+    "minimise": "minimise",
+    "tabDropdown": "additional tabs"
+  },
+  "resolved": true
+}
