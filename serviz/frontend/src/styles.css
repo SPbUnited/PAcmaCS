@@ -27,7 +27,7 @@ body {
 
 #menuContainer {
   width: 170px;
-  height: calc(100% - 217px);
+  height: auto;
   position: fixed;
   top: 0;
   left: 0;
@@ -42,10 +42,10 @@ body {
   left: 0;
   right: 0;
   width: 170px;
-  height: 217px;
+  height: fit-content;
   background: #222;
   border-top: 2px solid #333;
-  overflow-y: auto;
+  overflow-y: none;
   box-sizing: border-box;
 }
 
