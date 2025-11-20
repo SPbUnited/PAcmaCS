@@ -17,6 +17,11 @@ import yaml
 
 import pprint
 
+import multiprocessing as mp
+if mp.get_start_method(allow_none=True) != "fork":
+    mp.set_start_method("fork") # fix bad paths without docker
+
+
 parser = ArgumentParser()
 parser.add_argument("--config", default="config.yml")
 args = parser.parse_args()

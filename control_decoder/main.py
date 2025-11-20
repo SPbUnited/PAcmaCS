@@ -87,24 +87,28 @@ while True:
     if socks == {}:
         time.sleep(0.01)
     elif s_inbound in socks:
-        signal = s_inbound.recv_json()
-        signal_data = structure(signal["data"], cdcm.DecoderTeamCommand)
+        try:
+            signal = s_inbound.recv_json()
+            signal_data = structure(signal["data"], cdcm.DecoderTeamCommand)
 
-        telemetry_text = f'SENDING COMMANDS IN "{control_mode}" MODE\n \tr_id\tspeedX\tspeedY\tspeedW\tdribler\tvoltage\tkickUP\tkickDWN\tbeep\tdribEN\tcharEN\tautokck\n'
+            telemetry_text = f'SENDING COMMANDS IN "{control_mode}" MODE\n \tr_id\tspeedX\tspeedY\tspeedW\tdribler\tvoltage\tkickUP\tkickDWN\tbeep\tdribEN\tcharEN\tautokck\n'
 
-        if control_mode == "SIM":
-            command: rcm.RobotControlExt = decoder.decoder2sim(signal_data)
-            s_outbound_sim.send_json({"transnet": "actuate_robot", "data": unstructure(command)})
-        else:
-            packets_low, packets_high = decoder.decoder2robot(signal_data)
-            for packet in packets_low:
-                s_outbound_real_low.sendto(packet, real_robots_ip_port_low)
-            for packet in packets_high:
-                s_outbound_real_high.sendto(packet, real_robots_ip_port_high)
+            if control_mode == "SIM":
+                command: rcm.RobotControlExt = decoder.decoder2sim(signal_data)
+                s_outbound_sim.send_json({"transnet": "actuate_robot", "data": unstructure(command)})
+            else:
+                packets_low, packets_high = decoder.decoder2robot(signal_data)
+                for packet in packets_low:
+                    s_outbound_real_low.sendto(packet, real_robots_ip_port_low)
+                for packet in packets_high:
+                    s_outbound_real_high.sendto(packet, real_robots_ip_port_high)
 
-            for cmd in packets_low + packets_high:
-                telemetry_text += create_telemetry(cmd)
-            last_update = time.time()
+                for cmd in packets_low + packets_high:
+                    telemetry_text += create_telemetry(cmd)
+                last_update = time.time()
+        except OverflowError:
+            print("\033[31mAn invalid control command was received.\033[0m Are you sure the SIM/REAL mode of control is correct?")
+            time.sleep(0.1)
 
     if time.time() - last_update < 2:
         telemetry_socket.send_json(
