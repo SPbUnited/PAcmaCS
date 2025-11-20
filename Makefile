@@ -109,7 +109,7 @@ init_npm: no-sudo
 	@echo "${GREEN}============="
 	@echo "| NPM  INIT |"
 	@echo "=============${NC}"
-	cd serviz/serviz_frontend && npm install
+	cd serviz/frontend && npm install
 
 build_docker: guard_not_mac no-sudo
 	@echo "${BLUE}============="
@@ -121,7 +121,7 @@ build_npm: guard_not_mac no-sudo
 	@echo "${BLUE}============="
 	@echo "|   BUILD NPM   |"
 	@echo "=============${NC}"
-	cd serviz/serviz_frontend && npm run build
+	cd serviz/frontend && npm run build
 
 build: guard_not_mac build_docker build_npm
 
@@ -158,7 +158,7 @@ npm-dev: guard_not_mac no-sudo
 	@echo "${CYAN}============="
 	@echo "|  NPM DEV  |"
 	@echo "=============${NC}"
-	cd serviz/serviz_frontend && npm run dev
+	cd serviz/frontend && npm run dev
 
 down: guard_not_mac
 	@echo "${RED}============="
