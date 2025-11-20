@@ -53,8 +53,15 @@ NC=\033[0m # No Color
 ARCH=$(shell dpkg --print-architecture)
 # UBUNTU_CODENAME=$(shell . /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
 UBUNTU_CODENAME=$(shell cat /etc/*release | grep --color=never -oP '(?<=DISTRIB_CODENAME=).*')
+UNAME_S := $(shell uname -s)
 
-install_docker: no-sudo
+guard_not_mac:
+	@if [ "$(UNAME_S)" = "Darwin" ]; then \
+		echo "${RED}This command does not support for MacOS${NC} (you can't run PAcmaCS in Docker)" 1>&2; \
+		exit 1; \
+	fi
+
+install_docker: guard_not_mac no-sudo
 	echo "${UBUNTU_CODENAME}"
 	# Add Docker's official GPG key:
 	sudo rm /etc/apt/sources.list.d/docker.list || true
@@ -73,25 +80,23 @@ install_docker: no-sudo
 
 	sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-post_install_docker: no-sudo
+post_install_docker: guard_not_mac no-sudo
 	sudo groupadd docker || true
 	sudo usermod -aG docker ${USER}
 	@echo "newgrp docker"
 	@echo "\n${YELLOW}Reboot your machine now${NC} (ignore if using WSL)"
 	@newgrp docker
 
-install_misc: no-sudo
+install_misc: guard_not_mac no-sudo
 	sudo apt update || true
 	sudo apt install -y python3-venv npm jq vite
 
-install: install_misc install_docker post_install_docker
+install: guard_not_mac install_misc install_docker post_install_docker
 
 install_wsl: install_misc
 	@echo "\n${YELLOW}Now please install Docker Desktop from ${WHITE}https://www.docker.com/products/docker-desktop/${NC}\n"
 
 init: init_py init_npm
-	@echo "\n${YELLOW}Don't forget to do ${WHITE}source venv/bin/activate${NC}"
-	@echo "                   ~~~~~~~~~~~~~~~~~~~~~~~~"
 
 init_py: no-sudo
 	@echo "${GREEN}============="
@@ -106,30 +111,37 @@ init_npm: no-sudo
 	@echo "=============${NC}"
 	cd serviz/serviz_frontend && npm install
 
-build_docker: no-sudo
+build_docker: guard_not_mac no-sudo
 	@echo "${BLUE}============="
 	@echo "|   BUILD DOCKER   |"
 	@echo "=============${NC}"
 	docker compose build
 
-build_npm: no-sudo
+build_npm: guard_not_mac no-sudo
 	@echo "${BLUE}============="
 	@echo "|   BUILD NPM   |"
 	@echo "=============${NC}"
 	cd serviz/serviz_frontend && npm run build
 
-build: build_docker build_npm
+build: guard_not_mac build_docker build_npm
 
-up: up-message no-sudo 
-	docker compose up pacmacs
+up: up-message no-sudo
+	@if [ "$(UNAME_S)" = "Darwin" ]; then \
+		echo "Run for MacOS"; \
+		source venv/bin/activate; \
+		honcho start; \
+	else \
+		echo "Run for Debian system"; \
+		docker compose up pacmacs; \
+	fi
 
-up-grsim: up-message no-sudo
+up-grsim: guard_not_mac up-message no-sudo
 	docker compose up grsim
 
-up-autoreferee: up-message no-sudo
+up-autoreferee: guard_not_mac up-message no-sudo
 	docker compose up autoreferee
 
-up-all: up-message no-sudo
+up-all: guard_not_mac up-message no-sudo
 	docker compose up pacmacs grsim autoreferee
 
 up-message:
@@ -142,19 +154,19 @@ up-message:
 	@echo "UID=${UID}"
 	@echo "GID=${GID}"
 
-npm-dev: no-sudo
+npm-dev: guard_not_mac no-sudo
 	@echo "${CYAN}============="
 	@echo "|  NPM DEV  |"
 	@echo "=============${NC}"
 	cd serviz/serviz_frontend && npm run dev
 
-down:
+down: guard_not_mac
 	@echo "${RED}============="
 	@echo "|    DOWN   |"
 	@echo "=============${NC}"
 	docker compose down
 
-purge:
+purge: guard_not_mac
 	@echo "${BIRED}============="
 	@echo "|   PURGE   |"
 	@echo "=============${NC}"
