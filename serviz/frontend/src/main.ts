@@ -1,7 +1,7 @@
 import "./socketManager";
 import { GoldenLayout, LayoutConfig } from "golden-layout";
 import "./styles.css";
-import { loadComponents } from "./loadComponents.js";
+import { loadComponents } from "./loadComponents.ts";
 
 const menuContainerElement = document.querySelector("#menuContainer");
 const layoutElement: HTMLElement | null =
@@ -30,11 +30,20 @@ if (menuContainerElement && layoutElement) {
   }
 
   const components = loadComponents();
-
+  
   console.log("All components that could be found:", components);
 
   components.forEach((c) => {
-    goldenLayout.registerComponentFactoryFunction(c.name, c.factory);
+    goldenLayout.registerComponentFactoryFunction(
+      c.name,
+      (glContainer: any, state: any) => {
+        const cleanup = c.factory({ element: glContainer.element });
+
+        if (typeof cleanup === "function") {
+          glContainer.on("destroy", cleanup);
+        }
+      }
+    );
 
     const newItem = document.createElement("li");
     newItem.textContent = c.name;

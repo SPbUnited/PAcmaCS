@@ -148,7 +148,7 @@ const Field: Component = {
     });
 
     subscribeToTopic("update_geometry");
-    bus.on("update_geometry", (data) => {
+    const onUpdateGeometry = (data) => {
       // console.log("Update field with new data:", data);
       fieldConfig = {
         width: data.length,
@@ -165,12 +165,13 @@ const Field: Component = {
       drawField(fieldSvg, fieldConfig);
       updateViewBox([drawingSvg, fieldSvg, textSvg], fieldConfig);
       updateTransform();
-    });
+    };
+    bus.on("update_geometry", onUpdateGeometry);
 
     let lastSprites: any = null;
     let isDrawing = false;
     subscribeToTopic("update_sprites");
-    bus.on("update_sprites", (data) => {
+    const onUpdateSprites = (data) => {
       lastSprites = data;
       requestDraw();
 
@@ -191,7 +192,8 @@ const Field: Component = {
           textSvg.appendChild(text);
         }
       }
-    });
+    };
+    bus.on("update_sprites", onUpdateSprites);
     function requestDraw() {
       if (isDrawing) return;
       isDrawing = true;
@@ -279,6 +281,10 @@ const Field: Component = {
 
       arrowLine = null;
     }
+    return () => {
+      bus.off("update_geometry", onUpdateGeometry);
+      bus.off("update_sprites", onUpdateSprites);
+    };
   },
 };
 

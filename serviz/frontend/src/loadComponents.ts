@@ -14,7 +14,8 @@ export function loadComponents() {
 
 interface Component {
   name: string;
-  factory: (container: { element: HTMLElement }) => void;
+  factory: (container: { element: HTMLElement }) => void | (() => void);
+  // returns unsubscribe function for every topic (bus.on)
 }
 
 export default Component;

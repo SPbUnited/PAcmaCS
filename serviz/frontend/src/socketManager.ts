@@ -11,7 +11,11 @@ socket.onAny((event, data) => {
 socket.on("connect", () => console.log("Connected to backend"));
 socket.on("disconnect", () => console.log("Disconnected from backend"));
 
+const subscribedTopics = new Set<string>();
 export function subscribeToTopic(topic: string) {
+  if (subscribedTopics.has(topic)) return;
+  subscribedTopics.add(topic);
+
   socket.on(topic, (payload) => {
     bus.emit(topic, payload);
   });

@@ -1,5 +1,5 @@
 import Component from "../loadComponents";
-import { bus, subscribeToTopic, sendMessage } from "../socketManager";
+import { sendMessage } from "../socketManager";
 import { CustomDropdown, NumberInput } from "../customButtons";
 
 const SimControl: Component = {

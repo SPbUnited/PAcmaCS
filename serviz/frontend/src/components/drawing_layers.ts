@@ -48,8 +48,9 @@ const DrawingLayers: Component = {
         if (el.dataset.layer === name) return el;
       return undefined;
     }
+
     subscribeToTopic("update_sprites");
-    bus.on("update_sprites", (data) => {
+    const onUpdateSprites = (data) => {
       const validNames = new Set<string>();
       for (const layerName of Object.keys(data)) {
         const layer = data[layerName];
@@ -90,10 +91,15 @@ const DrawingLayers: Component = {
         const name = input?.dataset.layer;
         if (name && !validNames.has(name)) label.remove();
       }
-    });
+    };
+    bus.on("update_sprites", onUpdateSprites);
     clearButton.addEventListener("click", () => {
       sendMessage("clear_layers", "");
     });
+
+    return () => {
+      bus.off("update_sprites", onUpdateSprites);
+    };
   },
 };
 

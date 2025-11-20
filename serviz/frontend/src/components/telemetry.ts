@@ -54,7 +54,7 @@ const Telemetry: Component = {
 
     subscribeToTopic("update_telemetry");
 
-    bus.on("update_telemetry", (data) => {
+    const onUpdateTelemetry = (data) => {
       telemetryData = data;
 
       const previousTopic = currentTopic;
@@ -70,7 +70,8 @@ const Telemetry: Component = {
 
       selectDropdown.updateOptions(newOptions);
       telemetryBox.textContent = getText(currentTopic);
-    });
+    };
+    bus.on("update_telemetry", onUpdateTelemetry);
 
     clearButton.addEventListener("click", () => {
       sendMessage("clear_telemetry", "");
@@ -78,6 +79,9 @@ const Telemetry: Component = {
       selectDropdown.updateOptions([]);
       telemetryBox.textContent = "No telemetry right now";
     });
+    return () => {
+      bus.off("update_telemetry", onUpdateTelemetry);
+    };
   },
 };
 
