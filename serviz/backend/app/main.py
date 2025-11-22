@@ -36,7 +36,9 @@ import zmq
 
 sprite_store = BGStore()
 telemetry_store = BGStore()
+
 visibility = {}
+layer_heigh: dict[str, float] = {}
 
 feed_lock = Lock()
 last_feed_update = time.time()
@@ -49,13 +51,29 @@ context = zmq.Context()
 s_signals = context.socket(zmq.PUB)
 s_signals.connect(config["ether"]["s_signals_sub_url"])
 
-
 def update_layer(layer_name: str, data):
+    if layer_name not in layer_heigh:
+        heigh = 1
+        if "heigh" in data:
+            heigh = data["heigh"]
+            
+        used_heights = set()
+        for _, h in layer_heigh.items():
+            used_heights.add(h)
+
+        while heigh in used_heights:
+            heigh += 0.001
+        layer_heigh.update({layer_name: heigh})
+
+    else:
+        data["heigh"] = layer_heigh[layer_name]
+
     sprite_store.write({layer_name: data})
     if layer_name not in visibility:
         visibility[layer_name] = data["is_visible"]
     else:
         data["is_visible"] = visibility[layer_name]
+
     if layer_name == "vision_feed":
         with feed_lock:
             global last_feed_update
@@ -70,6 +88,50 @@ def update_geometry_data(data):
         if geometry_data != data:
             geometry_data = data
             geometry_data_updated = True
+
+def _move_layer(layer_name: str, direction: str):
+    if layer_name not in layer_heigh:
+        print('Wrong command "move_layer": unknown layer', layer_name)
+        return
+
+    layers = []
+    for name, h in layer_heigh.items():
+        layers.append((name, float(h)))
+
+    if not layers:
+        return
+
+    layers.sort(key=lambda x: x[1])  # по возрастанию heigh
+
+    index = None
+    for i, (name, _) in enumerate(layers):
+        if name == layer_name:
+            index = i
+            break
+
+    if direction == "up":
+        if index == 0:
+            return
+        other_index = index - 1
+    elif direction == "down":
+        if index == len(layers) - 1:
+            return
+        other_index = index + 1
+    else:
+        return
+
+    name1, h1 = layers[index]
+    name2, h2 = layers[other_index]
+
+    layer_heigh[name1] = h2
+    layer_heigh[name2] = h1
+
+    current_sprites = sprite_store.fetch()
+    for name in (name1, name2):
+        layer_data = current_sprites.get(name)
+        if layer_data is not None:
+            layer_data["heigh"] = layer_heigh[name]
+            sprite_store.write({name: layer_data})
 
 
 @app.route("/")
@@ -104,6 +166,7 @@ def send_signal(data):
 @sio.on("clear_layers")
 def clear_layers(data):
     visibility.clear()
+    layer_heigh.clear()
     sprite_store.clear()
 
 
@@ -114,6 +177,16 @@ def clear_telemetry(data):
 @sio.on("toggle_layer_visibility")
 def toggle_layer_visibility(key):
     visibility[key] = not visibility[key]
+
+@sio.on("move_layer_up")
+def move_layer_up(layer_name):
+    _move_layer(layer_name, "up")
+
+
+@sio.on("move_layer_down")
+def move_layer_down(layer_name):
+    _move_layer(layer_name, "down")
+
 
 def update_sprites():
     print("Update sprites enter")

@@ -49,25 +49,46 @@ const DrawingLayers: Component = {
       return undefined;
     }
 
+    const layerHeigh = new Map<string, number>();
+
     subscribeToTopic("update_sprites");
     const onUpdateSprites = (data) => {
       const validNames = new Set<string>();
+      let update = false;
       for (const layerName of Object.keys(data)) {
         const layer = data[layerName];
         if (!layer || !Array.isArray(layer.data)) continue;
         validNames.add(layerName);
 
+        const heighValue = Number(layer.heigh);
+        if (layerHeigh.get(layerName) != heighValue) {
+          update = true;
+          layerHeigh.set(layerName, heighValue);
+        }
+
         let checkbox = findCheckbox(layerName);
         if (!checkbox) {
+          update = true;
           //Add new checkbox
           const label = document.createElement("label");
-          label.style.display = "block";
+          label.style.display = "flex";
+          label.style.alignItems = "center";
+          label.style.marginBottom = "2px";
+          label.style.width = "100%";
+          label.dataset.layer = layerName;
+
+          const leftPart = document.createElement("span");
+          leftPart.style.display = "flex";
+          leftPart.style.alignItems = "center";
+          leftPart.style.flex = "1 1 auto";
+          leftPart.style.minWidth = "0"; // важно для ellipsis в flex
 
           checkbox = document.createElement("input");
           checkbox.type = "checkbox";
           checkbox.checked = !!layer.is_visible;
           checkbox.dataset.level = layer.level ?? "0";
           checkbox.dataset.layer = layerName;
+          checkbox.style.marginRight = "5px";
 
           checkbox.addEventListener("click", (e) => {
             e.preventDefault();
@@ -75,8 +96,51 @@ const DrawingLayers: Component = {
             sendMessage("toggle_layer_visibility", layerName);
           });
 
-          label.appendChild(checkbox);
-          label.appendChild(document.createTextNode(" " + layerName));
+          // span для текста с обрезкой
+          const nameSpan = document.createElement("span");
+          nameSpan.textContent = " " + layerName;
+          nameSpan.style.display = "inline-block";
+          nameSpan.style.flex = "1 1 auto";
+          nameSpan.style.minWidth = "0";
+          nameSpan.style.whiteSpace = "nowrap";
+          nameSpan.style.overflow = "hidden";
+          nameSpan.style.textOverflow = "ellipsis";
+
+          leftPart.appendChild(checkbox);
+          leftPart.appendChild(nameSpan);
+
+          const rightPart = document.createElement("span");
+          rightPart.style.display = "flex";
+          rightPart.style.gap = "2px"; // меньше расстояние между стрелками
+          rightPart.style.marginLeft = "auto";
+          rightPart.style.flexShrink = "0"; // не сжимать стрелки
+
+          const upButton = document.createElement("button");
+          upButton.textContent = "↑";
+          upButton.style.width = "20px";
+          upButton.style.height = "20px";
+          upButton.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            sendMessage("move_layer_up", layerName);
+          });
+
+          const downButton = document.createElement("button");
+          downButton.textContent = "↓";
+          downButton.style.width = "20px";
+          downButton.style.height = "20px";
+          downButton.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            sendMessage("move_layer_down", layerName);
+          });
+
+          rightPart.appendChild(upButton);
+          rightPart.appendChild(downButton);
+
+          label.appendChild(leftPart);
+          label.appendChild(rightPart);
+
           layersList.appendChild(label);
         } else {
           checkbox.checked = !!layer.is_visible;
@@ -91,7 +155,36 @@ const DrawingLayers: Component = {
         const name = input?.dataset.layer;
         if (name && !validNames.has(name)) label.remove();
       }
+
+      for (const name of Array.from(layerHeigh.keys())) {
+        if (!validNames.has(name)) {
+          layerHeigh.delete(name);
+        }
+      }
+
+      if (update) {
+        const labels = Array.from(
+          layersList.querySelectorAll<HTMLLabelElement>("label")
+        );
+        labels.sort((a, b) => {
+          const aInput = a.querySelector<HTMLInputElement>(
+            'input[type="checkbox"][data-layer]'
+          );
+          const bInput = b.querySelector<HTMLInputElement>(
+            'input[type="checkbox"][data-layer]'
+          );
+          const aName = aInput?.dataset.layer ?? "";
+          const bName = bInput?.dataset.layer ?? "";
+          const aHeigh = layerHeigh.get(aName) ?? 0;
+          const bHeigh = layerHeigh.get(bName) ?? 0;
+          return aHeigh - bHeigh;
+        });
+        for (const label of labels) {
+          layersList.appendChild(label);
+        }
+      }
     };
+
     bus.on("update_sprites", onUpdateSprites);
     clearButton.addEventListener("click", () => {
       sendMessage("clear_layers", "");
