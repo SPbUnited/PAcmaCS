@@ -522,7 +522,7 @@ type VisionObject =
   | Text;
 
 interface FeedData {
-  [layerName: string]: { data: VisionObject[]; is_visible: boolean };
+  [layerName: string]: { data: VisionObject[]; is_visible: boolean; heigh: number };
 }
 
 function drawImageSvg(svg: SVGSVGElement, json: FeedData) {
@@ -530,8 +530,25 @@ function drawImageSvg(svg: SVGSVGElement, json: FeedData) {
   const svgNS = "http://www.w3.org/2000/svg";
   const minSpeed = 10;
 
-  for (const layerName of Object.keys(json).reverse()) {
-    const layer = json[layerName];
+  const layers = Object.keys(json)
+    .map((layerName) => {
+      const layer = json[layerName];
+      return { layerName, layer };
+    })
+    .filter(({ layer }) => layer && Array.isArray(layer.data))
+    .sort((a, b) => {
+      const ha =
+        typeof a.layer.heigh === "number"
+          ? a.layer.heigh
+          : Number(a.layer.heigh) || 0;
+      const hb =
+        typeof b.layer.heigh === "number"
+          ? b.layer.heigh
+          : Number(b.layer.heigh) || 0;
+      return hb - ha;
+    });
+
+  for (const { layerName, layer } of layers) {
     if (!layer.is_visible) continue;
 
     layer.data.forEach((element) => {

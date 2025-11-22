@@ -115,10 +115,13 @@ const DrawingLayers: Component = {
           rightPart.style.marginLeft = "auto";
           rightPart.style.flexShrink = "0"; // не сжимать стрелки
 
+          const buttonSize = "25px";
+
           const upButton = document.createElement("button");
           upButton.textContent = "↑";
-          upButton.style.width = "20px";
-          upButton.style.height = "20px";
+          upButton.style.width = buttonSize;
+          upButton.style.height = buttonSize;
+          upButton.style.margin = "5px";
           upButton.addEventListener("click", (e) => {
             e.preventDefault();
             e.stopImmediatePropagation();
@@ -127,8 +130,9 @@ const DrawingLayers: Component = {
 
           const downButton = document.createElement("button");
           downButton.textContent = "↓";
-          downButton.style.width = "20px";
-          downButton.style.height = "20px";
+          downButton.style.width = buttonSize;
+          downButton.style.height = buttonSize;
+          downButton.style.margin = "5px";
           downButton.addEventListener("click", (e) => {
             e.preventDefault();
             e.stopImmediatePropagation();
