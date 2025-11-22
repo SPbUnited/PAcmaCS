@@ -54,6 +54,18 @@ const Field: Component = {
     coordsDisplay.style.pointerEvents = "none";
     container.element.append(coordsDisplay);
 
+    // Create display with info about robot relocation
+    const robotRelocDisplay = document.createElement("div");
+    robotRelocDisplay.style.position = "absolute";
+    robotRelocDisplay.style.bottom = "0";
+    robotRelocDisplay.style.right = "0";
+    robotRelocDisplay.style.background = "rgba(0, 0, 0, 0.6)";
+    robotRelocDisplay.style.color = "white";
+    robotRelocDisplay.style.fontFamily = "monospace";
+    robotRelocDisplay.style.fontSize = "13px";
+    robotRelocDisplay.style.pointerEvents = "none";
+    container.element.append(robotRelocDisplay);
+
     // Field image initial config
     let scale = 0.9;
     let originX = 0;
@@ -69,14 +81,11 @@ const Field: Component = {
     // Settings of display with coords
 
     fieldSvg.addEventListener("mousemove", (e) => {
-      const pt = fieldSvg.createSVGPoint();
-      pt.x = e.clientX;
-      pt.y = e.clientY;
-      const svgP = pt.matrixTransform(fieldSvg.getScreenCTM()?.inverse());
+      const coords = convertCoordsToField(fieldSvg, e);
 
-      coordsDisplay.textContent = `X: ${svgP.x.toFixed(
+      coordsDisplay.textContent = `X: ${coords[0].toFixed(
         0
-      )}, Y: ${-svgP.y.toFixed(0)}`;
+      )}, Y: ${coords[1].toFixed(0)}`;
     });
     fieldSvg.addEventListener("mouseleave", (e) => {
       coordsDisplay.textContent = ``;
@@ -95,7 +104,7 @@ const Field: Component = {
 
         const rect = fieldSvg.getBoundingClientRect();
 
-        const scaleFactor = e.deltaY > 0 ? 1 / 1.1 : 1.1;
+        const scaleFactor = 1 + e.deltaY / 100;
         const newScale = scale * scaleFactor;
         if (newScale > 0.3 && newScale < 10) {
           originX +=
@@ -112,12 +121,9 @@ const Field: Component = {
     container.element.addEventListener("mousedown", (e) => {
       if (e.altKey) {
         isDrawingArrow = true;
-        const pt = fieldSvg.createSVGPoint();
-        pt.x = e.clientX;
-        pt.y = e.clientY;
-        const svgP = pt.matrixTransform(fieldSvg.getScreenCTM()?.inverse());
-        dragStartX = svgP.x;
-        dragStartY = svgP.y;
+        const coords = convertCoordsToField(fieldSvg, e);
+        dragStartX = coords[0];
+        dragStartY = coords[1];
         draggingArrowX = dragStartX;
         draggingArrowY = dragStartY;
       } else {
@@ -134,12 +140,10 @@ const Field: Component = {
     window.addEventListener("mousemove", (e) => {
       if (!isDragging) return;
       if (isDrawingArrow) {
-        const pt = fieldSvg.createSVGPoint();
-        pt.x = e.clientX;
-        pt.y = e.clientY;
-        const svgP = pt.matrixTransform(fieldSvg.getScreenCTM()?.inverse());
-        draggingArrowX = svgP.x;
-        draggingArrowY = svgP.y;
+        const coords = convertCoordsToField(fieldSvg, e);
+
+        draggingArrowX = coords[0];
+        draggingArrowY = coords[1];
       } else {
         originX = e.clientX - dragStartX;
         originY = e.clientY - dragStartY;
@@ -200,7 +204,8 @@ const Field: Component = {
 
       requestAnimationFrame(() => {
         if (lastSprites) {
-          drawImageSvg(drawingSvg, lastSprites);
+          robotsOnField = [];
+          drawImageSvg(drawingSvg, lastSprites, robotsOnField);
           if (isDrawingArrow) {
             updateArrow(
               drawingSvg,
@@ -277,10 +282,91 @@ const Field: Component = {
         transnet: "set_ball",
         data: { x: x, y: -y, vx: vx, vy: -vy },
       });
-      console.log(vx, vy);
+      console.log("Send signal with ball speed:", vx, vy);
 
       arrowLine = null;
     }
+
+    let robotsOnField: RobotOnField[] = [];
+    let selectedRobot: RobotOnField | null = null;
+
+    container.element.addEventListener("click", (e) => {
+      if (e.altKey) return;
+
+      const coords = convertCoordsToField(fieldSvg, e);
+
+      if (!selectedRobot) {
+        let best: RobotOnField | null = null;
+        let bestDist2 = 200 * 200;
+
+        for (const robot of robotsOnField) {
+          const dx = coords[0] - robot.x;
+          const dy = coords[1] - robot.y;
+          const dist2 = dx * dx + dy * dy;
+          if (dist2 <= bestDist2) {
+            bestDist2 = dist2;
+            best = robot;
+          }
+        }
+
+        if (best) {
+          selectedRobot = best;
+          console.log(
+            "Robot selected for relocation:",
+            best.color,
+            best.robot_id
+          );
+
+          robotRelocDisplay.textContent = `Relocate robot: ${best.color} ${best.robot_id}\n(Press ESC to clear)`;
+        }
+      } else {
+        const robot = selectedRobot;
+        selectedRobot = null;
+
+        const coords = convertCoordsToField(fieldSvg, e);
+
+        if (robot.color == "blue") {
+          sendMessage("send_signal", {
+            transnet: "set_formation",
+            data: {
+              BLUE: [
+                {
+                  robot_id: robot.robot_id,
+                  x: coords[0],
+                  y: coords[1],
+                  rotation: (robot.orientation / Math.PI) * 180,
+                },
+              ],
+            },
+          });
+        } else {
+          sendMessage("send_signal", {
+            transnet: "set_formation",
+            data: {
+              YELLOW: [
+                {
+                  robot_id: robot.robot_id,
+                  x: coords[0],
+                  y: coords[1],
+                  rotation: (robot.orientation / Math.PI) * 180,
+                },
+              ],
+            },
+          });
+        }
+        robotRelocDisplay.textContent = ``;
+      }
+    });
+    window.addEventListener("keydown", (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (selectedRobot != null) {
+          selectedRobot = null;
+          console.log("Robot selection cleared");
+          robotRelocDisplay.textContent = ``;
+        }
+      }
+    });
+
     return () => {
       bus.off("update_geometry", onUpdateGeometry);
       bus.off("update_sprites", onUpdateSprites);
@@ -289,6 +375,25 @@ const Field: Component = {
 };
 
 export default Field;
+
+function convertCoordsToField(
+  fieldSvg: SVGSVGElement,
+  e: PointerEvent | MouseEvent
+): [number, number] {
+  const pt = fieldSvg.createSVGPoint();
+  pt.x = e.clientX;
+  pt.y = e.clientY;
+  const svgP = pt.matrixTransform(fieldSvg.getScreenCTM()?.inverse());
+  return [svgP.x, -svgP.y];
+}
+
+interface RobotOnField {
+  x: number;
+  y: number;
+  orientation: number;
+  color: "blue" | "yellow";
+  robot_id: number;
+}
 
 interface FieldConfig {
   width: number;
@@ -522,10 +627,20 @@ type VisionObject =
   | Text;
 
 interface FeedData {
-  [layerName: string]: { data: VisionObject[]; is_visible: boolean; heigh: number };
+  [layerName: string]: {
+    data: VisionObject[];
+    is_visible: boolean;
+    heigh: number;
+  };
 }
 
-function drawImageSvg(svg: SVGSVGElement, json: FeedData) {
+function drawImageSvg(
+  svg: SVGSVGElement,
+  json: FeedData,
+  robotsList?: RobotOnField[]
+) {
+  if (robotsList) robotsList.length = 0;
+
   svg.innerHTML = "";
   const svgNS = "http://www.w3.org/2000/svg";
   const minSpeed = 10;
@@ -550,6 +665,8 @@ function drawImageSvg(svg: SVGSVGElement, json: FeedData) {
 
   for (const { layerName, layer } of layers) {
     if (!layer.is_visible) continue;
+
+    const isVisionFeed = layerName === "vision_feed";
 
     layer.data.forEach((element) => {
       switch (element.type) {
@@ -582,6 +699,15 @@ function drawImageSvg(svg: SVGSVGElement, json: FeedData) {
           break;
         }
         case "robot_blu": {
+          if (isVisionFeed && robotsList) {
+            robotsList.push({
+              x: element.x,
+              y: element.y,
+              orientation: element.rotation || 0,
+              color: "blue",
+              robot_id: element.robot_id,
+            });
+          }
           if (
             element.vx &&
             element.vy &&
@@ -631,6 +757,15 @@ function drawImageSvg(svg: SVGSVGElement, json: FeedData) {
           break;
         }
         case "robot_yel": {
+          if (isVisionFeed && robotsList) {
+            robotsList.push({
+              x: element.x,
+              y: element.y,
+              orientation: element.rotation || 0,
+              color: "yellow",
+              robot_id: element.robot_id,
+            });
+          }
           if (
             element.vx &&
             element.vy &&
