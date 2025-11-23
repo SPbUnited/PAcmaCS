@@ -312,7 +312,7 @@ const SimControl: Component = {
       }
     }, 50);
     return () => {
-      bus.on("update_sprites", onUpdateSprites);
+      bus.off("update_sprites", onUpdateSprites);
     };
   },
 };
