@@ -210,9 +210,9 @@ const Field: Component = {
             updateArrow(
               drawingSvg,
               dragStartX,
-              dragStartY,
+              -dragStartY,
               draggingArrowX,
-              draggingArrowY
+              -draggingArrowY
             );
           }
           lastSprites = null;
@@ -280,7 +280,7 @@ const Field: Component = {
       const vy = dragStartY - draggingArrowY;
       sendMessage("send_signal", {
         transnet: "set_ball",
-        data: { x: x, y: -y, vx: vx, vy: -vy },
+        data: { x: x, y: y, vx: vx, vy: vy },
       });
       console.log("Send signal with ball speed:", vx, vy);
 
@@ -387,7 +387,7 @@ function convertCoordsToField(
   return [svgP.x, -svgP.y];
 }
 
-interface RobotOnField {
+export interface RobotOnField {
   x: number;
   y: number;
   orientation: number;
@@ -626,7 +626,7 @@ type VisionObject =
   | Circle
   | Text;
 
-interface FeedData {
+export interface FeedData {
   [layerName: string]: {
     data: VisionObject[];
     is_visible: boolean;

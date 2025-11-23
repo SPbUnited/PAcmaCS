@@ -1,6 +1,7 @@
 import Component from "../loadComponents";
-import { sendMessage } from "../socketManager";
+import { bus, subscribeToTopic, sendMessage } from "../socketManager";
 import { CustomDropdown, NumberInput } from "../customButtons";
+import { FeedData } from "./field";
 
 const SimControl: Component = {
   name: "SimControl",
@@ -68,6 +69,61 @@ const SimControl: Component = {
     randomBtn.addEventListener("click", () => {
       sendMessage("send_signal", generateRandomFormation());
     });
+
+    const thirdRow = document.createElement("div");
+    thirdRow.style.display = "flex";
+    thirdRow.style.justifyContent = "space-between";
+    thirdRow.style.width = "90%";
+    thirdRow.style.margin = "5px 0 0 5%";
+    container.element.append(thirdRow);
+
+    const btnLoad = document.createElement("button");
+    btnLoad.textContent = "Load";
+    btnLoad.style.margin = "0";
+    btnLoad.style.marginRight = "5px";
+    btnLoad.style.width = "70px";
+    btnLoad.style.height = "40px";
+    btnLoad.style.font = "20px Arial, sans-serif";
+    btnLoad.style.opacity = "0.5";
+    btnLoad.style.pointerEvents = "none";
+    btnLoad.addEventListener("click", () => {
+      sendMessage("send_signal", savedFormation);
+      console.log("Load formation:", savedFormation);
+    });
+
+    let nowFormation: any = {
+      transnet: "set_formation",
+      data: {
+        BLUE: [],
+        YELLOW: [],
+        BALL: { x: 0, y: 0, vx: 0, vy: 0 },
+      },
+    };
+    let savedFormation: any | null = null;
+
+    const btnSave = document.createElement("button");
+    btnSave.textContent = "Save";
+    btnSave.style.margin = "0";
+    btnSave.style.marginLeft = "5px";
+    btnSave.style.width = "70px";
+    btnSave.style.height = "40px";
+    btnSave.style.font = "20px Arial, sans-serif";
+    btnSave.addEventListener("click", () => {
+      if (nowFormation != null) {
+        btnLoad.style.opacity = "1";
+        btnLoad.style.pointerEvents = "auto";
+        savedFormation = structuredClone(nowFormation);
+        console.log("Save formation:", savedFormation);
+      }
+    });
+    thirdRow.appendChild(btnSave);
+    thirdRow.appendChild(btnLoad);
+
+    subscribeToTopic("update_sprites");
+    const onUpdateSprites = (data) => {
+      updateFormation(data, nowFormation);
+    };
+    bus.on("update_sprites", onUpdateSprites);
 
     const downHeader = document.createElement("div");
     downHeader.style.display = "flex";
@@ -255,6 +311,9 @@ const SimControl: Component = {
         controlRobot();
       }
     }, 50);
+    return () => {
+      bus.on("update_sprites", onUpdateSprites);
+    };
   },
 };
 
@@ -366,4 +425,47 @@ function generateRandomFormation() {
       enable_graveyard: false,
     },
   };
+}
+
+function updateFormation(json: FeedData, nowFormation?: any | null) {
+  nowFormation["data"]["BLUE"] = [];
+  nowFormation["data"]["YELLOW"] = [];
+  for (const layerName of Object.keys(json)) {
+    const layer = json[layerName];
+    if (layerName != "vision_feed") continue;
+
+    layer.data.forEach((element) => {
+      switch (element.type) {
+        case "robot_blu": {
+          nowFormation["data"]["BLUE"].push({
+            robot_id: element.robot_id,
+            x: element.x,
+            y: element.y,
+            rotation: ((element.rotation || 0) / Math.PI) * 180,
+          });
+          break;
+        }
+        case "robot_yel": {
+          nowFormation["data"]["YELLOW"].push({
+            robot_id: element.robot_id,
+            x: element.x,
+            y: element.y,
+            rotation: ((element.rotation || 0) / Math.PI) * 180,
+          });
+          break;
+        }
+        case "ball": {
+          nowFormation["data"]["BALL"] = {
+            x: element.x,
+            y: element.y,
+            vx: element.vx || 0,
+            vy: element.vy || 0,
+          };
+          break;
+        }
+        default: {
+        }
+      }
+    });
+  }
 }
