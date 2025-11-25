@@ -117,13 +117,7 @@ build_docker: guard_not_mac no-sudo
 	@echo "=============${NC}"
 	docker compose build
 
-build_npm: guard_not_mac no-sudo
-	@echo "${BLUE}============="
-	@echo "|   BUILD NPM   |"
-	@echo "=============${NC}"
-	cd serviz/frontend && npm run build
-
-build: guard_not_mac build_docker build_npm
+build: guard_not_mac build_docker
 
 up: up-message no-sudo
 	@if [ "$(UNAME_S)" = "Darwin" ]; then \
@@ -153,12 +147,6 @@ up-message:
 	@echo "CONTROL=${CTRL}"
 	@echo "UID=${UID}"
 	@echo "GID=${GID}"
-
-npm-dev: guard_not_mac no-sudo
-	@echo "${CYAN}============="
-	@echo "|  NPM DEV  |"
-	@echo "=============${NC}"
-	cd serviz/frontend && npm run dev
 
 down: guard_not_mac
 	@echo "${RED}============="

@@ -95,7 +95,6 @@ make up-all
 - `make up` - запускает все сервисы кроме grsim
 - `make up-grsim` - запускает headless grsim
 - `make up-all` - запускает все сервисы (serviz, transnet, grsim)
-- `make npm-dev` - запуск фронтенда Сервиза в режиме live-server для разработки
 - `make down` - останавливает все сервисы
 - `make purge` - очищает все сервисы и их данные
 
