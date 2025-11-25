@@ -97,7 +97,7 @@ install_wsl: install_misc
 	@echo "\n${YELLOW}Now please install Docker Desktop from ${WHITE}https://www.docker.com/products/docker-desktop/${NC}\n"
 
 init: init_py init_npm
-    mkdir -p logs
+	mkdir -p logs
 
 init_py: no-sudo
 	@echo "${GREEN}============="
