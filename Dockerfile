@@ -1,4 +1,4 @@
-FROM nikolaik/python-nodejs
+FROM python:3.12-slim
 
 WORKDIR /app
 
@@ -7,4 +7,4 @@ RUN pip install -r requirements.txt
 
 COPY . /app
 
-CMD ["honcho", "start"]
+CMD ["honcho", "-f", "Procfile.docker", "start"]

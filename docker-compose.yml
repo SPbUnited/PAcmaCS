@@ -14,6 +14,21 @@ services:
     userns_mode: "host"
     user: "${UID}:${GID}"
 
+  serviz_frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    network_mode: host
+    working_dir: /app/serviz/frontend
+    volumes:
+      - .:/app
+    environment:
+      - VERSION=${VERSION}
+      - DIV=${DIV}
+    userns_mode: "host"
+    user: "${UID}:${GID}"
+    command: [ "sh", "-c", "npm install && npm run dev -- --host 0.0.0.0" ]
+
   grsim:
     image: robocupssl/grsim:latest
     network_mode: host

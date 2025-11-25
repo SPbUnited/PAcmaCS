@@ -97,6 +97,7 @@ install_wsl: install_misc
 	@echo "\n${YELLOW}Now please install Docker Desktop from ${WHITE}https://www.docker.com/products/docker-desktop/${NC}\n"
 
 init: init_py init_npm
+    mkdir -p logs
 
 init_py: no-sudo
 	@echo "${GREEN}============="
@@ -126,7 +127,7 @@ up: up-message no-sudo
 		honcho start; \
 	else \
 		echo "Run for Debian system"; \
-		docker compose up pacmacs; \
+		docker compose up pacmacs serviz_frontend; \
 	fi
 
 up-grsim: guard_not_mac up-message no-sudo
@@ -136,7 +137,7 @@ up-autoreferee: guard_not_mac up-message no-sudo
 	docker compose up autoreferee
 
 up-all: guard_not_mac up-message no-sudo
-	docker compose up pacmacs grsim autoreferee
+	docker compose up pacmacs serviz_frontend grsim autoreferee
 
 up-message:
 	@echo "${PURPLE}============="
