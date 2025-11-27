@@ -3,6 +3,7 @@ import { GoldenLayout, LayoutConfig } from "golden-layout";
 import "./styles.css";
 import { loadComponents } from "./loadComponents.ts";
 import { loadLayouts } from "./layout_templates/load_layout.ts";
+import DefaultConfig from "./layout_templates/Only field.json";
 
 const menuContainerElement = document.querySelector("#menuContainer");
 const layoutElement: HTMLElement | null =
@@ -11,15 +12,8 @@ const layoutElement: HTMLElement | null =
 if (menuContainerElement && layoutElement) {
   const goldenLayout = new GoldenLayout(layoutElement);
 
-  const defaultConfig: LayoutConfig = {
-    root: {
-      type: "row",
-      content: [],
-    },
-  };
-
   var savedState = localStorage.getItem("savedState");
-  var layoutConfig: LayoutConfig;
+  var layoutConfig: LayoutConfig = LayoutConfig.fromResolved(DefaultConfig as any);
 
   if (savedState) {
     console.log("Previous state restored");
@@ -27,7 +21,6 @@ if (menuContainerElement && layoutElement) {
     layoutConfig = LayoutConfig.fromResolved(resolvedConfig);
   } else {
     console.log("No saved state, loading default layout");
-    layoutConfig = defaultConfig;
   }
 
   const components = loadComponents();
