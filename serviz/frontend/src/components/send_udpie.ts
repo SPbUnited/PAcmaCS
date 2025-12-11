@@ -1,30 +1,90 @@
 import Component from "../loadComponents";
 import { sendMessage } from "../socketManager";
+import { CustomDropdown } from "../customButtons";
 
-function parseHexToBytes(hex: string): number[] {
-  const cleaned = hex.replace(/[^0-9a-fA-F]/g, "");
-  if (!cleaned.length) {
-    throw new Error("Введите пакет NRFM в шестнадцатеричном виде");
+function parseNibble(hex1: string, fieldName: string): number {
+  const cleaned = hex1.replace(/[^0-9a-fA-F]/g, "");
+  if (cleaned.length !== 1) {
+    throw new Error(`${fieldName}: нужно ввести ровно 1 hex-символ`);
   }
-  if (cleaned.length % 2 !== 0) {
-    throw new Error("Нечётное количество hex-символов");
+  const v = parseInt(cleaned, 16);
+  if (Number.isNaN(v) || v < 0 || v > 0xf) {
+    throw new Error(`${fieldName}: не удалось разобрать hex-значение`);
   }
-
-  const bytes: number[] = [];
-  for (let i = 0; i < cleaned.length; i += 2) {
-    const byte = parseInt(cleaned.slice(i, i + 2), 16);
-    if (Number.isNaN(byte)) {
-      throw new Error("Ошибка разбора hex-строки");
-    }
-    bytes.push(byte);
-  }
-  return bytes;
+  return v;
 }
 
-function buildUdpieDebugOverride(nrfmHex: string): number[] {
-  const nrfmBytes = parseHexToBytes(nrfmHex);
+function parseByte2(hex2: string, fieldName: string): number {
+  const cleaned = hex2.replace(/[^0-9a-fA-F]/g, "");
+  if (cleaned.length !== 2) {
+    throw new Error(
+      `${fieldName}: нужно ввести ровно 2 шестнадцатеричных символа`
+    );
+  }
+  const value = parseInt(cleaned, 16);
+  if (Number.isNaN(value)) {
+    throw new Error(`${fieldName}: не удалось разобрать hex-значение`);
+  }
+  return value;
+}
 
-  const preamble = nrfmBytes[0];
+function floatToBytes(value: number): number[] {
+  const buf = new ArrayBuffer(4);
+  const view = new DataView(buf);
+  view.setFloat32(0, value, false);
+  return [
+    view.getUint8(0),
+    view.getUint8(1),
+    view.getUint8(2),
+    view.getUint8(3),
+  ];
+}
+
+function buildUdpieDebugOverride(
+  typeNibbleHex: string,
+  robotNibbleHex: string,
+  deviceHex: string,
+  regHex: string | null,
+  drvIdHex: string | null,
+  payloadText: string
+): number[] {
+  const typeNibble = parseNibble(typeNibbleHex, "Тип пакета");
+  const robotNibble = parseNibble(robotNibbleHex, "Индекс робота");
+  const preamble = (typeNibble << 4) | robotNibble;
+
+  const deviceByte = parseByte2(deviceHex, "Устройство");
+  const nrfmBytes: number[] = [preamble, deviceByte];
+
+  const devUpper = deviceHex.toUpperCase();
+
+  if (devUpper === "0A") {
+    if (!regHex) {
+      throw new Error("Регистр: нужно указать значение");
+    }
+    const regByte = parseByte2(regHex, "Регистр");
+    nrfmBytes.push(regByte);
+  } else if (devUpper === "0C") {
+    if (!drvIdHex) {
+      throw new Error("DRV ID: нужно указать значение");
+    }
+    if (!regHex) {
+      throw new Error("Регистр: нужно указать значение");
+    }
+    const drvIdByte = parseByte2(drvIdHex, "DRV ID");
+    const regByte = parseByte2(regHex, "Регистр");
+    nrfmBytes.push(drvIdByte, regByte);
+  }
+
+  const trimmed = payloadText.trim();
+  if (trimmed.length > 0) {
+    const num = Number(trimmed.replace(",", "."));
+    if (Number.isNaN(num)) {
+      throw new Error("Полезная нагрузка: требуется число (например 0.2)");
+    }
+    const payloadBytes = floatToBytes(num);
+    nrfmBytes.push(...payloadBytes);
+  }
+
   const packetType = (preamble >> 4) & 0x0f;
   if (packetType !== 0x0a) {
     console.warn(
@@ -45,18 +105,153 @@ const SendUdpie: Component = {
     container.element.style.padding = "8px";
     container.element.style.boxSizing = "border-box";
 
-    const label = document.createElement("h3");
-    label.textContent = "NRFM debug_override пакет (hex, без байта 0xDE):";
-    label.style.marginBottom = "4px";
-    container.element.appendChild(label);
+    const title = document.createElement("h3");
+    title.textContent = "NRFM debug_override пакет (без байта 0xDE):";
+    title.style.marginBottom = "8px";
+    container.element.appendChild(title);
 
-    const input = document.createElement("textarea");
-    input.style.width = "100%";
-    input.style.height = "80px";
-    input.style.resize = "vertical";
-    input.style.fontFamily = "monospace";
-    input.placeholder = "Например: A8 0A 00";
-    container.element.appendChild(input);
+    const firstRow = document.createElement("div");
+    firstRow.style.display = "flex";
+    firstRow.style.alignItems = "flex-start";
+    firstRow.style.gap = "8px";
+    firstRow.style.marginBottom = "8px";
+
+    // ---- Тип пакета ----
+    const firstLabel = document.createElement("label");
+    firstLabel.style.display = "flex";
+    firstLabel.style.flexDirection = "column";
+    firstLabel.style.alignItems = "flex-start";
+
+    const firstLabelText = document.createElement("span");
+    firstLabelText.textContent = "Тип пакета:";
+
+    const firstInput = document.createElement("input");
+    firstInput.type = "text";
+    firstInput.maxLength = 1;
+    firstInput.style.width = "22px";
+    firstInput.style.fontFamily = "monospace";
+    firstInput.placeholder = "A";
+
+    firstLabel.appendChild(firstLabelText);
+    firstLabel.appendChild(firstInput);
+
+    // ---- Индекс робота ----
+    const secondLabel = document.createElement("label");
+    secondLabel.style.display = "flex";
+    secondLabel.style.flexDirection = "column";
+    secondLabel.style.alignItems = "flex-start";
+
+    const secondLabelText = document.createElement("span");
+    secondLabelText.textContent = "Индекс робота:";
+
+    const secondInput = document.createElement("input");
+    secondInput.type = "text";
+    secondInput.maxLength = 1;
+    secondInput.style.width = "22px";
+    secondInput.style.fontFamily = "monospace";
+    secondInput.placeholder = "8";
+
+    secondLabel.appendChild(secondLabelText);
+    secondLabel.appendChild(secondInput);
+
+    // ---- Устройство (dropdown) ----
+    const deviceLabel = document.createElement("label");
+    deviceLabel.style.display = "flex";
+    deviceLabel.style.flexDirection = "column";
+    deviceLabel.style.alignItems = "flex-start";
+    deviceLabel.style.width = "100px";
+
+    const deviceLabelText = document.createElement("span");
+    deviceLabelText.textContent = "Устройство:";
+
+    const deviceDropdown = new CustomDropdown({
+      options: [],
+      onChange: (value) => {
+        currentDevice = value;
+        updateDeviceFields();
+      },
+    });
+    deviceDropdown.element.style.width = "auto";
+
+    deviceLabel.appendChild(deviceLabelText);
+    deviceLabel.appendChild(deviceDropdown.element);
+
+    // ---- DRV ID ----
+    const drvIdLabel = document.createElement("label");
+    drvIdLabel.style.display = "flex";
+    drvIdLabel.style.flexDirection = "column";
+    drvIdLabel.style.alignItems = "flex-start";
+
+    const drvIdLabelText = document.createElement("span");
+    drvIdLabelText.textContent = "DRV ID:";
+
+    const drvIdInput = document.createElement("input");
+    drvIdInput.type = "text";
+    drvIdInput.maxLength = 2;
+    drvIdInput.style.width = "32px";
+    drvIdInput.style.fontFamily = "monospace";
+    drvIdInput.placeholder = "00";
+
+    drvIdLabel.appendChild(drvIdLabelText);
+    drvIdLabel.appendChild(drvIdInput);
+
+    // ---- Регистр ----
+    const regLabel = document.createElement("label");
+    regLabel.style.display = "flex";
+    regLabel.style.flexDirection = "column";
+    regLabel.style.alignItems = "flex-start";
+
+    const regLabelText = document.createElement("span");
+    regLabelText.textContent = "Регистр:";
+
+    const regInput = document.createElement("input");
+    regInput.type = "text";
+    regInput.maxLength = 2;
+    regInput.style.width = "32px";
+    regInput.style.fontFamily = "monospace";
+    regInput.placeholder = "20";
+
+    regLabel.appendChild(regLabelText);
+    regLabel.appendChild(regInput);
+
+    firstRow.appendChild(firstLabel);
+    firstRow.appendChild(secondLabel);
+    firstRow.appendChild(deviceLabel);
+    firstRow.appendChild(drvIdLabel);
+    firstRow.appendChild(regLabel);
+    container.element.appendChild(firstRow);
+
+    deviceDropdown.updateOptions([{ value: "0A" }, { value: "0C" }]);
+    let currentDevice = "0A";
+
+    function updateDeviceFields() {
+      if (currentDevice === "0C") {
+        drvIdLabel.style.display = "";
+        regLabel.style.display = "";
+      } else if (currentDevice === "0A") {
+        drvIdLabel.style.display = "none";
+        regLabel.style.display = "";
+      } else {
+        drvIdLabel.style.display = "none";
+        regLabel.style.display = "none";
+      }
+    }
+
+    updateDeviceFields();
+
+    const payloadLabel = document.createElement("label");
+    payloadLabel.textContent =
+      "Полезная нагрузка (float, будет закодирована как float32):";
+    payloadLabel.style.marginBottom = "4px";
+    container.element.appendChild(payloadLabel);
+
+    const payloadInput = document.createElement("textarea");
+    payloadInput.style.width = "100%";
+    payloadInput.style.height = "60px";
+    payloadInput.style.resize = "vertical";
+    payloadInput.style.fontFamily = "monospace";
+    payloadInput.placeholder = "Например: 0.2";
+    container.element.appendChild(payloadInput);
 
     const status = document.createElement("div");
     status.style.marginTop = "4px";
@@ -78,7 +273,14 @@ const SendUdpie: Component = {
       status.style.color = "#b0b0b0";
 
       try {
-        const udpBytes = buildUdpieDebugOverride(input.value);
+        const udpBytes = buildUdpieDebugOverride(
+          firstInput.value,
+          secondInput.value,
+          currentDevice,
+          regInput.value,
+          drvIdInput.value,
+          payloadInput.value
+        );
 
         const packet = {
           control: "send_udpie",
@@ -99,7 +301,7 @@ const SendUdpie: Component = {
       }
     });
 
-    return () => {};
+    return () => { };
   },
 };
 

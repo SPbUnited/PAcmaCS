@@ -84,9 +84,24 @@ def create_telemetry(data: bytes) -> str:
     values_str = [str(val) for val in values]
     return "\t" + "\t".join(values_str) + "\n"
 
+def log_udpie_packet(data: bytes) -> None:
+    global udpies_telemetry
+    now_str = time.strftime("%H:%M:%S", time.localtime())
+    hex_str = " ".join(f"{b:02X}" for b in data)
+    line = f"{now_str}\t{hex_str}"
+
+    if udpies_telemetry:
+        udpies_telemetry += "\n" + line
+    else:
+        udpies_telemetry = line
+
+    telemetry_socket.send_json({"SENDED UDPIE'S": udpies_telemetry})
+
 
 last_update = 0.0
 telemetry_text: str = "NO NEW MESSAGES"
+
+udpies_telemetry: str = ""
 
 while True:
     socks = dict(poller.poll(timeout=0))
@@ -125,7 +140,7 @@ while True:
                     except Exception as e:
                         print("send_udpie: cannot convert data to bytes:", e)
                         continue
-                    
+                                
                     print("Get new udpie:", data)
                     robot_id = data[1] & 0x0F
 
@@ -133,6 +148,9 @@ while True:
                         s_outbound_real_low.sendto(data, real_robots_ip_port_low)
                     else:
                         s_outbound_real_high.sendto(data, real_robots_ip_port_high)
+
+                    log_udpie_packet(data)
+
         except OverflowError:
             print("\033[31mAn invalid control command was received.\033[0m Are you sure the SIM/REAL mode of control is correct?")
             time.sleep(0.1)

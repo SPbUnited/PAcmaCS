@@ -113,6 +113,10 @@ body {
   background: #1f1f1f;
 }
 
+* label {
+  color: #b0b0b0;
+}
+
 input[type="checkbox"] {
   accent-color: #b0b0b0;
 }
@@ -122,7 +126,8 @@ input[type="range"] {
   appearance: none;
   width: 200px;
   height: 6px;
-  background: #666; /* цвет полосы */
+  background: #666;
+  /* цвет полосы */
   border-radius: 3px;
   outline: none;
 }
@@ -132,7 +137,8 @@ input[type="range"]::-webkit-slider-thumb {
   appearance: none;
   width: 16px;
   height: 16px;
-  background: #aaaaaa; /* цвет ползунка */
+  background: #aaaaaa;
+  /* цвет ползунка */
   border-radius: 50%;
   cursor: pointer;
 }
