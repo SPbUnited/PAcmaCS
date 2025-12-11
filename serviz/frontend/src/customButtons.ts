@@ -33,6 +33,7 @@ export class CustomDropdown {
     selectedDiv.textContent = this.selected;
     selectedDiv.style.padding = "5px 10px";
     selectedDiv.style.color = "#b0b0b0";
+    selectedDiv.style.font = "17px Arial, sans-serif";
     selectedDiv.style.background = "#1a1a1a";
     selectedDiv.style.border = "1px solid #222";
     selectedDiv.style.cursor = "pointer";

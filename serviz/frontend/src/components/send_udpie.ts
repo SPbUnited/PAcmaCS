@@ -209,7 +209,7 @@ const SendUdpie: Component = {
     regInput.maxLength = 2;
     regInput.style.width = "32px";
     regInput.style.fontFamily = "monospace";
-    regInput.placeholder = "0";
+    regInput.placeholder = "20";
 
     regLabel.appendChild(regLabelText);
     regLabel.appendChild(regInput);
@@ -290,9 +290,27 @@ const SendUdpie: Component = {
 
         sendMessage("send_signal", packet);
 
-        const hexString = udpBytes
-          .map((b) => b.toString(16).padStart(2, "0").toUpperCase())
-          .join(" ");
+        let headerLen = udpBytes.length;
+
+        if (payloadInput.value.trim().length > 0) {
+          if (currentDevice === "0A") {
+            headerLen = 4;
+          } else if (currentDevice === "0C") {
+            headerLen = 5;
+          }
+        }
+
+        const toHex = (b: number) => b.toString(16).padStart(2, "0").toUpperCase();
+
+        const headerPart = udpBytes.slice(0, headerLen).map(toHex).join(" ");
+        const payloadPart =
+          headerLen < udpBytes.length
+            ? udpBytes.slice(headerLen).map(toHex).join(" ")
+            : "";
+
+        const hexString =
+          payloadPart.length > 0 ? `${headerPart} | ${payloadPart}` : headerPart;
+
         status.style.color = "#88dd00";
         status.textContent = `Отправлено: ${hexString}`;
       } catch (err) {
