@@ -159,7 +159,6 @@ const SendUdpie: Component = {
     deviceLabel.style.display = "flex";
     deviceLabel.style.flexDirection = "column";
     deviceLabel.style.alignItems = "flex-start";
-    deviceLabel.style.width = "100px";
 
     const deviceLabelText = document.createElement("span");
     deviceLabelText.textContent = "Устройство:";
@@ -172,6 +171,7 @@ const SendUdpie: Component = {
       },
     });
     deviceDropdown.element.style.width = "auto";
+    deviceDropdown.element.style.width = "50px";
 
     deviceLabel.appendChild(deviceLabelText);
     deviceLabel.appendChild(deviceDropdown.element);
@@ -209,7 +209,7 @@ const SendUdpie: Component = {
     regInput.maxLength = 2;
     regInput.style.width = "32px";
     regInput.style.fontFamily = "monospace";
-    regInput.placeholder = "20";
+    regInput.placeholder = "0";
 
     regLabel.appendChild(regLabelText);
     regLabel.appendChild(regInput);
@@ -226,16 +226,17 @@ const SendUdpie: Component = {
 
     function updateDeviceFields() {
       if (currentDevice === "0C") {
-        drvIdLabel.style.display = "";
-        regLabel.style.display = "";
+        drvIdLabel.style.display = "flex";
+        regLabel.style.display = "flex";
       } else if (currentDevice === "0A") {
         drvIdLabel.style.display = "none";
-        regLabel.style.display = "";
+        regLabel.style.display = "flex";
       } else {
         drvIdLabel.style.display = "none";
         regLabel.style.display = "none";
       }
     }
+
 
     updateDeviceFields();
 
@@ -246,7 +247,7 @@ const SendUdpie: Component = {
     container.element.appendChild(payloadLabel);
 
     const payloadInput = document.createElement("textarea");
-    payloadInput.style.width = "100%";
+    payloadInput.style.width = "auto";
     payloadInput.style.height = "60px";
     payloadInput.style.resize = "vertical";
     payloadInput.style.fontFamily = "monospace";

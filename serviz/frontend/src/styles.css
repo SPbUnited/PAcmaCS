@@ -117,6 +117,15 @@ body {
   color: #b0b0b0;
 }
 
+* textarea,
+input {
+  color: #b0b0b0;
+  border-color: #424242ff;
+  background-color: #1a1a1a;
+  margin: 5px;
+  font-size: 17px;
+}
+
 input[type="checkbox"] {
   accent-color: #b0b0b0;
 }
