@@ -85,23 +85,38 @@ def create_telemetry(data: bytes) -> str:
     return "\t" + "\t".join(values_str) + "\n"
 
 def log_udpie_packet(data: bytes) -> None:
-    global udpies_telemetry
+    global udpies_history
+
     now_str = time.strftime("%H:%M:%S", time.localtime())
     hex_str = " ".join(f"{b:02X}" for b in data)
-    line = f"{now_str}\t{hex_str}"
 
-    if udpies_telemetry:
-        udpies_telemetry += "\n" + line
+    if udpies_history and udpies_history[0][0] == hex_str:
+        last_hex, last_count, first_time = udpies_history[0]
+        udpies_history[0] = (last_hex, last_count + 1, first_time)
     else:
-        udpies_telemetry = line
+        udpies_history.insert(0, (hex_str, 1, now_str))
+        if len(udpies_history) > 20:
+            udpies_history = udpies_history[:20]
+            udpies_history.append(("...", 1, ""))
 
-    telemetry_socket.send_json({"SENDED UDPIE'S": udpies_telemetry})
+    lines: list[str] = []
+    for pkt_hex, count, time_str in udpies_history:
+        if count == 1:
+            line = f"{time_str}\t{pkt_hex}"
+        else:
+            line = f"{time_str}\t{pkt_hex}"
+            line += " " * (40 - len(line)) + f"x{count}"
+        lines.append(line)
+
+    udpies_text = "\n".join(lines)
+
+    telemetry_socket.send_json({"SENDED UDPIES": udpies_text})
 
 
 last_update = 0.0
 telemetry_text: str = "NO NEW MESSAGES"
 
-udpies_telemetry: str = ""
+udpies_history: list[tuple[str, int, str]] = []
 
 while True:
     socks = dict(poller.poll(timeout=0))
@@ -144,12 +159,17 @@ while True:
                     print("Get new udpie:", data)
                     robot_id = data[1] & 0x0F
 
-                    if robot_id < 8:
-                        s_outbound_real_low.sendto(data, real_robots_ip_port_low)
-                    else:
-                        s_outbound_real_high.sendto(data, real_robots_ip_port_high)
+                    try:
+                        if robot_id < 8:
+                            s_outbound_real_low.sendto(data, real_robots_ip_port_low)
+                        else:
+                            s_outbound_real_high.sendto(data, real_robots_ip_port_high)
+                        log_udpie_packet(data)
+                    except OSError as e:
+                        print("Can't send UDPie, no route to host:", e)
+                        telemetry_socket.send_json({"SENDED UDPIE'S": "Can't send UDPie, no route to host"})
+                        
 
-                    log_udpie_packet(data)
 
         except OverflowError:
             print("\033[31mAn invalid control command was received.\033[0m Are you sure the SIM/REAL mode of control is correct?")

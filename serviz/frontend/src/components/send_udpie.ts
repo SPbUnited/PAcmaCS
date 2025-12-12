@@ -251,7 +251,7 @@ const SendUdpie: Component = {
     payloadInput.style.height = "60px";
     payloadInput.style.resize = "vertical";
     payloadInput.style.fontFamily = "monospace";
-    payloadInput.placeholder = "Например: 0.2";
+    payloadInput.placeholder = "Опционально (например: 0.2)";
     container.element.appendChild(payloadInput);
 
     const status = document.createElement("div");
@@ -263,7 +263,8 @@ const SendUdpie: Component = {
     sendButton.textContent = "Send UDPie";
     sendButton.style.marginTop = "8px";
     sendButton.style.height = "30px";
-    sendButton.style.alignSelf = "flex-start";
+    sendButton.style.width = "auto";
+    // sendButton.style.alignSelf = "flex-start";
     container.element.appendChild(sendButton);
 
     sendButton.addEventListener("click", (e) => {
