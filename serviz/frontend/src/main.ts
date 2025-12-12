@@ -13,7 +13,9 @@ if (menuContainerElement && layoutElement) {
   const goldenLayout = new GoldenLayout(layoutElement);
 
   var savedState = localStorage.getItem("savedState");
-  var layoutConfig: LayoutConfig = LayoutConfig.fromResolved(DefaultConfig as any);
+  var layoutConfig: LayoutConfig = LayoutConfig.fromResolved(
+    DefaultConfig as any
+  );
 
   if (savedState) {
     console.log("Previous state restored");
@@ -62,5 +64,10 @@ if (menuContainerElement && layoutElement) {
     localStorage.setItem("savedState", JSON.stringify(state));
   });
 
-  goldenLayout.loadLayout(layoutConfig);
+  try {
+    goldenLayout.loadLayout(layoutConfig);
+  } catch (err) {
+    goldenLayout.loadLayout(LayoutConfig.fromResolved(DefaultConfig as any));
+    console.warn("Error in saved state, loading default layout");
+  }
 }
