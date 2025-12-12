@@ -28,6 +28,7 @@ telemetry_socket = context.socket(zmq.PUB)
 telemetry_socket.connect("ipc:///tmp/ether.telemetry.xsub")
 
 inbound = config["control_decoder"]["s_control_sink_url"]
+signals_inbound = config["ether"]["s_signals_pub_url"]
 outbound_sim = config["ether"]["s_signals_sub_url"]
 
 s_inbound = context.socket(zmq.SUB)
@@ -35,6 +36,11 @@ s_inbound.bind(inbound)
 s_inbound.setsockopt_string(zmq.SUBSCRIBE, "{'control':")
 s_inbound.setsockopt_string(zmq.SUBSCRIBE, '{"control":')
 # s_inbound.setsockopt(zmq.CONFLATE, 1)
+
+s_signals = context.socket(zmq.SUB)
+s_signals.connect(signals_inbound)
+s_signals.setsockopt_string(zmq.SUBSCRIBE, '{"control":')
+s_signals.setsockopt_string(zmq.SUBSCRIBE, "{'control':")
 
 s_outbound_sim = context.socket(zmq.PUB)
 s_outbound_sim.connect(outbound_sim)
@@ -52,6 +58,7 @@ s_outbound_real_high = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 poller = zmq.Poller()
 poller.register(s_inbound, zmq.POLLIN)
+poller.register(s_signals, zmq.POLLIN)
 
 decoder = Decoder()
 
@@ -77,35 +84,93 @@ def create_telemetry(data: bytes) -> str:
     values_str = [str(val) for val in values]
     return "\t" + "\t".join(values_str) + "\n"
 
+def log_udpie_packet(data: bytes) -> None:
+    global udpies_history
+
+    now_str = time.strftime("%H:%M:%S", time.localtime())
+    hex_str = " ".join(f"{b:02X}" for b in data)
+
+    if udpies_history and udpies_history[0][0] == hex_str:
+        last_hex, last_count, first_time = udpies_history[0]
+        udpies_history[0] = (last_hex, last_count + 1, first_time)
+    else:
+        udpies_history.insert(0, (hex_str, 1, now_str))
+        if len(udpies_history) > 20:
+            udpies_history = udpies_history[:20]
+            udpies_history.append(("...", 1, ""))
+
+    lines: list[str] = []
+    for pkt_hex, count, time_str in udpies_history:
+        if count == 1:
+            line = f"{time_str}\t{pkt_hex}"
+        else:
+            line = f"{time_str}\t{pkt_hex}"
+            line += " " * (40 - len(line)) + f"x{count}"
+        lines.append(line)
+
+    udpies_text = "\n".join(lines)
+
+    telemetry_socket.send_json({"SENDED UDPIES": udpies_text})
+
 
 last_update = 0.0
 telemetry_text: str = "NO NEW MESSAGES"
+
+udpies_history: list[tuple[str, int, str]] = []
 
 while True:
     socks = dict(poller.poll(timeout=0))
     # print(socks.values())
     if socks == {}:
         time.sleep(0.01)
-    elif s_inbound in socks:
+    else:
         try:
-            signal = s_inbound.recv_json()
-            signal_data = structure(signal["data"], cdcm.DecoderTeamCommand)
+            if s_inbound in socks:
+                signal = s_inbound.recv_json()
+                signal_data = structure(signal["data"], cdcm.DecoderTeamCommand)
 
-            telemetry_text = f'SENDING COMMANDS IN "{control_mode}" MODE\n \tr_id\tspeedX\tspeedY\tspeedW\tdribler\tvoltage\tkickUP\tkickDWN\tbeep\tdribEN\tcharEN\tautokck\n'
+                telemetry_text = f'SENDING COMMANDS IN "{control_mode}" MODE\n \tr_id\tspeedX\tspeedY\tspeedW\tdribler\tvoltage\tkickUP\tkickDWN\tbeep\tdribEN\tcharEN\tautokck\n'
 
-            if control_mode == "SIM":
-                command: rcm.RobotControlExt = decoder.decoder2sim(signal_data)
-                s_outbound_sim.send_json({"transnet": "actuate_robot", "data": unstructure(command)})
-            else:
-                packets_low, packets_high = decoder.decoder2robot(signal_data)
-                for packet in packets_low:
-                    s_outbound_real_low.sendto(packet, real_robots_ip_port_low)
-                for packet in packets_high:
-                    s_outbound_real_high.sendto(packet, real_robots_ip_port_high)
+                if control_mode == "SIM":
+                    command: rcm.RobotControlExt = decoder.decoder2sim(signal_data)
+                    s_outbound_sim.send_json({"transnet": "actuate_robot", "data": unstructure(command)})
+                else:
+                    packets_low, packets_high = decoder.decoder2robot(signal_data)
+                    for packet in packets_low:
+                        s_outbound_real_low.sendto(packet, real_robots_ip_port_low)
+                    for packet in packets_high:
+                        s_outbound_real_high.sendto(packet, real_robots_ip_port_high)
 
-                for cmd in packets_low + packets_high:
-                    telemetry_text += create_telemetry(cmd)
-                last_update = time.time()
+                    for cmd in packets_low + packets_high:
+                        telemetry_text += create_telemetry(cmd)
+                    last_update = time.time()
+
+            if s_signals in socks:
+                signal = s_signals.recv_json()
+                if signal["control"] == "send_udpie":
+                    raw = signal.get("data")
+
+                    try:
+                        data = bytes(int(x) & 0xFF for x in raw)
+                    except Exception as e:
+                        print("send_udpie: cannot convert data to bytes:", e)
+                        continue
+                                
+                    print("Get new udpie:", data)
+                    robot_id = data[1] & 0x0F
+
+                    try:
+                        if robot_id < 8:
+                            s_outbound_real_low.sendto(data, real_robots_ip_port_low)
+                        else:
+                            s_outbound_real_high.sendto(data, real_robots_ip_port_high)
+                        log_udpie_packet(data)
+                    except OSError as e:
+                        print("Can't send UDPie, no route to host:", e)
+                        telemetry_socket.send_json({"SENDED UDPIE'S": "Can't send UDPie, no route to host"})
+                        
+
+
         except OverflowError:
             print("\033[31mAn invalid control command was received.\033[0m Are you sure the SIM/REAL mode of control is correct?")
             time.sleep(0.1)
