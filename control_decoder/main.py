@@ -167,7 +167,7 @@ while True:
                         log_udpie_packet(data)
                     except OSError as e:
                         print("Can't send UDPie, no route to host:", e)
-                        telemetry_socket.send_json({"SENDED UDPIE'S": "Can't send UDPie, no route to host"})
+                        telemetry_socket.send_json({"SENDED UDPIES": "Can't send UDPie, no route to host"})
                         
 
 
