@@ -17,8 +17,8 @@ transnet:
 control_decoder:
   api_version: 1
   s_control_sink_url: tcp://*:5051
-  real_robots_ip_low: "10.0.120.211"
-  real_robots_ip_high: "10.0.120.210"
+  real_robots_ip_low: "10.0.120.220"
+  real_robots_ip_high: "10.0.120.221"
   real_robots_port: 10000
 
 ether:
