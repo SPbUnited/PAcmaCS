@@ -1,0 +1,160 @@
+name: CI smoke (build + up)
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            name: ubuntu-24.04
+          - os: macos-15
+            name: macos (arm64)
+
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+
+    env:
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      FORCE_COLOR: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: serviz/frontend/package-lock.json
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install OS deps (Ubuntu)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y jq
+
+      - name: Install OS deps (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          brew update
+          brew install jq || true
+
+      # -------------------------
+      # INSTALL
+      # -------------------------
+
+      - name: Install (Ubuntu, CI-safe)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          # В CI нельзя безопасно вызывать post_install_docker (там newgrp/reboot подсказки),
+          # поэтому выполняем то же самое, но без зависания.
+          make install_misc
+          make install_docker
+
+          docker --version
+          docker compose version
+
+      - name: Install (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          true
+
+      # -------------------------
+      # INIT
+      # -------------------------
+
+      - name: Init (venv + npm)
+        shell: bash
+        run: |
+          make init
+
+      # -------------------------
+      # BUILD
+      # -------------------------
+
+      - name: Build (Ubuntu, docker)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          make build
+
+      - name: Build (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          # На macOS ветке make up не использует docker compose, поэтому build можно пропустить.
+          true
+
+      # -------------------------
+      # RUN + LOG CHECK
+      # -------------------------
+
+      - name: Up smoke test (Ubuntu) and check logs
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -o pipefail
+
+          # make up не завершится сам (docker compose up в foreground),
+          # поэтому даём ему поработать и "обрываем" по timeout.
+          # Код 124 (timeout) считаем нормальным, если в логах нет ошибок.
+          timeout 120s make up 2>&1 | tee up.log || code=$?
+          if [ "${code:-0}" -ne 0 ] && [ "${code:-0}" -ne 124 ]; then
+            echo "make up failed with code=${code}"
+            exit "${code}"
+          fi
+
+          # Быстрая проверка: типовые маркеры ошибок.
+          if grep -E -i -n "(^|\s)(error|fatal|panic|traceback|exception|segmentation fault|addresssanitizer)\b" up.log; then
+            echo "Detected error patterns in logs"
+            exit 1
+          fi
+
+          # Дополнительно: покажем статусы контейнеров (не валим билд, только для диагностики)
+          docker compose ps || true
+          docker compose logs --no-color --tail=200 || true
+
+      - name: Up smoke test (macOS) and check logs
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -o pipefail
+
+          # Darwin-ветка: активирует venv и запускает honcho start
+          timeout 60s make up 2>&1 | tee up.log || code=$?
+          if [ "${code:-0}" -ne 0 ] && [ "${code:-0}" -ne 124 ]; then
+            echo "make up failed with code=${code}"
+            exit "${code}"
+          fi
+
+          if grep -E -i -n "(^|\s)(error|fatal|panic|traceback|exception|segmentation fault|addresssanitizer)\b" up.log; then
+            echo "Detected error patterns in logs"
+            exit 1
+          fi
+
+      - name: Upload logs artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-${{ matrix.name }}
+          path: |
+            up.log
+            logs/**
+          if-no-files-found: ignore
