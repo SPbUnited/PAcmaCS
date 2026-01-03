@@ -27,7 +27,7 @@ services:
       - DIV=${DIV}
     userns_mode: "host"
     user: "${UID}:${GID}"
-    command: [ "sh", "-c", "npm install && npm run start" ]
+    command: [ "sh", "-c", "npm run start" ]
 
   grsim:
     image: robocupssl/grsim:latest
