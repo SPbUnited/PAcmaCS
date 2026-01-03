@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "start": "npx -y serve -s dist -l 8000"
+    "start": "serve -s dist -l 8000"
   },
   "devDependencies": {
     "typescript": "~5.8.3",
@@ -15,6 +15,7 @@
   "dependencies": {
     "events": "3.3.0",
     "golden-layout": "2.6.0",
+    "serve": "14.2.5",
     "socket.io": "4.8.3",
     "socket.io-client": "4.8.3"
   }
