@@ -53,6 +53,7 @@ jobs:
         run: |
           brew update
           brew install jq || true
+          brew install coreutils
 
       # -------------------------
       # INSTALL
@@ -65,16 +66,9 @@ jobs:
           # В CI нельзя безопасно вызывать post_install_docker (там newgrp/reboot подсказки),
           # поэтому выполняем то же самое, но без зависания.
           make install_misc
-          make install_docker
-
+          
           docker --version
           docker compose version
-
-      - name: Install (macOS)
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          true
 
       # -------------------------
       # INIT
@@ -95,13 +89,6 @@ jobs:
         run: |
           make build
 
-      - name: Build (macOS)
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          # На macOS ветке make up не использует docker compose, поэтому build можно пропустить.
-          true
-
       # -------------------------
       # RUN + LOG CHECK
       # -------------------------
@@ -115,7 +102,7 @@ jobs:
           # make up не завершится сам (docker compose up в foreground),
           # поэтому даём ему поработать и "обрываем" по timeout.
           # Код 124 (timeout) считаем нормальным, если в логах нет ошибок.
-          timeout 120s make up 2>&1 | tee up.log || code=$?
+          timeout 60s make up 2>&1 | tee up.log || code=$?
           if [ "${code:-0}" -ne 0 ] && [ "${code:-0}" -ne 124 ]; then
             echo "make up failed with code=${code}"
             exit "${code}"
@@ -138,7 +125,7 @@ jobs:
           set -o pipefail
 
           # Darwin-ветка: активирует venv и запускает honcho start
-          timeout 60s make up 2>&1 | tee up.log || code=$?
+          gtimeout 60s make up 2>&1 | tee up.log || code=$?
           if [ "${code:-0}" -ne 0 ] && [ "${code:-0}" -ne 124 ]; then
             echo "make up failed with code=${code}"
             exit "${code}"
