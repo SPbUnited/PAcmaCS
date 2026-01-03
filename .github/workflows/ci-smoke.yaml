@@ -1,6 +1,7 @@
 name: CI smoke (build + up)
 
 on:
+  push: # delete this, too heavy action
   pull_request:
   workflow_dispatch:
 
