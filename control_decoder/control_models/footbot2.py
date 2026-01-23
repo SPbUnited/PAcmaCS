@@ -1,5 +1,4 @@
 import math
-import zmq
 import socket
 import time
 
