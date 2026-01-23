@@ -75,9 +75,10 @@ def update_layer(layer_name: str, data):
         data["is_visible"] = visibility[layer_name]
 
     if layer_name == "vision_feed":
-        with feed_lock:
-            global last_feed_update
-            last_feed_update = time.time()
+        if len(data["data"]) > 1:
+            with feed_lock:
+                global last_feed_update
+                last_feed_update = time.time()
 
 def update_telemetry_data(data):
     telemetry_store.write(data)
