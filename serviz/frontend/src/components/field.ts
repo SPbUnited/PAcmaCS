@@ -84,7 +84,7 @@ const Field: Component = {
       const coords = convertCoordsToField(fieldSvg, e);
 
       coordsDisplay.textContent = `X: ${coords[0].toFixed(
-        0
+        0,
       )}, Y: ${coords[1].toFixed(0)}`;
     });
     fieldSvg.addEventListener("mouseleave", (e) => {
@@ -116,7 +116,7 @@ const Field: Component = {
           updateTransform();
         }
       },
-      { passive: false }
+      { passive: false },
     );
     container.element.addEventListener("mousedown", (e) => {
       if (e.altKey) {
@@ -212,7 +212,7 @@ const Field: Component = {
               dragStartX,
               -dragStartY,
               draggingArrowX,
-              -draggingArrowY
+              -draggingArrowY,
             );
           }
           lastSprites = null;
@@ -238,7 +238,7 @@ const Field: Component = {
       x1: number,
       y1: number,
       x2: number,
-      y2: number
+      y2: number,
     ) {
       const color = "#ffb325";
       const markerId = `arrow-${color.replace("#", "")}`;
@@ -314,7 +314,7 @@ const Field: Component = {
           console.log(
             "Robot selected for relocation:",
             best.color,
-            best.robot_id
+            best.robot_id,
           );
 
           robotRelocDisplay.textContent = `Relocate robot: ${best.color} ${best.robot_id}\n(Press ESC to clear)`;
@@ -378,7 +378,7 @@ export default Field;
 
 function convertCoordsToField(
   fieldSvg: SVGSVGElement,
-  e: PointerEvent | MouseEvent
+  e: PointerEvent | MouseEvent,
 ): [number, number] {
   const pt = fieldSvg.createSVGPoint();
   pt.x = e.clientX;
@@ -434,7 +434,7 @@ function drawField(fieldSvg: SVGSVGElement, cfg: FieldConfig): void {
     "viewBox",
     `${-cfg.width / 2 - cfg.borderSize} ${-cfg.height / 2 - cfg.borderSize} ${
       cfg.width + cfg.borderSize * 2
-    } ${cfg.height + cfg.borderSize * 2}`
+    } ${cfg.height + cfg.borderSize * 2}`,
   );
   fieldSvg.setAttribute("preserveAspectRatio", "xMidYMid meet");
 
@@ -478,7 +478,7 @@ function drawField(fieldSvg: SVGSVGElement, cfg: FieldConfig): void {
   const leftGoal = document.createElementNS(svgNS, "rect");
   leftGoal.setAttribute(
     "x",
-    String(-(cfg.width / 2 + cfg.goalDepth - goalLineWidth / 2))
+    String(-(cfg.width / 2 + cfg.goalDepth - goalLineWidth / 2)),
   );
   leftGoal.setAttribute("y", String(-cfg.goalWidth / 2));
   leftGoal.setAttribute("width", String(cfg.goalDepth));
@@ -615,6 +615,16 @@ interface Text {
   align?: "left" | "middle" | "right";
 }
 
+interface ReadySvg {
+  type: "svg";
+  svg: string;
+  x: number;
+  y: number;
+  scale?: number;
+  rotation?: number;
+}
+const svgCache = new Map<string, SVGElement>();
+
 type VisionObject =
   | RobotYel
   | RobotBlu
@@ -624,7 +634,8 @@ type VisionObject =
   | Polygon
   | Rect
   | Circle
-  | Text;
+  | Text
+  | ReadySvg;
 
 export interface FeedData {
   [layerName: string]: {
@@ -637,7 +648,7 @@ export interface FeedData {
 function drawImageSvg(
   svg: SVGSVGElement,
   json: FeedData,
-  robotsList?: RobotOnField[]
+  robotsList?: RobotOnField[],
 ) {
   if (robotsList) robotsList.length = 0;
 
@@ -735,7 +746,7 @@ function drawImageSvg(
             "transform",
             `rotate(${-((element.rotation || 0) * 180) / Math.PI}, ${
               element.x
-            }, ${-element.y})`
+            }, ${-element.y})`,
           );
           robot.setAttribute("width", "160");
           robot.setAttribute("height", "180");
@@ -793,7 +804,7 @@ function drawImageSvg(
             "transform",
             `rotate(${-((element.rotation || 0) * 180) / Math.PI}, ${
               element.x
-            }, ${-element.y})`
+            }, ${-element.y})`,
           );
           robot.setAttribute("width", "160");
           robot.setAttribute("height", "180");
@@ -887,6 +898,36 @@ function drawImageSvg(
           svg.appendChild(text);
           break;
         }
+        case "svg": {
+          let cached = svgCache.get(element.svg);
+
+          if (!cached) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(element.svg, "image/svg+xml");
+            cached = doc.documentElement as SVGElement;
+            svgCache.set(element.svg, cached);
+          }
+
+          const g = document.createElementNS(svgNS, "g");
+
+          const scale = element.scale ?? 1;
+          const rotation = element.rotation ?? 0;
+
+          g.setAttribute(
+            "transform",
+            `
+              translate(${element.x}, ${-element.y})
+              rotate(${(-rotation * 180) / Math.PI})
+              scale(${scale})
+            `,
+          );
+
+          g.appendChild(cached.cloneNode(true));
+          svg.appendChild(g);
+
+          break;
+        }
+
         default:
           // @ts-ignore
           console.warn("Unknown element type:", element.type);
