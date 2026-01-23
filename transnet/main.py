@@ -157,7 +157,7 @@ def setup_proxy(context: zmq.Context, signal_bus: SignalBus = None):
 
 def proxy_ctrl_handler(signal: Dict):
     signal_type = signal["transnet"]
-    print(signal)
+    # print(signal)
 
     if signal_type == "ether_select":
         print("Ether select")

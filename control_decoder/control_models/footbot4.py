@@ -1,58 +1,45 @@
 import math
-from attrs import define, field
-from . import robot_command_model as rcm
-from . import control_decoder_command_model as cdcm
+import zmq
+import socket
+import time
 
+from decoder import control_decoder_command_model as cdcm
+from control_models.base_model import ControlModel
 
-@define
-class Decoder:
-    """Decoder for the control signals"""
+class FB4Decoder(ControlModel):
+    def __init__(self, config, telemetry_sender):
+        super().__init__(config, telemetry_sender)
 
-    def decoder2sim(self, decoder_team_command: cdcm.DecoderTeamCommand):
-        """Convert the decoder command to a sim robot command"""
-
-        robot_team_command = rcm.RobotControlExt(
-            isteamyellow=decoder_team_command.isteamyellow,
-            robot_commands=[],
+        self.fb4_ip_port_low: tuple[str, int] = (
+            config["control_decoder"]["fb4_ip_low"],
+            config["control_decoder"]["fb4_port"],
         )
+        self.fb4_ip_port_high: tuple[str, int] = (
+            config["control_decoder"]["fb4_ip_high"],
+            config["control_decoder"]["fb4_port"],
+        )
+        self.s_outbound_real_low = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.s_outbound_real_high = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        
+        def robots_sender_low(data: bytes):
+            self.s_outbound_real_low.sendto(data, self.fb4_ip_port_low)
+        def robots_sender_high(data: bytes):
+            self.s_outbound_real_high.sendto(data, self.fb4_ip_port_high)
+        self.udpie_processor = UdPieProcessor(robots_sender_low,robots_sender_high, telemetry_sender)
 
-        for decoder_command in decoder_team_command.robot_commands:
+    def process(self, signal_data: cdcm.DecoderTeamCommand) -> None:
+        self.telemetry_text = 'SENDING COMMANDS IN "FB4" MODE\n \tr_id\tspeedX\tspeedY\tspeedW\tdribler\tvoltage\tkickUP\tkickDWN\tbeep\tdribEN\tcharEN\tautokck\n'
+        packets_low, packets_high = self.decoder(signal_data)
+        for packet in packets_low:
+            self.s_outbound_real_low.sendto(packet, self.fb4_ip_port_low)
+        for packet in packets_high:
+            self.s_outbound_real_high.sendto(packet, self.fb4_ip_port_high)
 
-            is_kick = (
-                decoder_command.kick_up
-                or decoder_command.kick_forward
-                or decoder_command.auto_kick_up
-                or decoder_command.auto_kick_forward
-            )
-            is_upper_kick = decoder_command.kick_up or decoder_command.auto_kick_up
+        for cmd in packets_low + packets_high:
+            self.telemetry_text += create_telemetry(cmd)
+        self.last_update = time.time()
 
-            # real robot hits the ball at about 6 m/s at maximum voltage
-            kick_speed = decoder_command.kicker_setting * (6 / 15) if is_kick else 0
-            kick_angle = 30 if is_upper_kick else 0
-
-            angular_vel = decoder_command.angular_vel
-            if angular_vel is None:
-                angular_vel = 0
-
-            robot_command = rcm.RobotCommand(
-                id=decoder_command.robot_id,
-                move_command=rcm.RobotMoveCommand(
-                    local_velocity=rcm.MoveLocalVelocity(
-                        forward=decoder_command.forward_vel / 1000,
-                        left=decoder_command.left_vel / 1000,
-                        angular=angular_vel,
-                    ),
-                ),
-                kick_speed=kick_speed,
-                kick_angle=kick_angle,
-                dribbler_speed=decoder_command.dribbler_setting,
-            )
-
-            robot_team_command.robot_commands.append(robot_command)
-
-        return robot_team_command
-
-    def decoder2robot(self, decoder_team_command: cdcm.DecoderTeamCommand) -> tuple[list[bytes], list[bytes]]:
+    def decoder(self, decoder_team_command: cdcm.DecoderTeamCommand) -> tuple[list[bytes], list[bytes]]:
         """Convert the decoder command to a robot command"""
         commands_low: list[bytes] = []
         commands_high: list[bytes] = []
@@ -76,7 +63,7 @@ class Decoder:
             elif robot.auto_kick_up:
                 autokick = 2
 
-            command_bytes = create_packet15(
+            command_bytes = create_packet(
                 bot_number=int(robot.robot_id),
                 speed_x=-robot.left_vel / (435 / 15),
                 speed_y=robot.forward_vel / (440 / 15),
@@ -96,42 +83,33 @@ class Decoder:
                 commands_high.append(command_bytes)
 
         return commands_low, commands_high
+    
+    def process_signal(self, raw: Any):
+        self.udpie_processor.process_udpie(raw)
+
+
+
+def create_telemetry(data: bytes) -> str:
+    """Create line for telemetry for single robot"""
+    values = [
+        data[1],
+        int.from_bytes(data[2:3], "big", signed=True),
+        int.from_bytes(data[3:4], "big", signed=True),
+        int.from_bytes(data[4:5], "big", signed=True),
+        data[5],
+        data[6],
+        data[7],
+        data[8],
+        data[9],
+        data[10],
+        data[11],
+        data[12],
+    ]
+    values_str = [str(val) for val in values]
+    return "\t" + "\t".join(values_str) + "\n"
 
 
 def create_packet(
-    bot_number: int,  # unsigned byte (0-255)
-    speed_x: int,  # signed byte (-128 to 127)
-    speed_y: int,  # signed byte
-    speed_w: int,  # signed byte
-    dribbler_speed: int,  # unsigned byte
-    kicker_voltage: int,  # unsigned byte
-    kick_up: int,  # boolean flag (bit 0)
-    kick_down: int,  # boolean flag (bit 1)
-    beep: int,  # boolean flag (bit 2)
-    dribbler_en: int,  # boolean flag (bit 3)
-    charge_en: int,  # boolean flag (bit 4)
-    autokick: int,  # unsigned byte
-) -> bytes:
-    # Convert all values to bytes and pack into a list
-    bytes_list = [
-        0x01,  # Header
-        bot_number,
-        speed_x.to_bytes(1, "big", signed=True)[0],
-        speed_y.to_bytes(1, "big", signed=True)[0],
-        speed_w.to_bytes(1, "big", signed=True)[0],
-        dribbler_speed,
-        kicker_voltage,
-        kick_up,
-        kick_down,
-        beep,
-        dribbler_en,
-        charge_en,
-        autokick,
-    ]
-
-    return bytes(bytes_list)
-
-def create_packet15(
     bot_number: int,  # unsigned byte (0-255)
     speed_x: float,  # signed byte (-128 to 127)
     speed_y: float,  # signed byte
@@ -233,3 +211,61 @@ def float_to_143(x: float) -> int:
     # binary_1_4_3 = minifloat_to_binary(sign, exp, mantissa, 4, 3)
 
     return out
+
+###################################################################################################
+
+udpies_history: list[tuple[str, int, str]] = []
+
+class UdPieProcessor:
+    def __init__(self, robots_sender_low, robots_sender_high, telemetry_sender):
+        self.robots_sender_low = robots_sender_low
+        self.robots_sender_high = robots_sender_high
+        self.telemetry_sender = telemetry_sender
+
+    def process_udpie(self, raw_data):
+        try:
+            data = bytes(int(x) & 0xFF for x in raw_data)
+        except Exception as e:
+            print("send_udpie: cannot convert data to bytes:", e)
+            return
+
+        print("Get new udpie:", data)
+        robot_id = data[1] & 0x0F
+
+        try:
+            if robot_id < 8:
+                self.robots_sender_low(data)
+            else:
+                self.robots_sender_high(data)
+            self.log_udpie_packet(data)
+        except OSError as e:
+            print("Can't send UDPie, no route to host:", e)
+            self.telemetry_sender({"SENDED UDPIES": "Can't send UDPie, no route to host"})
+
+    def log_udpie_packet(self, data: bytes) -> None:
+        global udpies_history
+
+        now_str = time.strftime("%H:%M:%S", time.localtime())
+        hex_str = " ".join(f"{b:02X}" for b in data)
+
+        if udpies_history and udpies_history[0][0] == hex_str:
+            last_hex, last_count, first_time = udpies_history[0]
+            udpies_history[0] = (last_hex, last_count + 1, first_time)
+        else:
+            udpies_history.insert(0, (hex_str, 1, now_str))
+            if len(udpies_history) > 20:
+                udpies_history = udpies_history[:20]
+                udpies_history.append(("...", 1, ""))
+
+        lines: list[str] = []
+        for pkt_hex, count, time_str in udpies_history:
+            if count == 1:
+                line = f"{time_str}\t{pkt_hex}"
+            else:
+                line = f"{time_str}\t{pkt_hex}"
+                line += " " * (40 - len(line)) + f"x{count}"
+            lines.append(line)
+
+        udpies_text = "\n".join(lines)
+
+        self.telemetry_sender({"SENDED UDPIES": udpies_text})

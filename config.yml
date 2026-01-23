@@ -15,11 +15,14 @@ transnet:
   s_geometry_ctrl_url: ipc:///tmp/transnet.geometry.ctrl
 
 control_decoder:
-  api_version: 1
+  api_version: 2
   s_control_sink_url: tcp://*:5051
-  real_robots_ip_low: "10.0.120.220"
-  real_robots_ip_high: "10.0.120.221"
-  real_robots_port: 10000
+  fb2_ip_low: "10.0.120.211"
+  fb2_ip_high: "10.0.120.210"
+  fb2_port: 10000
+  fb4_ip_low: "10.0.120.220"
+  fb4_ip_high: "10.0.120.221"
+  fb4_port: 10000
 
 ether:
   api_version: 3
