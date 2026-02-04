@@ -368,7 +368,7 @@ if __name__ == "__main__":
 
             if s_signals in socks:
                 signal = s_signals.recv_json()
-                # print(signal)
+                print(signal)
                 is_signal_valid = False
                 is_signal_valid |= simControl.signal_handler(signal)
                 is_signal_valid |= robotControl.signal_handler(signal)

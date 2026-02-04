@@ -1,3 +1,4 @@
+import json
 from multiprocessing import Lock
 import time
 from typing import Optional
@@ -240,6 +241,9 @@ def update_telemetry():
                     break
                 else:
                     raise
+            except json.JSONDecodeError as e:
+                print("Bad JSON in telemetry:", e)
+                continue
 
         telemetry_store.switch()
 
