@@ -39,16 +39,44 @@ const PlaybackControls: Component = {
 
     const netRow = row();
 
-    const etherBtn = btn("Switch Ether", false);
-    etherBtn.onclick = () =>
+    const etherBtn = btn("Switch to LIVE data", false);
+    etherBtn.onclick = () => {
       sendMessage("send_signal", { transnet: "ether_select" });
+      if (autoSwitchCheckbox.checked) {
+        sendMessage("clear_layers", "");
+        sendMessage("clear_telemetry", "");
+      }
+    };
 
-    const phantomBtn = btn("Switch Phantom", false);
-    phantomBtn.onclick = () =>
+    const phantomBtn = btn("Switch to LOG replay", false);
+    phantomBtn.onclick = () => {
       sendMessage("send_signal", { transnet: "phantom_select" });
+      if (autoSwitchCheckbox.checked) {
+        sendMessage("clear_layers", "");
+        sendMessage("clear_telemetry", "");
+      }
+    };
 
     netRow.append(etherBtn, phantomBtn);
     root.appendChild(netRow);
+
+    const checkboxRow = document.createElement("label");
+    checkboxRow.style.display = "flex";
+    checkboxRow.style.alignItems = "center";
+    checkboxRow.style.justifyContent = "center";
+    checkboxRow.style.gap = "6px";
+    checkboxRow.style.fontSize = "14px";
+    checkboxRow.style.opacity = "0.8";
+
+    const autoSwitchCheckbox = document.createElement("input");
+    autoSwitchCheckbox.type = "checkbox";
+    autoSwitchCheckbox.checked = true; // по умолчанию
+
+    const checkboxText = document.createElement("span");
+    checkboxText.textContent = "Auto clear telemetry and drawing layers";
+
+    checkboxRow.append(autoSwitchCheckbox, checkboxText);
+    root.appendChild(checkboxRow);
 
     // =====================================================
     // Mode selector
@@ -101,6 +129,9 @@ const PlaybackControls: Component = {
         telsink: isRecording ? "stop_recording" : "start_recording",
       });
     };
+    recordBtn.style.width = "250px";
+    recordBtn.style.marginLeft = "auto";
+    recordBtn.style.marginRight = "auto";
 
     recordingBlock.appendChild(recordBtn);
     root.appendChild(recordingBlock);
@@ -143,8 +174,13 @@ const PlaybackControls: Component = {
       sendMessage("send_signal", { telsink: "toggle_pause" });
 
     const stopBtn = btn("Stop");
-    stopBtn.onclick = () =>
+    stopBtn.onclick = () => {
       sendMessage("send_signal", { telsink: "stop_playback" });
+      if (autoSwitchCheckbox.checked) {
+        sendMessage("clear_layers", "");
+        sendMessage("clear_telemetry", "");
+      }
+    };
 
     playRow.append(playBtn, pauseBtn, stopBtn);
     playingBlock.appendChild(playRow);
