@@ -714,22 +714,18 @@ function drawImageSvg(
   const minSpeed = 10;
 
   const layers = Object.keys(json)
-    .map((layerName) => {
-      const layer = json[layerName];
-      return { layerName, layer };
-    })
+    .map((layerName) => ({ layerName, layer: json[layerName] }))
     .filter(({ layer }) => layer && Array.isArray(layer.data))
     .sort((a, b) => {
-      const ha =
-        typeof a.layer.height === "number"
-          ? a.layer.height
-          : Number(a.layer.height) || 0;
-      const hb =
-        typeof b.layer.height === "number"
-          ? b.layer.height
-          : Number(b.layer.height) || 0;
+      const ha = Number(a.layer.height ?? a.layer.heigh) || 0;
+      const hb = Number(b.layer.height ?? b.layer.heigh) || 0;
       return hb - ha;
     });
+
+  for (const { layerName } of layers) {
+    const g = getLayerGroup(svg, layerName);
+    svg.appendChild(g);
+  }
 
   for (const { layerName, layer } of layers) {
     const group = getLayerGroup(svg, layerName);
