@@ -54,20 +54,20 @@ s_signals.connect(config["ether"]["s_signals_sub_url"])
 
 def update_layer(layer_name: str, data):
     if layer_name not in layer_heigh:
-        heigh = 1
-        if "heigh" in data:
-            heigh = data["heigh"]
+        height = 1
+        if "height" in data:
+            height = data["height"]
             
         used_heights = set()
         for _, h in layer_heigh.items():
             used_heights.add(h)
 
-        while heigh in used_heights:
-            heigh += 0.001
-        layer_heigh.update({layer_name: heigh})
+        while height in used_heights:
+            height += 0.001
+        layer_heigh.update({layer_name: height})
 
     else:
-        data["heigh"] = layer_heigh[layer_name]
+        data["height"] = layer_heigh[layer_name]
 
     sprite_store.write({layer_name: data})
     if layer_name not in visibility:
@@ -103,7 +103,7 @@ def _move_layer(layer_name: str, direction: str):
     if not layers:
         return
 
-    layers.sort(key=lambda x: x[1])  # по возрастанию heigh
+    layers.sort(key=lambda x: x[1])  # по возрастанию height
 
     index = None
     for i, (name, _) in enumerate(layers):
@@ -132,7 +132,7 @@ def _move_layer(layer_name: str, direction: str):
     for name in (name1, name2):
         layer_data = current_sprites.get(name)
         if layer_data is not None:
-            layer_data["heigh"] = layer_heigh[name]
+            layer_data["height"] = layer_heigh[name]
             sprite_store.write({name: layer_data})
 
 

@@ -42,7 +42,7 @@ const DrawingLayers: Component = {
 
     function findCheckbox(name: string): HTMLInputElement | undefined {
       const items = layersList.querySelectorAll<HTMLInputElement>(
-        'input[type="checkbox"][data-layer]'
+        'input[type="checkbox"][data-layer]',
       );
       for (const el of Array.from(items))
         if (el.dataset.layer === name) return el;
@@ -60,7 +60,7 @@ const DrawingLayers: Component = {
         if (!layer || !Array.isArray(layer.data)) continue;
         validNames.add(layerName);
 
-        const heighValue = Number(layer.heigh);
+        const heighValue = Number(layer.height);
         if (layerHeigh.get(layerName) != heighValue) {
           update = true;
           layerHeigh.set(layerName, heighValue);
@@ -154,7 +154,7 @@ const DrawingLayers: Component = {
       const existing = layersList.querySelectorAll<HTMLLabelElement>("label");
       for (const label of Array.from(existing)) {
         const input = label.querySelector<HTMLInputElement>(
-          'input[type="checkbox"][data-layer]'
+          'input[type="checkbox"][data-layer]',
         );
         const name = input?.dataset.layer;
         if (name && !validNames.has(name)) label.remove();
@@ -168,14 +168,14 @@ const DrawingLayers: Component = {
 
       if (update) {
         const labels = Array.from(
-          layersList.querySelectorAll<HTMLLabelElement>("label")
+          layersList.querySelectorAll<HTMLLabelElement>("label"),
         );
         labels.sort((a, b) => {
           const aInput = a.querySelector<HTMLInputElement>(
-            'input[type="checkbox"][data-layer]'
+            'input[type="checkbox"][data-layer]',
           );
           const bInput = b.querySelector<HTMLInputElement>(
-            'input[type="checkbox"][data-layer]'
+            'input[type="checkbox"][data-layer]',
           );
           const aName = aInput?.dataset.layer ?? "";
           const bName = bInput?.dataset.layer ?? "";

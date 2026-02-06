@@ -678,7 +678,7 @@ export interface FeedData {
   [layerName: string]: {
     data: VisionObject[];
     is_visible: boolean;
-    heigh: number;
+    height: number;
   };
 }
 
@@ -721,13 +721,13 @@ function drawImageSvg(
     .filter(({ layer }) => layer && Array.isArray(layer.data))
     .sort((a, b) => {
       const ha =
-        typeof a.layer.heigh === "number"
-          ? a.layer.heigh
-          : Number(a.layer.heigh) || 0;
+        typeof a.layer.height === "number"
+          ? a.layer.height
+          : Number(a.layer.height) || 0;
       const hb =
-        typeof b.layer.heigh === "number"
-          ? b.layer.heigh
-          : Number(b.layer.heigh) || 0;
+        typeof b.layer.height === "number"
+          ? b.layer.height
+          : Number(b.layer.height) || 0;
       return hb - ha;
     });
 
