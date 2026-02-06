@@ -298,8 +298,11 @@ def relay_data(sio: SocketIO):
         
         global last_feed_update
         sprites_data = sprite_store.fetch()
-        for layer_name in visibility:
-            sprites_data[layer_name]["is_visible"] = visibility[layer_name]
+        for layer_name, is_visible in visibility.items():
+            layer = sprites_data.get(layer_name)
+            if layer is not None:
+                layer["is_visible"] = is_visible
+
             
         sprites_data["_time_from_update"] = time.time() - last_feed_update
         sio.emit("update_sprites", sprites_data)
@@ -310,6 +313,21 @@ def relay_data(sio: SocketIO):
         if geometry_data_updated:
             sio.emit("update_geometry", geometry_data)
             geometry_data_updated = False
+
+        # clear svg
+        with sprite_store.write_lock:
+            store = sprite_store.store[sprite_store.get_write_color()]
+
+            for layer in store.values():
+                items = layer.get("data")
+                if not isinstance(items, list):
+                    continue
+
+                for item in items:
+                    if item.get("type") == "svg":
+                        layer["data"] = []
+                        break
+
 
 
 # Run the app
