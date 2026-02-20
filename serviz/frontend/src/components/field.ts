@@ -104,7 +104,13 @@ const Field: Component = {
 
         const rect = fieldSvg.getBoundingClientRect();
 
-        const scaleFactor = 1 + e.deltaY / 100;
+
+        let delta = e.deltaY;
+
+        if (e.deltaMode === 0) delta /= 200;
+        else delta /= 1000;
+
+        const scaleFactor = 1 + delta;
         const newScale = scale * scaleFactor;
         if (newScale > 0.3 && newScale < 10) {
           originX +=
@@ -469,8 +475,7 @@ function drawField(fieldSvg: SVGSVGElement, cfg: FieldConfig): void {
 
   fieldSvg.setAttribute(
     "viewBox",
-    `${-cfg.width / 2 - cfg.borderSize} ${-cfg.height / 2 - cfg.borderSize} ${
-      cfg.width + cfg.borderSize * 2
+    `${-cfg.width / 2 - cfg.borderSize} ${-cfg.height / 2 - cfg.borderSize} ${cfg.width + cfg.borderSize * 2
     } ${cfg.height + cfg.borderSize * 2}`,
   );
   fieldSvg.setAttribute("preserveAspectRatio", "xMidYMid meet");
@@ -803,8 +808,7 @@ function drawImageSvg(
           robot.setAttribute("y", (-element.y - 90).toString());
           robot.setAttribute(
             "transform",
-            `rotate(${-((element.rotation || 0) * 180) / Math.PI}, ${
-              element.x
+            `rotate(${-((element.rotation || 0) * 180) / Math.PI}, ${element.x
             }, ${-element.y})`,
           );
           robot.setAttribute("width", "160");
@@ -861,8 +865,7 @@ function drawImageSvg(
           robot.setAttribute("y", (-element.y - 90).toString());
           robot.setAttribute(
             "transform",
-            `rotate(${-((element.rotation || 0) * 180) / Math.PI}, ${
-              element.x
+            `rotate(${-((element.rotation || 0) * 180) / Math.PI}, ${element.x
             }, ${-element.y})`,
           );
           robot.setAttribute("width", "160");
