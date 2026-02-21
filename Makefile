@@ -110,7 +110,7 @@ init_npm: no-sudo
 	@echo "${GREEN}============="
 	@echo "| NPM  INIT |"
 	@echo "=============${NC}"
-	cd serviz/frontend && npm install
+	cd serviz/frontend && npm ci && npm run build
 
 build_docker: guard_not_mac no-sudo
 	@echo "${BLUE}============="
@@ -146,8 +146,8 @@ up-message:
 	@echo "VERSION=${VERSION}"
 	@echo "DIVISION='${DIV}'"
 	@echo "CONTROL=${CTRL}"
-	@echo "UID=${UID}"
-	@echo "GID=${GID}"
+# 	@echo "UID=${UID}"
+# 	@echo "GID=${GID}"
 
 down: guard_not_mac
 	@echo "${RED}============="
@@ -170,3 +170,6 @@ no-sudo:
 	fi \
 	}
 
+# npm install to update packages
+dev: no-sudo
+	cd serviz/frontend && npm run dev

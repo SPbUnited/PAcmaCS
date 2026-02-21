@@ -1,3 +1,4 @@
+import json
 from multiprocessing import Lock
 import time
 from typing import Optional
@@ -53,20 +54,20 @@ s_signals.connect(config["ether"]["s_signals_sub_url"])
 
 def update_layer(layer_name: str, data):
     if layer_name not in layer_heigh:
-        heigh = 1
-        if "heigh" in data:
-            heigh = data["heigh"]
+        height = 1
+        if "height" in data:
+            height = data["height"]
             
         used_heights = set()
         for _, h in layer_heigh.items():
             used_heights.add(h)
 
-        while heigh in used_heights:
-            heigh += 0.001
-        layer_heigh.update({layer_name: heigh})
+        while height in used_heights:
+            height += 0.001
+        layer_heigh.update({layer_name: height})
 
     else:
-        data["heigh"] = layer_heigh[layer_name]
+        data["height"] = layer_heigh[layer_name]
 
     sprite_store.write({layer_name: data})
     if layer_name not in visibility:
@@ -75,9 +76,10 @@ def update_layer(layer_name: str, data):
         data["is_visible"] = visibility[layer_name]
 
     if layer_name == "vision_feed":
-        with feed_lock:
-            global last_feed_update
-            last_feed_update = time.time()
+        if len(data["data"]) > 1:
+            with feed_lock:
+                global last_feed_update
+                last_feed_update = time.time()
 
 def update_telemetry_data(data):
     telemetry_store.write(data)
@@ -101,7 +103,7 @@ def _move_layer(layer_name: str, direction: str):
     if not layers:
         return
 
-    layers.sort(key=lambda x: x[1])  # по возрастанию heigh
+    layers.sort(key=lambda x: x[1])  # по возрастанию height
 
     index = None
     for i, (name, _) in enumerate(layers):
@@ -130,7 +132,7 @@ def _move_layer(layer_name: str, direction: str):
     for name in (name1, name2):
         layer_data = current_sprites.get(name)
         if layer_data is not None:
-            layer_data["heigh"] = layer_heigh[name]
+            layer_data["height"] = layer_heigh[name]
             sprite_store.write({name: layer_data})
 
 
@@ -239,6 +241,9 @@ def update_telemetry():
                     break
                 else:
                     raise
+            except json.JSONDecodeError as e:
+                print("Bad JSON in telemetry:", e)
+                continue
 
         telemetry_store.switch()
 
@@ -293,8 +298,11 @@ def relay_data(sio: SocketIO):
         
         global last_feed_update
         sprites_data = sprite_store.fetch()
-        for layer_name in visibility:
-            sprites_data[layer_name]["is_visible"] = visibility[layer_name]
+        for layer_name, is_visible in visibility.items():
+            layer = sprites_data.get(layer_name)
+            if layer is not None:
+                layer["is_visible"] = is_visible
+
             
         sprites_data["_time_from_update"] = time.time() - last_feed_update
         sio.emit("update_sprites", sprites_data)
@@ -305,6 +313,21 @@ def relay_data(sio: SocketIO):
         if geometry_data_updated:
             sio.emit("update_geometry", geometry_data)
             geometry_data_updated = False
+
+        # clear svg
+        with sprite_store.write_lock:
+            store = sprite_store.store[sprite_store.get_write_color()]
+
+            for layer in store.values():
+                items = layer.get("data")
+                if not isinstance(items, list):
+                    continue
+
+                for item in items:
+                    if item.get("type") == "svg":
+                        layer["data"] = []
+                        break
+
 
 
 # Run the app

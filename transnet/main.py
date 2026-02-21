@@ -157,7 +157,7 @@ def setup_proxy(context: zmq.Context, signal_bus: SignalBus = None):
 
 def proxy_ctrl_handler(signal: Dict):
     signal_type = signal["transnet"]
-    print(signal)
+    # print(signal)
 
     if signal_type == "ether_select":
         print("Ether select")
@@ -368,7 +368,7 @@ if __name__ == "__main__":
 
             if s_signals in socks:
                 signal = s_signals.recv_json()
-                # print(signal)
+                print(signal)
                 is_signal_valid = False
                 is_signal_valid |= simControl.signal_handler(signal)
                 is_signal_valid |= robotControl.signal_handler(signal)

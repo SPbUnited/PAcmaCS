@@ -1,4 +1,5 @@
 [![Version](https://img.shields.io/badge/version-v0.24.0-informational)](https://github.com/SPBUnited/serviz/actions/workflows/auto-semver.yml)
+[![CI smoke (build + up)](https://github.com/SPbUnited/PAcmaCS/actions/workflows/ci-smoke.yaml/badge.svg?branch=fb4)](https://github.com/SPbUnited/PAcmaCS/actions/workflows/ci-smoke.yaml)
 
 # PAcmaCS - Programmatically Actionable multi-agent Cybernetic Studio
 
@@ -87,7 +88,21 @@ make build
 make up-all
 ```
 
-После запуска можно подключится к serviz по адресу http://localhost:5173
+После запуска можно подключится к serviz по адресу http://localhost:8000
+
+## Обновление до новой версии
+
+Подтяните изменения из удаленного репозитория:
+
+```
+git pull
+```
+
+Заного соберите проект:
+```
+make init
+make build    # не нужно на MacOS
+```
 
 ## Более подробное описание реализованных инструкций:
 

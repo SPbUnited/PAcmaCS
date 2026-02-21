@@ -89,16 +89,20 @@ def main():
     while True:
         try:
             time.sleep(0.1)
-
-            event_bus.s_signals_out.send_json(
-                {
+            recording_status = {
                     "serviz": "update_telsink_recording_status",
                     "data": {
-                        "isRecording": logger.is_recording,
+                        "isRecording": logger.is_recording.value,
                         "isPlaying": player.is_playing.value,
+                        "currentTime": (
+                            player.current_time.value
+                            if player.is_playing.value
+                            else 0.0
+                        ),
+                        "duration": getattr(player, "duration", 0.0),
                     },
                 }
-            )
+            event_bus.s_signals_out.send_json(recording_status)
 
             event_bus.s_signals_out.send_json(
                 {

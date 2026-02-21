@@ -1,6 +1,5 @@
 export function loadComponents() {
   const result: Component[] = [];
-
   const modules = import.meta.glob("./components/*.ts", { eager: true });
   for (const path in modules) {
     const mod: any = modules[path];
@@ -12,16 +11,16 @@ export function loadComponents() {
   const custom_modules = import.meta.glob("../../../plugins/serviz/*.ts", {
     eager: true,
   });
-
+  const custom_result: Component[] = [];
   console.log("Found custom components:", custom_modules);
   for (const path in custom_modules) {
     const mod: any = custom_modules[path];
     if (mod.default) {
-      result.push(mod.default);
+      custom_result.push(mod.default);
     }
   }
 
-  return result;
+  return [result, custom_result];
 }
 
 interface Component {

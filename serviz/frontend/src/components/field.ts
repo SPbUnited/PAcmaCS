@@ -84,7 +84,7 @@ const Field: Component = {
       const coords = convertCoordsToField(fieldSvg, e);
 
       coordsDisplay.textContent = `X: ${coords[0].toFixed(
-        0
+        0,
       )}, Y: ${coords[1].toFixed(0)}`;
     });
     fieldSvg.addEventListener("mouseleave", (e) => {
@@ -104,7 +104,13 @@ const Field: Component = {
 
         const rect = fieldSvg.getBoundingClientRect();
 
-        const scaleFactor = 1 + e.deltaY / 100;
+
+        let delta = e.deltaY;
+
+        if (e.deltaMode === 0) delta /= 200;
+        else delta = Math.sign(delta) * 0.1;
+
+        const scaleFactor = 1 + delta;
         const newScale = scale * scaleFactor;
         if (newScale > 0.3 && newScale < 10) {
           originX +=
@@ -116,7 +122,7 @@ const Field: Component = {
           updateTransform();
         }
       },
-      { passive: false }
+      { passive: false },
     );
     container.element.addEventListener("mousedown", (e) => {
       if (e.altKey) {
@@ -212,8 +218,10 @@ const Field: Component = {
               dragStartX,
               -dragStartY,
               draggingArrowX,
-              -draggingArrowY
+              -draggingArrowY,
             );
+          } else {
+            clearArrow();
           }
           lastSprites = null;
         }
@@ -231,60 +239,95 @@ const Field: Component = {
       updateTransform();
     });
 
+    let arrowLayer: SVGGElement | null = null;
     let arrowLine: SVGLineElement | null = null;
+    let arrowText: SVGTextElement | null = null;
+
+    function getArrowLayer(svg: SVGSVGElement): SVGGElement {
+      if (arrowLayer) return arrowLayer;
+
+      arrowLayer = document.createElementNS(svgNS, "g");
+      arrowLayer.setAttribute("data-layer", "arrow_overlay");
+      svg.appendChild(arrowLayer);
+
+      return arrowLayer;
+    }
+
+    function clearArrow() {
+      if (arrowLayer) {
+        arrowLayer.remove();
+        arrowLayer = null;
+        arrowLine = null;
+        arrowText = null;
+      }
+    }
 
     function updateArrow(
       svg: SVGSVGElement,
       x1: number,
       y1: number,
       x2: number,
-      y2: number
+      y2: number,
     ) {
       const color = "#ffb325";
       const markerId = `arrow-${color.replace("#", "")}`;
       createArrowMarker(svg, color, markerId);
 
-      arrowLine = document.createElementNS(svgNS, "line");
+      const layer = getArrowLayer(svg);
+
+      // --- линия ---
+      if (!arrowLine) {
+        arrowLine = document.createElementNS(svgNS, "line");
+        arrowLine.setAttribute("stroke", color);
+        arrowLine.setAttribute("stroke-width", "20");
+        arrowLine.setAttribute("marker-end", `url(#${markerId})`);
+        layer.appendChild(arrowLine);
+      }
+
       arrowLine.setAttribute("x1", x1.toString());
       arrowLine.setAttribute("y1", y1.toString());
       arrowLine.setAttribute("x2", (x1 * 2 - x2).toString());
       arrowLine.setAttribute("y2", (y1 * 2 - y2).toString());
-      arrowLine.setAttribute("stroke", color);
-      arrowLine.setAttribute("stroke-width", "20");
-      arrowLine.setAttribute("marker-end", `url(#${markerId})`);
-      svg.appendChild(arrowLine);
 
+      // --- текст скорости ---
       const speed = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+
       if (speed > 100) {
+        if (!arrowText) {
+          arrowText = document.createElementNS(svgNS, "text");
+          arrowText.setAttribute("fill", color);
+          arrowText.setAttribute("font-size", "200");
+          arrowText.setAttribute("font-weight", "bold");
+          arrowText.setAttribute("text-anchor", "middle");
+          arrowText.setAttribute("dominant-baseline", "middle");
+          layer.appendChild(arrowText);
+        }
+
         const deltaY = y2 < y1 ? -100 : 100;
 
-        const text = document.createElementNS(svgNS, "text");
-        text.textContent = `${(speed / 1000).toFixed(1)} m/s`;
-        text.setAttribute("x", x1.toString());
-        text.setAttribute("y", (y1 + deltaY).toString());
-        text.setAttribute("fill", color);
-        text.setAttribute("font-size", "200");
-        text.setAttribute("font-weight", "bold");
-        text.setAttribute("text-anchor", "middle");
-        text.setAttribute("dominant-baseline", "middle");
-        svg.appendChild(text);
+        arrowText.textContent = `${(speed / 1000).toFixed(1)} m/s`;
+        arrowText.setAttribute("x", x1.toString());
+        arrowText.setAttribute("y", (y1 + deltaY).toString());
+        arrowText.style.display = "block";
+      } else if (arrowText) {
+        arrowText.style.display = "none";
       }
     }
 
     function finishArrow() {
-      if (!arrowLine) return;
+      if (!arrowLayer) return;
 
       const x = dragStartX;
       const y = dragStartY;
       const vx = dragStartX - draggingArrowX;
       const vy = dragStartY - draggingArrowY;
+
       sendMessage("send_signal", {
         transnet: "set_ball",
         data: { x: x, y: y, vx: vx, vy: vy },
       });
-      console.log("Send signal with ball speed:", vx, vy);
 
-      arrowLine = null;
+      clearArrow();
     }
 
     let robotsOnField: RobotOnField[] = [];
@@ -314,7 +357,7 @@ const Field: Component = {
           console.log(
             "Robot selected for relocation:",
             best.color,
-            best.robot_id
+            best.robot_id,
           );
 
           robotRelocDisplay.textContent = `Relocate robot: ${best.color} ${best.robot_id}\n(Press ESC to clear)`;
@@ -378,7 +421,7 @@ export default Field;
 
 function convertCoordsToField(
   fieldSvg: SVGSVGElement,
-  e: PointerEvent | MouseEvent
+  e: PointerEvent | MouseEvent,
 ): [number, number] {
   const pt = fieldSvg.createSVGPoint();
   pt.x = e.clientX;
@@ -432,9 +475,8 @@ function drawField(fieldSvg: SVGSVGElement, cfg: FieldConfig): void {
 
   fieldSvg.setAttribute(
     "viewBox",
-    `${-cfg.width / 2 - cfg.borderSize} ${-cfg.height / 2 - cfg.borderSize} ${
-      cfg.width + cfg.borderSize * 2
-    } ${cfg.height + cfg.borderSize * 2}`
+    `${-cfg.width / 2 - cfg.borderSize} ${-cfg.height / 2 - cfg.borderSize} ${cfg.width + cfg.borderSize * 2
+    } ${cfg.height + cfg.borderSize * 2}`,
   );
   fieldSvg.setAttribute("preserveAspectRatio", "xMidYMid meet");
 
@@ -478,7 +520,7 @@ function drawField(fieldSvg: SVGSVGElement, cfg: FieldConfig): void {
   const leftGoal = document.createElementNS(svgNS, "rect");
   leftGoal.setAttribute(
     "x",
-    String(-(cfg.width / 2 + cfg.goalDepth - goalLineWidth / 2))
+    String(-(cfg.width / 2 + cfg.goalDepth - goalLineWidth / 2)),
   );
   leftGoal.setAttribute("y", String(-cfg.goalWidth / 2));
   leftGoal.setAttribute("width", String(cfg.goalDepth));
@@ -615,6 +657,16 @@ interface Text {
   align?: "left" | "middle" | "right";
 }
 
+interface ReadySvg {
+  type: "svg";
+  svg: string;
+  x: number;
+  y: number;
+  scale?: number;
+  rotation?: number;
+}
+const svgCache = new Map<string, SVGElement>();
+
 type VisionObject =
   | RobotYel
   | RobotBlu
@@ -624,47 +676,70 @@ type VisionObject =
   | Polygon
   | Rect
   | Circle
-  | Text;
+  | Text
+  | ReadySvg;
 
 export interface FeedData {
   [layerName: string]: {
     data: VisionObject[];
     is_visible: boolean;
-    heigh: number;
+    height: number;
   };
+}
+
+const layerGroups = new Map<string, SVGGElement>();
+function getLayerGroup(svg: SVGSVGElement, layerName: string): SVGGElement {
+  let g = layerGroups.get(layerName);
+
+  if (!g) {
+    g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    g.setAttribute("data-layer", layerName);
+    layerGroups.set(layerName, g);
+    svg.appendChild(g);
+  }
+
+  return g;
 }
 
 function drawImageSvg(
   svg: SVGSVGElement,
   json: FeedData,
-  robotsList?: RobotOnField[]
+  robotsList?: RobotOnField[],
 ) {
   if (robotsList) robotsList.length = 0;
 
-  svg.innerHTML = "";
+  for (const [name, g] of layerGroups) {
+    if (!(name in json)) {
+      g.remove();
+      layerGroups.delete(name);
+    }
+  }
+
   const svgNS = "http://www.w3.org/2000/svg";
   const minSpeed = 10;
 
   const layers = Object.keys(json)
-    .map((layerName) => {
-      const layer = json[layerName];
-      return { layerName, layer };
-    })
+    .map((layerName) => ({ layerName, layer: json[layerName] }))
     .filter(({ layer }) => layer && Array.isArray(layer.data))
     .sort((a, b) => {
-      const ha =
-        typeof a.layer.heigh === "number"
-          ? a.layer.heigh
-          : Number(a.layer.heigh) || 0;
-      const hb =
-        typeof b.layer.heigh === "number"
-          ? b.layer.heigh
-          : Number(b.layer.heigh) || 0;
+      const ha = Number(a.layer.height ?? a.layer.heigh) || 0;
+      const hb = Number(b.layer.height ?? b.layer.heigh) || 0;
       return hb - ha;
     });
 
+  for (const { layerName } of layers) {
+    const g = getLayerGroup(svg, layerName);
+    svg.appendChild(g);
+  }
+
   for (const { layerName, layer } of layers) {
-    if (!layer.is_visible) continue;
+    const group = getLayerGroup(svg, layerName);
+    group.style.display = layer.is_visible ? "block" : "none";
+
+    if (!layer.data || layer.data.length === 0) {
+      continue;
+    }
+    group.innerHTML = "";
 
     const isVisionFeed = layerName === "vision_feed";
 
@@ -688,14 +763,14 @@ function drawImageSvg(
             arrow.setAttribute("stroke-width", "20");
             arrow.setAttribute("stroke", color);
             arrow.setAttribute("marker-end", `url(#${markerId})`);
-            svg.appendChild(arrow);
+            group.appendChild(arrow);
           }
           const circle = document.createElementNS(svgNS, "circle");
           circle.setAttribute("cx", element.x.toString());
           circle.setAttribute("cy", (-element.y).toString());
           circle.setAttribute("r", "25");
           circle.setAttribute("fill", "#FF7000");
-          svg.appendChild(circle);
+          group.appendChild(circle);
           break;
         }
         case "robot_blu": {
@@ -725,7 +800,7 @@ function drawImageSvg(
             arrow.setAttribute("stroke-width", "20");
             arrow.setAttribute("stroke", color);
             arrow.setAttribute("marker-end", `url(#${markerId})`);
-            svg.appendChild(arrow);
+            group.appendChild(arrow);
           }
           const robot = document.createElementNS(svgNS, "image");
 
@@ -733,14 +808,13 @@ function drawImageSvg(
           robot.setAttribute("y", (-element.y - 90).toString());
           robot.setAttribute(
             "transform",
-            `rotate(${-((element.rotation || 0) * 180) / Math.PI}, ${
-              element.x
-            }, ${-element.y})`
+            `rotate(${-((element.rotation || 0) * 180) / Math.PI}, ${element.x
+            }, ${-element.y})`,
           );
           robot.setAttribute("width", "160");
           robot.setAttribute("height", "180");
           robot.setAttribute("href", "../../images/robot_blu.svg");
-          svg.appendChild(robot);
+          group.appendChild(robot);
 
           const text = document.createElementNS(svgNS, "text");
           text.setAttribute("x", element.x.toString());
@@ -752,7 +826,7 @@ function drawImageSvg(
           text.setAttribute("font-size", "150");
           text.setAttribute("font-weight", "bold");
           text.textContent = String(element.robot_id);
-          svg.appendChild(text);
+          group.appendChild(text);
 
           break;
         }
@@ -783,7 +857,7 @@ function drawImageSvg(
             arrow.setAttribute("stroke-width", "20");
             arrow.setAttribute("stroke", color);
             arrow.setAttribute("marker-end", `url(#${markerId})`);
-            svg.appendChild(arrow);
+            group.appendChild(arrow);
           }
           const robot = document.createElementNS(svgNS, "image");
 
@@ -791,14 +865,13 @@ function drawImageSvg(
           robot.setAttribute("y", (-element.y - 90).toString());
           robot.setAttribute(
             "transform",
-            `rotate(${-((element.rotation || 0) * 180) / Math.PI}, ${
-              element.x
-            }, ${-element.y})`
+            `rotate(${-((element.rotation || 0) * 180) / Math.PI}, ${element.x
+            }, ${-element.y})`,
           );
           robot.setAttribute("width", "160");
           robot.setAttribute("height", "180");
           robot.setAttribute("href", "../../images/robot_yel.svg");
-          svg.appendChild(robot);
+          group.appendChild(robot);
 
           const text = document.createElementNS(svgNS, "text");
           text.setAttribute("x", element.x.toString());
@@ -810,7 +883,7 @@ function drawImageSvg(
           text.setAttribute("font-size", "150");
           text.setAttribute("font-weight", "bold");
           text.textContent = String(element.robot_id);
-          svg.appendChild(text);
+          group.appendChild(text);
 
           break;
         }
@@ -824,7 +897,7 @@ function drawImageSvg(
           polyline.setAttribute("fill", "none");
           polyline.setAttribute("stroke", element.color || "white");
           polyline.setAttribute("stroke-width", String(element.width || 2));
-          svg.appendChild(polyline);
+          group.appendChild(polyline);
           break;
         }
         case "arrow": {
@@ -840,7 +913,7 @@ function drawImageSvg(
           line.setAttribute("stroke", color);
           line.setAttribute("stroke-width", String(element.width || 2));
           line.setAttribute("marker-end", `url(#${markerId})`);
-          svg.appendChild(line);
+          group.appendChild(line);
           break;
         }
         case "polygon": {
@@ -853,7 +926,7 @@ function drawImageSvg(
           polygon.setAttribute("fill", element.color);
           polygon.setAttribute("stroke", element.color || "white");
           polygon.setAttribute("stroke-width", String(element.width));
-          svg.appendChild(polygon);
+          group.appendChild(polygon);
           break;
         }
         case "rect": {
@@ -863,7 +936,7 @@ function drawImageSvg(
           rect.setAttribute("width", String(element.width));
           rect.setAttribute("height", String(element.height));
           rect.setAttribute("fill", element.color);
-          svg.appendChild(rect);
+          group.appendChild(rect);
           break;
         }
         case "circle": {
@@ -872,7 +945,7 @@ function drawImageSvg(
           circle.setAttribute("cy", (-element.y).toString());
           circle.setAttribute("r", String(element.radius));
           circle.setAttribute("fill", element.color);
-          svg.appendChild(circle);
+          group.appendChild(circle);
           break;
         }
         case "text": {
@@ -884,9 +957,39 @@ function drawImageSvg(
           text.setAttribute("font-size", String(element.font_size));
           text.setAttribute("text-anchor", element.align || "middle");
           if (element.modifiers) text.setAttribute("style", element.modifiers);
-          svg.appendChild(text);
+          group.appendChild(text);
           break;
         }
+        case "svg": {
+          let cached = svgCache.get(element.svg);
+
+          if (!cached) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(element.svg, "image/svg+xml");
+            cached = doc.documentElement as SVGElement;
+            svgCache.set(element.svg, cached);
+          }
+
+          const g = document.createElementNS(svgNS, "g");
+
+          const scale = element.scale ?? 1;
+          const rotation = element.rotation ?? 0;
+
+          g.setAttribute(
+            "transform",
+            `
+              translate(${element.x}, ${-element.y})
+              rotate(${(-rotation * 180) / Math.PI})
+              scale(${scale})
+            `,
+          );
+
+          g.appendChild(cached.cloneNode(true));
+          group.appendChild(g);
+
+          break;
+        }
+
         default:
           // @ts-ignore
           console.warn("Unknown element type:", element.type);
@@ -895,9 +998,15 @@ function drawImageSvg(
   }
 }
 
+const markerCache = new WeakMap<SVGSVGElement, Set<string>>();
 function createArrowMarker(svg: SVGSVGElement, color: string, id: string) {
-  const existing = svg.querySelector(`#${id}`);
-  if (existing) return;
+  let cache = markerCache.get(svg);
+  if (!cache) {
+    cache = new Set();
+    markerCache.set(svg, cache);
+  }
+
+  if (cache.has(id)) return;
 
   const svgNS = "http://www.w3.org/2000/svg";
   const defs =
@@ -921,4 +1030,6 @@ function createArrowMarker(svg: SVGSVGElement, color: string, id: string) {
 
   marker.appendChild(polygon);
   defs.appendChild(marker);
+
+  cache.add(id);
 }

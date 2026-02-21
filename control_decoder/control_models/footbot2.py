@@ -1,58 +1,39 @@
 import math
-from attrs import define, field
-from . import robot_command_model as rcm
-from . import control_decoder_command_model as cdcm
+import socket
+import time
 
+from decoder import control_decoder_command_model as cdcm
+from control_models.base_model import ControlModel
 
-@define
-class Decoder:
-    """Decoder for the control signals"""
-
-    def decoder2sim(self, decoder_team_command: cdcm.DecoderTeamCommand):
-        """Convert the decoder command to a sim robot command"""
-
-        robot_team_command = rcm.RobotControlExt(
-            isteamyellow=decoder_team_command.isteamyellow,
-            robot_commands=[],
+class FB2Decoder(ControlModel):
+    def __init__(self, config, telemetry_sender):
+        super().__init__(config, telemetry_sender)
+        self.fb2_ip_port_low: tuple[str, int] = (
+            config["control_decoder"]["fb2_ip_low"],
+            config["control_decoder"]["fb2_port"],
         )
+        self.fb2_ip_port_high: tuple[str, int] = (
+            config["control_decoder"]["fb2_ip_high"],
+            config["control_decoder"]["fb2_port"],
+        )
+        self.s_outbound_real_low = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.s_outbound_real_high = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-        for decoder_command in decoder_team_command.robot_commands:
+        self.last_update = time.time()
 
-            is_kick = (
-                decoder_command.kick_up
-                or decoder_command.kick_forward
-                or decoder_command.auto_kick_up
-                or decoder_command.auto_kick_forward
-            )
-            is_upper_kick = decoder_command.kick_up or decoder_command.auto_kick_up
+    def process(self, signal_data: cdcm.DecoderTeamCommand) -> None:
+        self.telemetry_text = 'SENDING COMMANDS IN "FB2" MODE\n \tr_id\tspeedX\tspeedY\tspeedW\tdribler\tvoltage\tkickUP\tkickDWN\tbeep\tdribEN\tcharEN\tautokck\n'
+        packets_low, packets_high = self.decoder(signal_data)
+        for packet in packets_low:
+            self.s_outbound_real_low.sendto(packet, self.fb2_ip_port_low)
+        for packet in packets_high:
+            self.s_outbound_real_high.sendto(packet, self.fb2_ip_port_high)
 
-            # real robot hits the ball at about 6 m/s at maximum voltage
-            kick_speed = decoder_command.kicker_setting * (6 / 15) if is_kick else 0
-            kick_angle = 30 if is_upper_kick else 0
+        for cmd in packets_low + packets_high:
+            self.telemetry_text += create_telemetry(cmd)
+        self.last_update = time.time()
 
-            angular_vel = decoder_command.angular_vel
-            if angular_vel is None:
-                angular_vel = 0
-
-            robot_command = rcm.RobotCommand(
-                id=decoder_command.robot_id,
-                move_command=rcm.RobotMoveCommand(
-                    local_velocity=rcm.MoveLocalVelocity(
-                        forward=decoder_command.forward_vel / 1000,
-                        left=decoder_command.left_vel / 1000,
-                        angular=angular_vel,
-                    ),
-                ),
-                kick_speed=kick_speed,
-                kick_angle=kick_angle,
-                dribbler_speed=decoder_command.dribbler_setting,
-            )
-
-            robot_team_command.robot_commands.append(robot_command)
-
-        return robot_team_command
-
-    def decoder2robot(self, decoder_team_command: cdcm.DecoderTeamCommand) -> tuple[list[bytes], list[bytes]]:
+    def decoder(self, decoder_team_command: cdcm.DecoderTeamCommand) -> tuple[list[bytes], list[bytes]]:
         """Convert the decoder command to a robot command"""
         commands_low: list[bytes] = []
         commands_high: list[bytes] = []
@@ -130,3 +111,23 @@ def create_packet(
     ]
 
     return bytes(bytes_list)
+
+
+def create_telemetry(data: bytes) -> str:
+    """Create line for telemetry for single robot"""
+    values = [
+        data[1],
+        int.from_bytes(data[2:3], "big", signed=True),
+        int.from_bytes(data[3:4], "big", signed=True),
+        int.from_bytes(data[4:5], "big", signed=True),
+        data[5],
+        data[6],
+        data[7],
+        data[8],
+        data[9],
+        data[10],
+        data[11],
+        data[12],
+    ]
+    values_str = [str(val) for val in values]
+    return "\t" + "\t".join(values_str) + "\n"

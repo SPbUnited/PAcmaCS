@@ -25,11 +25,41 @@ if (menuContainerElement && layoutElement) {
     console.log("No saved state, loading default layout");
   }
 
-  const components = loadComponents();
+  const [components, custom_components] = loadComponents();
 
-  console.log("All components that could be found:", components);
+  console.log(
+    "All components that could be found:",
+    components,
+    custom_components
+  );
 
   components.forEach((c) => {
+    goldenLayout.registerComponentFactoryFunction(
+      c.name,
+      (glContainer: any, state: any) => {
+        const cleanup = c.factory({ element: glContainer.element });
+
+        if (typeof cleanup === "function") {
+          glContainer.on("destroy", cleanup);
+        }
+      }
+    );
+
+    const newItem = document.createElement("li");
+    newItem.textContent = c.name;
+    menuContainerElement.appendChild(newItem);
+
+    goldenLayout.newDragSource(newItem, c.name, c.factory);
+  });
+
+  if (custom_components.length > 0) {
+    const customLabel = document.createElement("h3");
+    customLabel.style.marginTop = "10px";
+    customLabel.textContent = "Custom components:";
+    menuContainerElement.appendChild(customLabel);
+  }
+
+  custom_components.forEach((c) => {
     goldenLayout.registerComponentFactoryFunction(
       c.name,
       (glContainer: any, state: any) => {
