@@ -1,7 +1,7 @@
 import math
 import socket
 import time
-from typing import Any
+from typing import Any, Callable
 
 from decoder import control_decoder_command_model as cdcm
 from control_models.base_model import ControlModel
@@ -217,7 +217,7 @@ def float_to_143(x: float) -> int:
 udpies_history: list[tuple[str, int, str]] = []
 
 class UdPieProcessor:
-    def __init__(self, robots_sender_low, robots_sender_high, telemetry_sender):
+    def __init__(self, robots_sender_low, robots_sender_high, telemetry_sender: Callable[[str, str], None]):
         self.robots_sender_low = robots_sender_low
         self.robots_sender_high = robots_sender_high
         self.telemetry_sender = telemetry_sender
@@ -240,7 +240,7 @@ class UdPieProcessor:
             self.log_udpie_packet(data)
         except OSError as e:
             print("Can't send UDPie, no route to host:", e)
-            self.telemetry_sender({"SENDED UDPIES": "Can't send UDPie, no route to host"})
+            self.telemetry_sender("SENDED UDPIES", "Can't send UDPie, no route to host")
 
     def log_udpie_packet(self, data: bytes) -> None:
         global udpies_history
@@ -268,4 +268,4 @@ class UdPieProcessor:
 
         udpies_text = "\n".join(lines)
 
-        self.telemetry_sender({"SENDED UDPIES": udpies_text})
+        self.telemetry_sender("SENDED UDPIES", udpies_text)
