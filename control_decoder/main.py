@@ -96,7 +96,7 @@ while True:
                     Decoder.process_signal(raw)
 
             except Exception as e:
-                print("Unknown exception while processing inbound: ", e)
+                print("Unknown exception while processing signals: ", e)
                 time.sleep(0.1)
 
     Decoder.send_telemetry()
