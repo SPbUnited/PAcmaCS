@@ -6,6 +6,7 @@ from typing import Any, Callable
 from decoder import control_decoder_command_model as cdcm
 from control_models.base_model import ControlModel
 
+
 class FB4Decoder(ControlModel):
     def __init__(self, config, telemetry_sender):
         super().__init__(config, telemetry_sender)
@@ -20,12 +21,14 @@ class FB4Decoder(ControlModel):
         )
         self.s_outbound_real_low = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.s_outbound_real_high = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        
+
         def robots_sender_low(data: bytes):
             self.s_outbound_real_low.sendto(data, self.fb4_ip_port_low)
+
         def robots_sender_high(data: bytes):
             self.s_outbound_real_high.sendto(data, self.fb4_ip_port_high)
-        self.udpie_processor = UdPieProcessor(robots_sender_low,robots_sender_high, telemetry_sender)
+
+        self.udpie_processor = UdPieProcessor(robots_sender_low, robots_sender_high, telemetry_sender)
 
     def process(self, signal_data: cdcm.DecoderTeamCommand) -> None:
         self.telemetry_text = 'SENDING COMMANDS IN "FB4" MODE\n \tr_id\tspeedX\tspeedY\tspeedW\tdribler\tvoltage\tkickUP\tkickDWN\tbeep\tdribEN\tcharEN\tautokck\n'
@@ -48,14 +51,14 @@ class FB4Decoder(ControlModel):
             angvel_flag: int
             if robot.angle is not None:
                 angle = -robot.angle
-                angvel_flag = 0
+                angvel_flag = 1
             elif robot.angular_vel is not None:
                 angle = robot.angular_vel
-                angvel_flag = 1
+                angvel_flag = 0
             else:
                 raise RuntimeError
 
-            angle_info = int(math.log(18 / math.pi * abs(angle) + 1) * math.copysign(1, angle) * (100 / math.log(18 + 1)))
+            # angle_info = int(math.log(18 / math.pi * abs(angle) + 1) * math.copysign(1, angle) * (100 / math.log(18 + 1)))
 
             autokick = 0
             if robot.auto_kick_forward:
@@ -67,7 +70,7 @@ class FB4Decoder(ControlModel):
                 bot_number=int(robot.robot_id),
                 speed_x=-robot.left_vel / (435 / 15),
                 speed_y=robot.forward_vel / (440 / 15),
-                speed_w=angle_info,
+                speed_w=angle,
                 dribbler_speed=int(robot.dribbler_setting),
                 kicker_voltage=int(robot.kicker_setting),
                 kick_up=int(robot.kick_up),
@@ -83,10 +86,9 @@ class FB4Decoder(ControlModel):
                 commands_high.append(command_bytes)
 
         return commands_low, commands_high
-    
+
     def process_signal(self, raw: Any):
         self.udpie_processor.process_udpie(raw)
-
 
 
 def create_telemetry(data: bytes) -> str:
@@ -142,6 +144,7 @@ def create_packet(
 
     return bytes(bytes_list)
 
+
 def float_to_minifloat(x, exponent_bits, mantissa_bits):
     if x == 0.0:
         return (0, 0, 0)
@@ -196,14 +199,12 @@ def minifloat_to_float(sign, stored_exponent, mantissa, exponent_bits, mantissa_
     print(bias, exponent2, mantissa, normalizer)
     return (-1) ** sign * (exponent2 * mantissa + normalizer)
 
-def minifloat_to_binary(
-    sign, stored_exponent, mantissa, exponent_bits, mantissa_bits
-):
+
+def minifloat_to_binary(sign, stored_exponent, mantissa, exponent_bits, mantissa_bits):
     exponent_str = format(stored_exponent, f"0{exponent_bits}b")
     mantissa_str = format(mantissa, f"0{mantissa_bits}b")
-    return (
-        f"{sign} {stored_exponent} {mantissa}\t{sign}{exponent_str}{mantissa_str}"
-    )
+    return f"{sign} {stored_exponent} {mantissa}\t{sign}{exponent_str}{mantissa_str}"
+
 
 def float_to_143(x: float) -> int:
     sign, exp, mantissa = float_to_minifloat(x, 4, 3)
@@ -212,9 +213,11 @@ def float_to_143(x: float) -> int:
 
     return out
 
+
 ###################################################################################################
 
 udpies_history: list[tuple[str, int, str]] = []
+
 
 class UdPieProcessor:
     def __init__(self, robots_sender_low, robots_sender_high, telemetry_sender: Callable[[str, str], None]):
