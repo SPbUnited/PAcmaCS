@@ -49,7 +49,7 @@ class SocketReader:
                     self.error_flag = True
                     print("error in SocketReader: ", e)
                     print("socket_reader info: ip ", self.ip, " port ", self.port)
-                    print("reconecting...")
+                    print("reconecting...\n")
                 self._reconnect()
 
 
