@@ -107,8 +107,8 @@ const Field: Component = {
 
         let delta = e.deltaY;
 
-        if (e.deltaMode === 0) delta /= 200;
-        else delta = Math.sign(delta) * 0.1;
+        if (e.deltaMode === 0) delta /= 500;
+        else delta = Math.sign(delta) * 0.03;
 
         const scaleFactor = 1 + delta;
         const newScale = scale * scaleFactor;
