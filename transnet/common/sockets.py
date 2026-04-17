@@ -47,7 +47,7 @@ class SocketReader:
             except (socket.timeout, OSError) as e:
                 if not self.error_flag:
                     self.error_flag = True
-                    print("error in SocketReader: ", e)
+                    print("err in SocketReader: ", e)
                     print("socket_reader info: ip ", self.ip, " port ", self.port)
                     print("reconecting...\n")
                 self._reconnect()
