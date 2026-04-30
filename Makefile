@@ -55,6 +55,11 @@ ARCH=$(shell dpkg --print-architecture)
 UBUNTU_CODENAME=$(shell cat /etc/*release | grep --color=never -oP '(?<=DISTRIB_CODENAME=).*')
 UNAME_S := $(shell uname -s)
 
+all:
+	$(MAKE) install
+	$(MAKE) init
+	$(MAKE) build
+
 guard_not_mac:
 	@if [ "$(UNAME_S)" = "Darwin" ]; then \
 		echo "${RED}This command does not support for MacOS${NC} (you can't run PAcmaCS in Docker)" 1>&2; \
@@ -130,6 +135,11 @@ up: up-message no-sudo
 		docker compose up pacmacs serviz_frontend; \
 	fi
 
+up-local: up-message no-sudo
+	@echo "Run without Docker"; \
+	source venv/bin/activate; \
+	honcho start;
+
 up-grsim: guard_not_mac up-message no-sudo
 	docker compose up grsim
 
@@ -173,3 +183,20 @@ no-sudo:
 # npm install to update packages
 dev: no-sudo
 	cd serviz/frontend && npm run dev
+
+help:
+	@printf '%s\n' ''
+	@printf '%s\n' 'Более подробное описание реализованных инструкций:'
+	@printf '%s\n' ''
+	@printf '%s\n' '- `make`                - полная начальная установка (запуск `install`, `init` и `build`)'
+	@printf '%s\n' '- `make install`        - устанавливает необходимые системные пакеты и Docker (также настраивает его, может потребоваться перезапуск)'
+	@printf '%s\n' '- `make init`           - инициализирует виртуальное окружение и зависимости'
+	@printf '%s\n' '- `make build`          - собирает образы для Docker'
+	@printf '%s\n' '- `make up`             - запускает все внутренние (только необходимые) сервисы в Docker'
+	@printf '%s\n' '- `make up-local`       - запускает все внутренние сервисы локально, может потребовать установки дополнительных пакетов'
+	@printf '%s\n' '- `make up-autoreferee` - запускает только autoreferee headless (без интерфейса)'
+	@printf '%s\n' '- `make up-grsim`       - запускает только grsim headless (без интерфейса)'
+	@printf '%s\n' '- `make up-all`         - запускает все сервисы (внутренние, а также grsim, autoreferee)'
+	@printf '%s\n' '- `make down`           - останавливает все сервисы'
+	@printf '%s\n' '- `make purge`          - очищает все сервисы и их данные'
+	@printf '%s\n' ''
