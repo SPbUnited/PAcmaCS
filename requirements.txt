@@ -23,3 +23,5 @@ pyzmq
 PyYAML 
 eventlet
 attrs
+#strategy_runner
+psutil

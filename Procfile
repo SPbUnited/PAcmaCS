@@ -3,4 +3,4 @@ serviz_frontend: cd serviz/frontend && npm run start
 transnet: cd transnet && python3 -u main.py --config=../config.yml
 telsink: python3 -u telsink/main.py --config=config.yml
 control_decoder: cd control_decoder && python3 -u main.py --config=../config.yml --ctrl=$CTRL
-strategy_runner: cd strategy_runner && python3 -u main.py --config=../config.yml
+strategy_runner: cd strategy_runner && python3 -u main.py --config=../config.yml --use=$STRAT
