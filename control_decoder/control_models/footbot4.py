@@ -6,6 +6,7 @@ from typing import Any, Callable
 from decoder import control_decoder_command_model as cdcm
 from control_models.base_model import ControlModel
 
+
 class FB4Decoder(ControlModel):
     def __init__(self, config, telemetry_sender):
         super().__init__(config, telemetry_sender)
@@ -20,12 +21,14 @@ class FB4Decoder(ControlModel):
         )
         self.s_outbound_real_low = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.s_outbound_real_high = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        
+
         def robots_sender_low(data: bytes):
             self.s_outbound_real_low.sendto(data, self.fb4_ip_port_low)
+
         def robots_sender_high(data: bytes):
             self.s_outbound_real_high.sendto(data, self.fb4_ip_port_high)
-        self.udpie_processor = UdPieProcessor(robots_sender_low,robots_sender_high, telemetry_sender)
+
+        self.udpie_processor = UdPieProcessor(robots_sender_low, robots_sender_high, telemetry_sender)
 
     def process(self, signal_data: cdcm.DecoderTeamCommand) -> None:
         self.telemetry_text = 'SENDING COMMANDS IN "FB4" MODE\n \tr_id\tspeedX\tspeedY\tspeedW\tdribler\tvoltage\tkickUP\tkickDWN\tbeep\tdribEN\tcharEN\tautokck\n'
@@ -48,14 +51,14 @@ class FB4Decoder(ControlModel):
             angvel_flag: int
             if robot.angle is not None:
                 angle = -robot.angle
-                angvel_flag = 0
+                angvel_flag = 1
             elif robot.angular_vel is not None:
                 angle = robot.angular_vel
-                angvel_flag = 1
+                angvel_flag = 0
             else:
                 raise RuntimeError
 
-            angle_info = int(math.log(18 / math.pi * abs(angle) + 1) * math.copysign(1, angle) * (100 / math.log(18 + 1)))
+            # angle_info = int(math.log(18 / math.pi * abs(angle) + 1) * math.copysign(1, angle) * (100 / math.log(18 + 1)))
 
             autokick = 0
             if robot.auto_kick_forward:
@@ -65,9 +68,9 @@ class FB4Decoder(ControlModel):
 
             command_bytes = create_packet(
                 bot_number=int(robot.robot_id),
-                speed_x=-robot.left_vel / (435 / 15),
-                speed_y=robot.forward_vel / (440 / 15),
-                speed_w=angle_info,
+                speed_x=-robot.left_vel / (1100 / 100),
+                speed_y=robot.forward_vel / (1100 / 100),
+                speed_w=angle,
                 dribbler_speed=int(robot.dribbler_setting),
                 kicker_voltage=int(robot.kicker_setting),
                 kick_up=int(robot.kick_up),
@@ -83,10 +86,9 @@ class FB4Decoder(ControlModel):
                 commands_high.append(command_bytes)
 
         return commands_low, commands_high
-    
+
     def process_signal(self, raw: Any):
         self.udpie_processor.process_udpie(raw)
-
 
 
 def create_telemetry(data: bytes) -> str:
@@ -110,26 +112,27 @@ def create_telemetry(data: bytes) -> str:
 
 
 def create_packet(
-    bot_number: int,  # unsigned byte (0-255)
-    speed_x: float,  # signed byte (-128 to 127)
-    speed_y: float,  # signed byte
-    speed_w: float,  # signed byte
+    bot_number: int,      # unsigned byte (0-255)
+    speed_x: float,       # signed byte (-128 to 127)
+    speed_y: float,       # signed byte
+    speed_w: float,       # angular velocity, or angle in rad if beep == 1
     dribbler_speed: int,  # unsigned byte
     kicker_voltage: int,  # unsigned byte
-    kick_up: int,  # boolean flag (bit 0)
-    kick_down: int,  # boolean flag (bit 1)
-    beep: int,  # boolean flag (bit 2)
-    dribbler_en: int,  # boolean flag (bit 3)
-    charge_en: int,  # boolean flag (bit 4)
-    autokick: int,  # unsigned byte
+    kick_up: int,         # boolean flag (bit 0)
+    kick_down: int,       # boolean flag (bit 1) 
+    beep: int,            # boolean flag (bit 2)
+    dribbler_en: int,     # boolean flag (bit 3)
+    charge_en: int,       # boolean flag (bit 4)
+    autokick: int,        # unsigned byte
 ) -> bytes:
-    # Convert all values to bytes and pack into a list
+    encoded_w = angle_to_int8_pi128(speed_w) if beep == 1 else float_to_143(speed_w)
+
     bytes_list = [
         0x01,  # Header
         bot_number + 240,
         float_to_143(speed_x),
         float_to_143(speed_y),
-        float_to_143(speed_w),
+        encoded_w,
         dribbler_speed,
         kicker_voltage,
         kick_up,
@@ -141,6 +144,21 @@ def create_packet(
     ]
 
     return bytes(bytes_list)
+
+
+def angle_to_int8_pi128(angle_rad: float) -> int:
+    """
+    Кодирует угол в int8_t с единицей измерения pi/128 rad.
+    Возвращает значение в диапазоне 0..255 для упаковки в bytes().
+    """
+    raw = round(angle_rad * 128 / math.pi)
+
+    # clamp to int8_t range
+    raw = max(-128, min(127, raw))
+
+    # convert signed int8_t to byte
+    return raw & 0xFF
+
 
 def float_to_minifloat(x, exponent_bits, mantissa_bits):
     if x == 0.0:
@@ -155,11 +173,6 @@ def float_to_minifloat(x, exponent_bits, mantissa_bits):
     stored_exponent = exponent + bias
     max_exp = (1 << exponent_bits) - 1
     max_significand = (1 << mantissa_bits) - 1
-    # print()
-    # print("signif\texp\tfrac\tbias\ts_exp\tmax_exp")
-    # print(
-    #     significand, exponent, fractional_part, bias, stored_exponent, max_exp, sep="\t"
-    # )
 
     is_subnormal = False
 
@@ -175,8 +188,7 @@ def float_to_minifloat(x, exponent_bits, mantissa_bits):
 
         scaled = fractional_part * (2**mantissa_bits)
         rounded_mantissa = round(scaled)
-        # print("scaled\trounded")
-        # print(scaled, rounded_mantissa, sep="\t")
+
         if rounded_mantissa >= (1 << mantissa_bits) and not is_subnormal:
             stored_exponent += 1
             mantissa = 0
@@ -184,8 +196,7 @@ def float_to_minifloat(x, exponent_bits, mantissa_bits):
                 return (sign, max_exp, max_significand)
         else:
             mantissa = rounded_mantissa
-        # if stored_exponent == 0:
-        #     mantissa +=
+
         return (sign, stored_exponent, mantissa)
 
 
@@ -196,25 +207,22 @@ def minifloat_to_float(sign, stored_exponent, mantissa, exponent_bits, mantissa_
     print(bias, exponent2, mantissa, normalizer)
     return (-1) ** sign * (exponent2 * mantissa + normalizer)
 
-def minifloat_to_binary(
-    sign, stored_exponent, mantissa, exponent_bits, mantissa_bits
-):
+
+def minifloat_to_binary(sign, stored_exponent, mantissa, exponent_bits, mantissa_bits):
     exponent_str = format(stored_exponent, f"0{exponent_bits}b")
     mantissa_str = format(mantissa, f"0{mantissa_bits}b")
-    return (
-        f"{sign} {stored_exponent} {mantissa}\t{sign}{exponent_str}{mantissa_str}"
-    )
+    return f"{sign} {stored_exponent} {mantissa}\t{sign}{exponent_str}{mantissa_str}"
+
 
 def float_to_143(x: float) -> int:
     sign, exp, mantissa = float_to_minifloat(x, 4, 3)
     out = sign << 7 | exp << 3 | mantissa
-    # binary_1_4_3 = minifloat_to_binary(sign, exp, mantissa, 4, 3)
-
     return out
 
 ###################################################################################################
 
 udpies_history: list[tuple[str, int, str]] = []
+
 
 class UdPieProcessor:
     def __init__(self, robots_sender_low, robots_sender_high, telemetry_sender: Callable[[str, str], None]):
