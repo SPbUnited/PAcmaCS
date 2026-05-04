@@ -7,4 +7,4 @@ RUN pip install -r requirements.txt
 
 COPY . /app
 
-CMD ["honcho", "start"]
+CMD ["honcho", "-f", "Procfile.docker", "start"]

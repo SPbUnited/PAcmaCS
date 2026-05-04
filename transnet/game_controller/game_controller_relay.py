@@ -1,5 +1,6 @@
 from enum import Enum
 import time
+from typing import Optional
 from attrs import define, field
 import zmq
 from common.sockets import SocketReader
@@ -44,7 +45,8 @@ class GameControllerRelay:
 
     def __attrs_post_init__(self):
         self._socket_reader = SocketReader(
-            ip=self.multicast_ip, port=self.multicast_port
+            ip=self.multicast_ip,
+            port=self.multicast_port,
         )
         self._reader = multiprocessing.Process(
             target=self._read_loop,
@@ -58,7 +60,7 @@ class GameControllerRelay:
         relay = context.socket(zmq.PUB)
         relay.bind(self.game_controller_fan_url)
 
-        prev_state = Referee.HALT
+        prev_state = State.HALT
 
         timer = time.time()
 
@@ -70,15 +72,20 @@ class GameControllerRelay:
                 data = self._socket_reader.read_package()
             timer = time.time()
 
+            if data is None:
+                continue
+
             package = self._ssl_converter.FromString(data)
             # print(package)
 
             mState, mForTeam = self.update_game_state(package, prev_state=prev_state)
+            ballPos: Optional[tuple[float, float]] = self.parse_ball_placement(package)
 
             relay_data = {
                 "state": mState.value,
                 "team": mForTeam.value,
                 "is_left": False,
+                "ball_pos": ballPos,
             }
 
             if mState != prev_state:
@@ -88,16 +95,14 @@ class GameControllerRelay:
 
             prev_state = mState
 
-    def update_game_state(
-        self, message: Referee, prev_state: Referee.Command
-    ) -> tuple[State, TeamColour]:
+    def update_game_state(self, message: Referee, prev_state: State) -> tuple[State, TeamColour]:
         command = message.command
 
         st = State
         tc = TeamColour
         ref = Referee
 
-        mState = ref.HALT
+        mState = st.HALT
         mForTeam = tc.NEUTRAL
 
         if command == ref.HALT:
@@ -162,3 +167,10 @@ class GameControllerRelay:
             mForTeam = tc.NEUTRAL
 
         return mState, mForTeam
+
+    def parse_ball_placement(self, message: Referee):
+        ball_pos: Optional[tuple[float, float]] = None
+        if message.command in [Referee.BALL_PLACEMENT_YELLOW, Referee.BALL_PLACEMENT_BLUE]:
+            ball_pos = (message.designated_position.x, message.designated_position.y)
+
+        return ball_pos

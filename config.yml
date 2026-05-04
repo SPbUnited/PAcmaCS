@@ -12,13 +12,17 @@ transnet:
   s_signals_ctrl_url: ipc:///tmp/transnet.signals.ctrl
   s_draw_ctrl_url: ipc:///tmp/transnet.draw.ctrl
   s_telemetry_ctrl_url: ipc:///tmp/transnet.telemetry.ctrl
+  s_geometry_ctrl_url: ipc:///tmp/transnet.geometry.ctrl
 
 control_decoder:
-  api_version: 1
+  api_version: 2
   s_control_sink_url: tcp://*:5051
-  real_robots_ip_low: "10.0.120.211"
-  real_robots_ip_high: "10.0.120.210"
-  real_robots_port: 10000
+  fb2_ip_low: "10.0.120.211"
+  fb2_ip_high: "10.0.120.210"
+  fb2_port: 10000
+  fb4_ip_low: "10.0.120.220"
+  fb4_ip_high: "10.0.120.221"
+  fb4_port: 10000
 
 ether:
   api_version: 3
@@ -28,5 +32,7 @@ ether:
   s_telemetry_sub_url: ipc:///tmp/ether.telemetry.xsub
   s_signals_pub_url: ipc:///tmp/ether.signals.xpub
   s_signals_sub_url: ipc:///tmp/ether.signals.xsub
+  s_geometry_pub_url: ipc:///tmp/ether.geometry.xpub
+  s_geometry_sub_url: ipc:///tmp/ether.geometry.xsub
   phantom_suffix: ".phantom"
   monitor_suffix: ".monitor"

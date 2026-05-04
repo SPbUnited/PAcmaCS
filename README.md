@@ -1,8 +1,11 @@
-[![Version](https://img.shields.io/badge/version-v0.24.0-informational)](https://github.com/SPBUnited/serviz/actions/workflows/auto-semver.yml)
+[![Version](https://img.shields.io/badge/version-v1.0.0-informational)](https://github.com/SPBUnited/serviz/actions/workflows/auto-semver.yml)
+[![CI smoke (build + up)](https://github.com/SPbUnited/PAcmaCS/actions/workflows/ci-smoke.yaml/badge.svg?branch=fb4)](https://github.com/SPbUnited/PAcmaCS/actions/workflows/ci-smoke.yaml)
+
+[Отлаженный релиз с прошлым легким интерфейсом](https://github.com/SPbUnited/PAcmaCS/releases/tag/v0.24.0)
 
 # PAcmaCS - Programmatically Actionable multi-agent Cybernetic Studio
 
-![](images/2025-03-29-22-52-41.png)
+![](images/interface.png)
 
 Данный монорепозиторий содержит набор модулей новой структуры системы управления команды SPbUnited:
 
@@ -39,14 +42,14 @@
 - Получение данных Vision Trackers из Autoreferee
 
 ### SERVIZ
+
 - Отрисовка игрового поля с объектами на поле в реальном времени. Реализованные объекты:
-    - [x] Роботы (с маркерами или номерами)
-    - [x] Мяч
-    - [x] Стрелки скорости
-    - [x] Произвольные линии и стрелки
-    - [ ] Кривые
-    - [x] Точки
-- Поддержка множества слоев с настройкой видимости для каждого слоя
+  - Роботы
+  - Мяч
+  - Произвольные линии
+  - Многоугольники
+  - Круги (точки)
+- Поддержка множества слоев с настройкой видимости для каждого слоя и настройкой высоты
 - Возможность управления роботами через клавиатуру
 
 ## Документация
@@ -58,7 +61,7 @@
 
 ## Зависимости
 
-- Python 3.12
+- Python 3.12+
 - Node.js 18
 - Docker
 - Docker Compose
@@ -76,6 +79,8 @@ cd PAcmaCS
 Установите зависимости и соберите проект:
 
 ```bash
+make install
+# тут может потребоваться перезапуск при первой установке Docker
 make init
 make build
 ```
@@ -88,16 +93,50 @@ make up-all
 
 После запуска можно подключится к serviz по адресу http://localhost:8000
 
+## Обновление до новой версии
+
+Подтяните изменения из удаленного репозитория:
+
+```
+git pull
+```
+
+Заного соберите проект:
+
+```
+make init
+make build    # не нужно на MacOS
+```
+
 ## Более подробное описание реализованных инструкций:
 
+- `make` - полная начальная установка (запуск `install`, `init` и `build`)
+- `make install` - устанавливает необходимые системные пакеты и Docker (также настраивает его, может потребоваться перезапуск)
 - `make init` - инициализирует виртуальное окружение и зависимости
-- `make build` - собирает образы для serviz и transnet
-- `make up` - запускает все сервисы кроме grsim
-- `make up-grsim` - запускает headless grsim
-- `make up-all` - запускает все сервисы (serviz, transnet, grsim)
-- `make npm-dev` - запуск фронтенда Сервиза в режиме live-server для разработки
+- `make build` - собирает образы для Docker
+- `make up` - запускает все внутренние (только необходимые) сервисы в Docker
+- `make up-local` - запускает все внутренние сервисы локально, может потребовать установки дополнительных пакетов
+- `make up-autoreferee` - запускает только autoreferee headless (без интерфейса)
+- `make up-grsim` - запускает только grsim headless (без интерфейса)
+- `make up-all` - запускает все сервисы (внутренние, а также grsim, autoreferee)
 - `make down` - останавливает все сервисы
 - `make purge` - очищает все сервисы и их данные
+
+## Использование на системе MacOS
+
+Вся установка производится кодной командой
+
+```bash
+make init
+```
+
+Запустить PAcmaCS можно командой
+
+```bash
+make up
+```
+
+Запуск с симмулятором не поддерживается, его необходимо ставить отдельно (за помощью можете обращаться к нам).
 
 ## Переключение дивизионов
 

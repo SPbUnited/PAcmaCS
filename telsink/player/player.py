@@ -10,7 +10,6 @@ class Player:
     socket_url_mapping: dict = field()
 
     playback_file_name: str = field(init=False)
-    playback_file_handler = field(init=False)
     playback_thread: multiprocessing.Process = field(init=False)
 
     is_playing: bool = field(init=False)
@@ -18,28 +17,55 @@ class Player:
     playback_speed: float = field(init=False)
     forward_override: float = field(init=False)
 
+    duration: float = field(init=False, default=0.0)
+    current_time: float = field(init=False)
+
     def __attrs_post_init__(self):
         self.is_playing = multiprocessing.Value(c_bool, False)
         self.is_paused = multiprocessing.Value(c_bool, False)
         self.playback_speed = multiprocessing.Value(c_float, 1.0)
         self.forward_override = multiprocessing.Value(c_float, 0.0)
+        self.current_time = multiprocessing.Value(c_float, 0.0)
 
     def start_playback(self, playback_file_name):
+        if self.is_playing.value:
+            print("Already playing")
+            return
         self.playback_file_name = playback_file_name
-        self.playback_file_handler = open(self.playback_file_name, "rb")
+
+        with open(self.playback_file_name, "rb") as f:
+            first_line = f.readline()
+            if not first_line:
+                print("Empty log file")
+                return
+
+            first_ts = float(first_line.decode().split(" ", 1)[0])
+            last_ts = first_ts
+
+            for line in f:
+                last_ts = float(line.decode().split(" ", 1)[0])
+
+        self.duration = max(0.0, last_ts - first_ts)
 
         self.is_playing.value = True
         self.is_paused.value = False
+        self.current_time.value = 0.0
+        self.forward_override.value = 0.0
+
         self.playback_thread = multiprocessing.Process(
-            target=self.__playback_loop,
+            target=self._playback_loop,
             args=(
+                self.playback_file_name,
                 self.is_playing,
                 self.is_paused,
                 self.socket_url_mapping,
                 self.playback_speed,
+                self.current_time,
+                self.forward_override,
             ),
         )
         self.playback_thread.start()
+
         print("Started playback from ", self.playback_file_name)
 
     def stop_playback(self):
@@ -50,7 +76,6 @@ class Player:
         self.is_paused.value = False
         self.playback_thread.terminate()
         self.playback_thread.join()
-        self.playback_file_handler.close()
         print("Stopped playback from ", self.playback_file_name)
 
     def toggle_pause(self):
@@ -66,41 +91,75 @@ class Player:
     def move_forward(self, time_to_move: float):
         self.forward_override.value += time_to_move
 
-    def __playback_loop(
+    def _playback_loop(
         self,
+        playback_file_name,
         is_playing,
         is_paused,
         socket_url_mapping,
         playback_speed,
+        current_time,
+        forward_override,
     ):
+        playback_file = open(playback_file_name, "rb")
         context = zmq.Context()
-
         sockets = {}
-        for socket_src_url, socket_target_url in socket_url_mapping.items():
-            sockets[socket_src_url] = context.socket(zmq.PUB)
-            sockets[socket_src_url].connect(socket_target_url)
 
-        start_time = time.time()
-        dtime = 0
-        offset_time = None
+        for src, dst in socket_url_mapping.items():
+            s = context.socket(zmq.PUB)
+            s.connect(dst)
+            sockets[src] = s
+
+        current_time.value = 0.0
+        dtime = 0.0
+        first_timestamp = None
 
         while is_playing.value:
-            line = self.playback_file_handler.readline()
-            if line == b"":
+            line = playback_file.readline()
+            if not line:
                 break
-            # print(line[:100])
-            timestamp, source_endpoint, message = line.decode().split(" ", maxsplit=2)
-            timestamp = float(timestamp)
 
-            if offset_time is None:
-                offset_time = timestamp
+            ts_str, source_endpoint, message = line.decode().split(" ", 2)
+            timestamp = float(ts_str)
 
-            while timestamp - offset_time > dtime + self.forward_override.value:
-                while is_paused.value:
-                    time.sleep(0.001)
-                    start_time = time.time() - dtime
-                dtime += (time.time() - start_time - dtime) * playback_speed.value
+            if first_timestamp is None:
+                first_timestamp = timestamp
+                last_update = time.time()
+                continue
 
-            # print(offset_time, timestamp, timestamp - offset_time, dtime)
+            target_time = timestamp - first_timestamp
+
+            while True:
+                if dtime >= target_time:
+                    break
+
+                if not is_playing.value:
+                    break
+
+
+                if is_paused.value:
+                    time.sleep(0.01)
+                    last_update = time.time()
+                    continue
+
+                time.sleep(0.001)
+
+                # apply seek
+                if forward_override.value != 0.0:
+                    dtime += forward_override.value
+                    forward_override.value = 0.0
+
+                dtime += (time.time() - last_update) * playback_speed.value
+                current_time.value = dtime
+                last_update = time.time()
+
 
             sockets[source_endpoint].send(message.encode())
+
+
+
+        playback_file.close()
+        context.destroy()
+        is_playing.value = False
+        current_time.value = 0.0
+

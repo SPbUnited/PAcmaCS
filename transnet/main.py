@@ -5,6 +5,7 @@ from attrs import define, field
 import zmq
 from thread_proxy_switch import ThreadProxySwitch
 import time
+import json
 
 from game_controller import game_controller_relay as gcr
 from common.tracker_client import TrackerClient
@@ -36,6 +37,7 @@ context = zmq.Context()
 s_draw = context.socket(zmq.PUB)
 s_draw.connect(config["ether"]["s_draw_sub_url"])
 
+
 s_signals = context.socket(zmq.SUB)
 s_signals.connect(config["ether"]["s_signals_pub_url"])
 s_signals.setsockopt_string(zmq.SUBSCRIBE, '{"transnet":')
@@ -47,6 +49,7 @@ poller.register(s_signals, zmq.POLLIN)
 s_signals_ctrl = context.socket(zmq.REQ)
 s_draw_ctrl = context.socket(zmq.REQ)
 s_telemetry_ctrl = context.socket(zmq.REQ)
+s_geometry_ctrl = context.socket(zmq.REQ)
 
 
 class PhantomCtrl(Enum):
@@ -70,6 +73,7 @@ def setup_proxy(context: zmq.Context, signal_bus: SignalBus = None):
     s_signals_ctrl.bind(config["transnet"]["s_signals_ctrl_url"])
     s_draw_ctrl.bind(config["transnet"]["s_draw_ctrl_url"])
     s_telemetry_ctrl.bind(config["transnet"]["s_telemetry_ctrl_url"])
+    s_geometry_ctrl.bind(config["transnet"]["s_geometry_ctrl_url"])
 
     print("Setting up proxy")
 
@@ -122,6 +126,23 @@ def setup_proxy(context: zmq.Context, signal_bus: SignalBus = None):
 
     print("Draw proxy UP")
 
+
+    geometry_proxy = ThreadProxySwitch(
+        zmq.XSUB, zmq.XSUB, zmq.XPUB, zmq.XPUB, ctrl_type=zmq.REP
+    )
+    geometry_proxy.bind_real(config["ether"]["s_geometry_sub_url"])
+    geometry_proxy.bind_phantom(
+        config["ether"]["s_geometry_sub_url"] + config["ether"]["phantom_suffix"]
+    )
+    geometry_proxy.bind_out(config["ether"]["s_geometry_pub_url"])
+    geometry_proxy.bind_monitor(
+        config["ether"]["s_geometry_pub_url"] + config["ether"]["monitor_suffix"]
+    )
+    geometry_proxy.connect_ctrl(config["transnet"]["s_geometry_ctrl_url"])
+    geometry_proxy.start()
+
+    print("Geometry proxy UP")
+
     ether_switch_handler(PhantomCtrl.ETHER)
 
     # signal_bus.on("ether_disable",
@@ -136,7 +157,7 @@ def setup_proxy(context: zmq.Context, signal_bus: SignalBus = None):
 
 def proxy_ctrl_handler(signal: Dict):
     signal_type = signal["transnet"]
-    print(signal)
+    # print(signal)
 
     if signal_type == "ether_select":
         print("Ether select")
@@ -256,6 +277,30 @@ def convert_trackers_to_serviz(trackers: TrackerWrapperPacketModel):
         )
     return data
 
+def format_message(data: dict) -> str:
+    lines = []
+    for _, layer in data.items():
+        for obj in layer["data"]:
+            if obj["type"] == "ball":
+                lines.append(
+                    f"BALL: x={round(obj['x'])}, y={round(obj['y'])}, "
+                    + (f"vx={round(obj['vx'])}, vy={round(obj['vy'])}" if "vx" in obj else "")
+                )
+            elif obj["type"] in ("robot_blu", "robot_yel"):
+                    line = (
+                        f"{obj['type'].upper():<10} {obj['robot_id']:>2} | "
+                        f"x={obj['x']:>5.0f}  y={obj['y']:>5.0f}  "
+                    )
+                    if "vx" in obj and "vy" in obj:
+                        line += f"vx={obj['vx']:>5.0f}  vy={obj['vy']:>5.0f}  "
+                    line += f"rot={obj['rotation']:>5.2f}"
+                    lines.append(line)
+
+            else:
+                lines.append(str(obj))
+    return "\n".join(lines)
+
+
 
 if __name__ == "__main__":
 
@@ -284,6 +329,9 @@ if __name__ == "__main__":
     s_telemetry = context.socket(zmq.PUB)
     s_telemetry.connect(config["ether"]["s_telemetry_sub_url"])
 
+    s_geometry = context.socket(zmq.PUB)
+    s_geometry.connect(config["ether"]["s_geometry_sub_url"])
+
     print("Transnet ready")
     while True:
 
@@ -293,17 +341,20 @@ if __name__ == "__main__":
         data = {"vision_feed": {"data": field_info, "is_visible": True}}
         s_draw.send_json(data)
 
-        s_telemetry.send_json({list(data.keys())[0]: pprint.pformat(data, width=400)})
+        field_geometry = client.get_detection().geometry
+        if field_geometry is not None:
+            s_geometry.send_json(field_geometry.__dict__)
+
+        s_telemetry.send_json({list(data.keys())[0]: format_message(data)})
 
         trackers = tracker_client.get_detections()
         for tracker_key in trackers:
             data = convert_trackers_to_serviz(trackers[tracker_key])
             s_draw.send_json(data)
-            data_str = pprint.pformat(
-                data,
-                width=400,
-            )
+
+            data_str = format_message(data)
             s_telemetry.send_json({list(data.keys())[0]: data_str})
+
 
         for i in range(100):
             # Process incoming signals
@@ -317,7 +368,7 @@ if __name__ == "__main__":
 
             if s_signals in socks:
                 signal = s_signals.recv_json()
-                # print(signal)
+                print(signal)
                 is_signal_valid = False
                 is_signal_valid |= simControl.signal_handler(signal)
                 is_signal_valid |= robotControl.signal_handler(signal)
