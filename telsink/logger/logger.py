@@ -28,6 +28,10 @@ class Logger:
         self.is_recording = multiprocessing.Value(c_bool, False)
 
     def start_recording(self):
+        if self.is_recording.value:
+            print("Already recording")
+            return
+
         timestamp = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
         self.log_file_name = f"{self.log_path}{timestamp}.log"
 

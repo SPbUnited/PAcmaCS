@@ -107,7 +107,14 @@ def main():
             event_bus.s_signals_out.send_json(
                 {
                     "serviz": "update_telsink_log_list",
-                    "data": os.listdir(config["telsink"]["log_path"]),
+                    "data": [
+                        file_name
+                        for file_name in os.listdir(config["telsink"]["log_path"])
+                        if file_name.endswith(".log")
+                        and os.path.isfile(
+                            config["telsink"]["log_path"] + "/" + file_name
+                        )
+                    ],
                 }
             )
 
