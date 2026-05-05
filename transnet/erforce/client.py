@@ -1,4 +1,5 @@
 import multiprocessing
+import time
 import typing
 
 import attr
@@ -82,3 +83,4 @@ class ErForceClient(VisionClient):
         while True:
             for robot_id, last_package in self._last_packages.items():
                 self._send(last_package)
+            time.sleep(0.001)

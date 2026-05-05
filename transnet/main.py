@@ -336,12 +336,13 @@ if __name__ == "__main__":
     while True:
 
         # Process vision
-        vision.update_vision()
+        detection = client.get_detection()
+        vision.update_vision(detection)
         field_info = vision.get_field_info()
         data = {"vision_feed": {"data": field_info, "is_visible": True}}
         s_draw.send_json(data)
 
-        field_geometry = client.get_detection().geometry
+        field_geometry = detection.geometry
         if field_geometry is not None:
             s_geometry.send_json(field_geometry.__dict__)
 
