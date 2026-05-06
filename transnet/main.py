@@ -332,29 +332,36 @@ if __name__ == "__main__":
     s_geometry = context.socket(zmq.PUB)
     s_geometry.connect(config["ether"]["s_geometry_sub_url"])
 
+    last_frontend_frame_at = 0.0
+    FRONTEND_FRAME_INTERVAL = 1 / 60
+
     print("Transnet ready")
     while True:
+        # only drawing and sending to UI
+        now = time.monotonic()
+        if now - last_frontend_frame_at >= FRONTEND_FRAME_INTERVAL:
+            last_frontend_frame_at = now
 
-        # Process vision
-        detection = client.get_detection()
-        vision.update_vision(detection)
-        field_info = vision.get_field_info()
-        data = {"vision_feed": {"data": field_info, "is_visible": True}}
-        s_draw.send_json(data)
-
-        field_geometry = detection.geometry
-        if field_geometry is not None:
-            s_geometry.send_json(field_geometry.__dict__)
-
-        s_telemetry.send_json({list(data.keys())[0]: format_message(data)})
-
-        trackers = tracker_client.get_detections()
-        for tracker_key in trackers:
-            data = convert_trackers_to_serviz(trackers[tracker_key])
+            # Process vision
+            detection = client.get_detection()
+            vision.update_vision(detection)
+            field_info = vision.get_field_info()
+            data = {"vision_feed": {"data": field_info, "is_visible": True}}
             s_draw.send_json(data)
 
-            data_str = format_message(data)
-            s_telemetry.send_json({list(data.keys())[0]: data_str})
+            field_geometry = detection.geometry
+            if field_geometry is not None:
+                s_geometry.send_json(field_geometry.__dict__)
+
+            s_telemetry.send_json({list(data.keys())[0]: format_message(data)})
+
+            trackers = tracker_client.get_detections()
+            for tracker_key in trackers:
+                data = convert_trackers_to_serviz(trackers[tracker_key])
+                s_draw.send_json(data)
+
+                data_str = format_message(data)
+                s_telemetry.send_json({list(data.keys())[0]: data_str})
 
 
         for i in range(100):
