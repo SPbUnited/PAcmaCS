@@ -376,13 +376,14 @@ if __name__ == "__main__":
 
             if s_signals in socks:
                 signal = s_signals.recv_json()
-                print(signal)
-                is_signal_valid = False
-                is_signal_valid |= simControl.signal_handler(signal)
-                is_signal_valid |= robotControl.signal_handler(signal)
-                is_signal_valid |= proxy_ctrl_handler(signal)
+                # print(signal)
+                if (
+                        simControl.signal_handler(signal) or 
+                        robotControl.signal_handler(signal) or 
+                        proxy_ctrl_handler(signal)
+                    ):
+                    continue
 
-                if not is_signal_valid:
-                    print("Invalid signal: ", signal)
+                print("Invalid signal: ", signal)
 
         time.sleep(0.001)
