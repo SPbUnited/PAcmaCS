@@ -1,5 +1,6 @@
 import socket
 import struct
+import time
 from typing import Optional
 
 import attr
@@ -37,6 +38,7 @@ class SocketReader:
                     print(f"\033[31m  err in SocketReader: {e}\033[0m")
                     print("  socket_reader info: ip ", self.ip, " port ", self.port)
                     print("\033[33m  reconecting...\033[0m\n")
+                time.sleep(0.001)
 
 
 

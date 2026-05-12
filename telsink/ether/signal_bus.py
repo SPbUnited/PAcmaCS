@@ -2,6 +2,10 @@ import threading
 from attrs import define, field
 import zmq
 
+
+POLL_TIMEOUT_MS = 15
+
+
 @define
 class SignalBus:
     recipient_name: str = field()
@@ -14,9 +18,11 @@ class SignalBus:
 
     context: zmq.Context = field(init=False)
     s_signals_out: zmq.Socket = field(init=False)
+    stop_event: threading.Event = field(init=False)
 
     def __attrs_post_init__(self):
         self.subscribtions = {}
+        self.stop_event = threading.Event()
 
         self.context = zmq.Context()
         self.s_signals_out = self.context.socket(zmq.PUB)
@@ -30,6 +36,7 @@ class SignalBus:
         self.poller_thread.start()
 
     def stop(self):
+        self.stop_event.set()
         self.poller_thread.join()
 
     def __poll_loop(self):
@@ -42,9 +49,9 @@ class SignalBus:
         self.poller = zmq.Poller()
         self.poller.register(s_signals_in, zmq.POLLIN)
 
-        while True:
+        while not self.stop_event.is_set():
             try:
-                socks = dict(self.poller.poll(timeout=0))
+                socks = dict(self.poller.poll(timeout=POLL_TIMEOUT_MS))
             except KeyboardInterrupt:
                 break
 
