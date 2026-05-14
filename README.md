@@ -1,4 +1,4 @@
-[![Version](https://img.shields.io/badge/version-v1.0.0-informational)](https://github.com/SPBUnited/serviz/actions/workflows/auto-semver.yml)
+[![Version](https://img.shields.io/badge/version-v1.0.1-informational)](https://github.com/SPBUnited/serviz/actions/workflows/auto-semver.yml)
 [![CI smoke (build + up)](https://github.com/SPbUnited/PAcmaCS/actions/workflows/ci-smoke.yaml/badge.svg?branch=fb4)](https://github.com/SPbUnited/PAcmaCS/actions/workflows/ci-smoke.yaml)
 
 [Отлаженный релиз с прошлым легким интерфейсом](https://github.com/SPbUnited/PAcmaCS/releases/tag/v0.24.0)

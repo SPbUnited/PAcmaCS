@@ -65,6 +65,8 @@ class FB4Decoder(ControlModel):
                 autokick = 1
             elif robot.auto_kick_up:
                 autokick = 2
+            elif robot.auto_kick_momentum:
+                autokick = 3
 
             command_bytes = create_packet(
                 bot_number=int(robot.robot_id),

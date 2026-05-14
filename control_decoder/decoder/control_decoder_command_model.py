@@ -14,6 +14,7 @@ class DecoderCommand:
     kick_forward: bool = field()
     auto_kick_up: bool = field()
     auto_kick_forward: bool = field()
+    auto_kick_momentum: bool = field()
 
     kicker_setting: int = field() # 0-15 [popugi]
     dribbler_setting: float = field() # 0-15 [popugi]

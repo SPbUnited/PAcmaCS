@@ -78,7 +78,7 @@ class ThreadProxySwitch:
         mode = "ETHER"
 
         while True:
-            socks = dict(self.poller.poll(timeout=1))
+            socks = dict(self.poller.poll())
 
             if socks == {}:
                 continue
