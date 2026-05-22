@@ -1,5 +1,6 @@
 import socket
 import struct
+import sys
 import time
 from typing import Optional
 
@@ -27,19 +28,27 @@ class SocketReader:
         self.sock.settimeout(self.timeout)
 
     def read_package(self) -> bytes:
+        error_counter = 0
         while True:
             try:
                 ans = self.sock.recv(self.msg_size)
-                self.error_flag = False
+                if self.error_flag:
+                    self.error_flag = False
+                    print("  socket_reader info: ip ", self.ip, " port ", self.port)
+                    print("\033[32m  reconnected...\033[0m\n")
                 return ans
             except (socket.timeout, OSError) as e:
                 if not self.error_flag:
                     self.error_flag = True
                     print(f"\033[31m  err in SocketReader: {e}\033[0m")
                     print("  socket_reader info: ip ", self.ip, " port ", self.port)
-                    print("\033[33m  reconecting...\033[0m\n")
-                time.sleep(0.001)
+                time.sleep(0.25)
+                error_counter += 1
+                print(f"\033[33m  reconecting {error_counter}...\033[0m\n")
 
+                if error_counter > 3:
+                    print(f"\033[31m  err in SocketReader: {e}\n UNABLE TO RECONNECT\033[0m")
+                    sys.exit(1)
 
 
 @attr.s(auto_attribs=True, kw_only=True)

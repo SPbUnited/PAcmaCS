@@ -21,23 +21,22 @@ class TrackerClient:
     zmq_relay_template: Any = field(init=True, default=None)
 
     _socket_reader: SocketReader = field(init=False)
-    _ssl_converter: TrackerWrapperPacketProto = field(
-        default=TrackerWrapperPacketProto(), init=False
-    )
+    _ssl_converter: TrackerWrapperPacketProto = field(default=TrackerWrapperPacketProto(), init=False)
 
     _tracking_data: Dict = field(init=False)
     _reader: multiprocessing.Process = field(init=False)
 
     def __attrs_post_init__(self) -> None:
-        self._socket_reader = SocketReader(
-            ip=self.multicast_ip, port=self.multicast_port
-        )
+        self._socket_reader = SocketReader(ip=self.multicast_ip, port=self.multicast_port)
         manager = multiprocessing.Manager()
         self._tracking_data = manager.dict()
         self._reader = multiprocessing.Process(target=self._read_loop)
 
     def init(self) -> None:
         self._reader.start()
+
+    def is_alive(self) -> None:
+        return self._reader.is_alive()
 
     def _read_loop(self) -> None:
         zmq_relay = self.zmq_relay_template()
@@ -60,16 +59,12 @@ class TrackerClient:
         tracking_data_parser.ParseFromString(data)
         if (
             tracking_data_parser.uuid in self._tracking_data.keys()
-            and self._tracking_data[
-                tracking_data_parser.uuid
-            ].tracked_frame.frame_number
+            and self._tracking_data[tracking_data_parser.uuid].tracked_frame.frame_number
             >= tracking_data_parser.tracked_frame.frame_number
         ):
             return None
 
-        tracking_data: TrackerWrapperPacket = proto_to_wrapper_packet(
-            tracking_data_parser
-        )
+        tracking_data: TrackerWrapperPacket = proto_to_wrapper_packet(tracking_data_parser)
         self._tracking_data[tracking_data.uuid] = tracking_data
         return tracking_data
 

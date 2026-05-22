@@ -23,6 +23,8 @@ class ThreadProxySwitch:
     thread: threading.Thread = field(init=False)
     poller: zmq.Poller = field(init=False)
 
+    stop_event: threading.Event = field(init=False)
+
     def __attrs_post_init__(self):
         self.context = zmq.Context()
         self.real = self.context.socket(self.real_type)
@@ -37,6 +39,8 @@ class ThreadProxySwitch:
         self.poller.register(self.out, zmq.POLLIN)
         self.poller.register(self.monitor, zmq.POLLIN)
         self.poller.register(self.ctrl, zmq.POLLIN)
+
+        self.stop_event = threading.Event()
 
     def connect_real(self, url):
         self.real.connect(url)
@@ -69,16 +73,26 @@ class ThreadProxySwitch:
         self.ctrl.bind(url)
 
     def start(self):
-        self.thread = threading.Thread(target=self._relay_loop)
+        self.thread = threading.Thread(
+            target=self._relay_loop,
+            args=(self.stop_event,),
+        )
         self.thread.start()
 
-    def _relay_loop(self):
+    def stop(self):
+        print(f"Stopping thread_proxy_switch: {self}")
+        self.stop_event.set()
+        print("Sent stop event")
+        self.thread.join()
+        print("Stopped proxy")
+
+    def _relay_loop(self, stop_event):
         # https://stackoverflow.com/questions/72324903/xsub-not-receiving-in-zeromq-xsub-pub-setup
 
         mode = "ETHER"
 
-        while True:
-            socks = dict(self.poller.poll())
+        while not stop_event.is_set():
+            socks = dict(self.poller.poll(timeout=1))
 
             if socks == {}:
                 continue

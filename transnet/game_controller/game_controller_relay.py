@@ -55,6 +55,9 @@ class GameControllerRelay:
     def init(self):
         self._reader.start()
 
+    def is_alive(self) -> None:
+        return self._reader.is_alive()
+
     def _read_loop(self):
         context = zmq.Context()
         relay = context.socket(zmq.PUB)
@@ -174,3 +177,7 @@ class GameControllerRelay:
             ball_pos = (message.designated_position.x, message.designated_position.y)
 
         return ball_pos
+
+    def close(self) -> None:
+        self._reader.terminate()
+        self._reader.join()

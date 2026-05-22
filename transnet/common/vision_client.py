@@ -44,9 +44,7 @@ class VisionClient:
     is_blue_on_positive_side: bool = True
 
     def __attrs_post_init__(self) -> None:
-        self._socket_reader = SocketReader(
-            ip=self.multicast_ip, port=self.multicast_port, timeout=self.vision_timeout
-        )
+        self._socket_reader = SocketReader(ip=self.multicast_ip, port=self.multicast_port, timeout=self.vision_timeout)
         manager = multiprocessing.Manager()
         self._packages = manager.list()
         self._detections = manager.list()
@@ -55,6 +53,9 @@ class VisionClient:
 
     def init(self) -> None:
         self._reader.start()
+
+    def is_alive(self) -> None:
+        return self._reader.is_alive()
 
     def close(self) -> None:
         self._reader.terminate()
@@ -65,9 +66,7 @@ class VisionClient:
             return self._detections[0]
         return self._read_detection()
 
-    def get_robot(
-        self, team: Team, robot_id: int, use_async: bool = True
-    ) -> typing.Optional[RobotDetection]:
+    def get_robot(self, team: Team, robot_id: int, use_async: bool = True) -> typing.Optional[RobotDetection]:
         found = False
         robot = None
         while not found:
@@ -106,18 +105,12 @@ class VisionClient:
     def _filter_timed_out_robots(self, detection: Detection) -> Detection:
         for i, robot in enumerate(detection.robots):
             if self._robot2key(robot) not in self._robot_detection_time:
-                self._robot_detection_time[self._robot2key(robot)] = (
-                    time.time() - robot.frame_info.t_capture
-                )
+                self._robot_detection_time[self._robot2key(robot)] = time.time() - robot.frame_info.t_capture
 
         detection.robots = [
             robot
             for robot in detection.robots
-            if time.time()
-            - (
-                self._robot_detection_time[self._robot2key(robot)]
-                + robot.frame_info.t_capture
-            )
+            if time.time() - (self._robot_detection_time[self._robot2key(robot)] + robot.frame_info.t_capture)
             < self.vision_timeout
         ]
 
@@ -148,12 +141,8 @@ class VisionClient:
             frame_info = self._convert_frame_info(detection)
             balls = [self._convert_ball(frame_info, ball) for ball in detection.balls]
 
-            robots = [
-                self._convert_robot(frame_info, robot, Team.BLUE)
-                for robot in detection.robots_blue
-            ] + [
-                self._convert_robot(frame_info, robot, Team.YELLOW)
-                for robot in detection.robots_yellow
+            robots = [self._convert_robot(frame_info, robot, Team.BLUE) for robot in detection.robots_blue] + [
+                self._convert_robot(frame_info, robot, Team.YELLOW) for robot in detection.robots_yellow
             ]
 
         geometry = None
@@ -185,7 +174,7 @@ class VisionClient:
                 penaltyAreaWidth=penalty_area_width,
                 penaltyAreaDepth=penalty_area_depth,
                 centerCircleRadius=center_circle_radius,
-                borderSize=raw_geometry.field.boundary_width
+                borderSize=raw_geometry.field.boundary_width,
             )
 
         return Detection(balls, robots, geometry)
@@ -200,9 +189,7 @@ class VisionClient:
         )
 
     @staticmethod
-    def _convert_robot(
-        frame_info: FrameInfo, convert_from: SSL_DetectionRobot, team: Team
-    ) -> RobotDetection:
+    def _convert_robot(frame_info: FrameInfo, convert_from: SSL_DetectionRobot, team: Team) -> RobotDetection:
         return RobotDetection(
             frame_info,
             team,
@@ -216,9 +203,7 @@ class VisionClient:
         )
 
     @staticmethod
-    def _convert_ball(
-        frame_info: FrameInfo, convert_from: SSL_DetectionFrame
-    ) -> SSL_DetectionBall:
+    def _convert_ball(frame_info: FrameInfo, convert_from: SSL_DetectionFrame) -> SSL_DetectionBall:
         return BallDetection(
             frame_info,
             convert_from.confidence,

@@ -1,4 +1,5 @@
 from enum import Enum
+import sys
 import threading
 from typing import Dict
 from attrs import define, field
@@ -19,8 +20,9 @@ import yaml
 import pprint
 
 import multiprocessing as mp
+
 if mp.get_start_method(allow_none=True) != "fork":
-    mp.set_start_method("fork") # fix bad paths without docker
+    mp.set_start_method("fork")  # fix bad paths without docker
 
 
 parser = ArgumentParser()
@@ -77,73 +79,48 @@ def setup_proxy(context: zmq.Context, signal_bus: SignalBus = None):
 
     print("Setting up proxy")
 
-    signals_proxy = ThreadProxySwitch(
-        zmq.XSUB, zmq.XSUB, zmq.XPUB, zmq.XPUB, ctrl_type=zmq.REP
-    )
+    signals_proxy = ThreadProxySwitch(zmq.XSUB, zmq.XSUB, zmq.XPUB, zmq.XPUB, ctrl_type=zmq.REP)
     signals_proxy.bind_real(config["ether"]["s_signals_sub_url"])
-    signals_proxy.bind_phantom(
-        config["ether"]["s_signals_sub_url"] + config["ether"]["phantom_suffix"]
-    )
+    signals_proxy.bind_phantom(config["ether"]["s_signals_sub_url"] + config["ether"]["phantom_suffix"])
     signals_proxy.bind_out(config["ether"]["s_signals_pub_url"])
-    signals_proxy.bind_monitor(
-        config["ether"]["s_signals_pub_url"] + config["ether"]["monitor_suffix"]
-    )
+    signals_proxy.bind_monitor(config["ether"]["s_signals_pub_url"] + config["ether"]["monitor_suffix"])
     signals_proxy.connect_ctrl(config["transnet"]["s_signals_ctrl_url"])
 
     signals_proxy.start()
 
     print("Signal proxy UP")
 
-    telemetry_proxy = ThreadProxySwitch(
-        zmq.XSUB, zmq.XSUB, zmq.XPUB, zmq.XPUB, ctrl_type=zmq.REP
-    )
+    telemetry_proxy = ThreadProxySwitch(zmq.XSUB, zmq.XSUB, zmq.XPUB, zmq.XPUB, ctrl_type=zmq.REP)
     telemetry_proxy.bind_real(config["ether"]["s_telemetry_sub_url"])
-    telemetry_proxy.bind_phantom(
-        config["ether"]["s_telemetry_sub_url"] + config["ether"]["phantom_suffix"]
-    )
+    telemetry_proxy.bind_phantom(config["ether"]["s_telemetry_sub_url"] + config["ether"]["phantom_suffix"])
     telemetry_proxy.bind_out(config["ether"]["s_telemetry_pub_url"])
-    telemetry_proxy.bind_monitor(
-        config["ether"]["s_telemetry_pub_url"] + config["ether"]["monitor_suffix"]
-    )
+    telemetry_proxy.bind_monitor(config["ether"]["s_telemetry_pub_url"] + config["ether"]["monitor_suffix"])
     telemetry_proxy.connect_ctrl(config["transnet"]["s_telemetry_ctrl_url"])
     telemetry_proxy.start()
 
     print("Telemetry proxy UP")
 
-    draw_proxy = ThreadProxySwitch(
-        zmq.XSUB, zmq.XSUB, zmq.XPUB, zmq.XPUB, ctrl_type=zmq.REP
-    )
+    draw_proxy = ThreadProxySwitch(zmq.XSUB, zmq.XSUB, zmq.XPUB, zmq.XPUB, ctrl_type=zmq.REP)
     draw_proxy.bind_real(config["ether"]["s_draw_sub_url"])
-    draw_proxy.bind_phantom(
-        config["ether"]["s_draw_sub_url"] + config["ether"]["phantom_suffix"]
-    )
+    draw_proxy.bind_phantom(config["ether"]["s_draw_sub_url"] + config["ether"]["phantom_suffix"])
     draw_proxy.bind_out(config["ether"]["s_draw_pub_url"])
-    draw_proxy.bind_monitor(
-        config["ether"]["s_draw_pub_url"] + config["ether"]["monitor_suffix"]
-    )
+    draw_proxy.bind_monitor(config["ether"]["s_draw_pub_url"] + config["ether"]["monitor_suffix"])
     draw_proxy.connect_ctrl(config["transnet"]["s_draw_ctrl_url"])
     draw_proxy.start()
 
     print("Draw proxy UP")
 
-
-    geometry_proxy = ThreadProxySwitch(
-        zmq.XSUB, zmq.XSUB, zmq.XPUB, zmq.XPUB, ctrl_type=zmq.REP
-    )
+    geometry_proxy = ThreadProxySwitch(zmq.XSUB, zmq.XSUB, zmq.XPUB, zmq.XPUB, ctrl_type=zmq.REP)
     geometry_proxy.bind_real(config["ether"]["s_geometry_sub_url"])
-    geometry_proxy.bind_phantom(
-        config["ether"]["s_geometry_sub_url"] + config["ether"]["phantom_suffix"]
-    )
+    geometry_proxy.bind_phantom(config["ether"]["s_geometry_sub_url"] + config["ether"]["phantom_suffix"])
     geometry_proxy.bind_out(config["ether"]["s_geometry_pub_url"])
-    geometry_proxy.bind_monitor(
-        config["ether"]["s_geometry_pub_url"] + config["ether"]["monitor_suffix"]
-    )
+    geometry_proxy.bind_monitor(config["ether"]["s_geometry_pub_url"] + config["ether"]["monitor_suffix"])
     geometry_proxy.connect_ctrl(config["transnet"]["s_geometry_ctrl_url"])
     geometry_proxy.start()
 
     print("Geometry proxy UP")
 
-    ether_switch_handler(PhantomCtrl.ETHER)
+    # ether_switch_handler(PhantomCtrl.ETHER)
 
     # signal_bus.on("ether_disable",
     #     lambda signal: s_ether_ctrl.send("PAUSE")
@@ -153,6 +130,14 @@ def setup_proxy(context: zmq.Context, signal_bus: SignalBus = None):
     # )
 
     print("Proxy UP")
+
+    return (signals_proxy, telemetry_proxy, draw_proxy, geometry_proxy)
+
+
+def kill_proxy(proxies):
+    for proxy in proxies:
+        print(f"Killing proxy :{proxy}")
+        proxy.stop()
 
 
 def proxy_ctrl_handler(signal: Dict):
@@ -277,6 +262,7 @@ def convert_trackers_to_serviz(trackers: TrackerWrapperPacketModel):
         )
     return data
 
+
 def format_message(data: dict) -> str:
     lines = []
     for _, layer in data.items():
@@ -287,19 +273,15 @@ def format_message(data: dict) -> str:
                     + (f"vx={round(obj['vx'])}, vy={round(obj['vy'])}" if "vx" in obj else "")
                 )
             elif obj["type"] in ("robot_blu", "robot_yel"):
-                    line = (
-                        f"{obj['type'].upper():<10} {obj['robot_id']:>2} | "
-                        f"x={obj['x']:>5.0f}  y={obj['y']:>5.0f}  "
-                    )
-                    if "vx" in obj and "vy" in obj:
-                        line += f"vx={obj['vx']:>5.0f}  vy={obj['vy']:>5.0f}  "
-                    line += f"rot={obj['rotation']:>5.2f}"
-                    lines.append(line)
+                line = f"{obj['type'].upper():<10} {obj['robot_id']:>2} | " f"x={obj['x']:>5.0f}  y={obj['y']:>5.0f}  "
+                if "vx" in obj and "vy" in obj:
+                    line += f"vx={obj['vx']:>5.0f}  vy={obj['vy']:>5.0f}  "
+                line += f"rot={obj['rotation']:>5.2f}"
+                lines.append(line)
 
             else:
                 lines.append(str(obj))
     return "\n".join(lines)
-
 
 
 if __name__ == "__main__":
@@ -315,7 +297,7 @@ if __name__ == "__main__":
 
     # signal_bus = SignalBus("transnet", config["ether"]["s_signals_pub_url"])
 
-    setup_proxy(context)  # , signal_bus)
+    proxies = setup_proxy(context)  # , signal_bus)
 
     game_controller_relay = gcr.GameControllerRelay(
         game_controller_fan_url=config["transnet"]["s_game_controller_fan_url"],
@@ -325,6 +307,13 @@ if __name__ == "__main__":
 
     tracker_client.init()
     game_controller_relay.init()
+
+    # print("\033[31m  One of subprocesses died, exiting...\033[0m")
+    # tracker_client.close()
+    # client.close()
+    # game_controller_relay.close()
+    # kill_proxy(proxies)
+    # sys.exit(1)
 
     s_telemetry = context.socket(zmq.PUB)
     s_telemetry.connect(config["ether"]["s_telemetry_sub_url"])
@@ -363,7 +352,6 @@ if __name__ == "__main__":
                 data_str = format_message(data)
                 s_telemetry.send_json({list(data.keys())[0]: data_str})
 
-
         for i in range(100):
             # Process incoming signals
             try:
@@ -377,13 +365,17 @@ if __name__ == "__main__":
             if s_signals in socks:
                 signal = s_signals.recv_json()
                 # print(signal)
-                if (
-                        simControl.signal_handler(signal) or 
-                        robotControl.signal_handler(signal) or 
-                        proxy_ctrl_handler(signal)
-                    ):
+                if simControl.signal_handler(signal) or robotControl.signal_handler(signal) or proxy_ctrl_handler(signal):
                     continue
 
                 print("Invalid signal: ", signal)
 
         time.sleep(0.001)
+
+        if not tracker_client.is_alive() or not client.is_alive() or not game_controller_relay.is_alive():
+            print("\033[31m  One of subprocesses died, exiting...\033[0m")
+            tracker_client.close()
+            client.close()
+            game_controller_relay.close()
+            kill_proxy(proxies)
+            sys.exit(1)
