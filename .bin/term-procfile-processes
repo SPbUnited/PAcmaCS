@@ -1,0 +1,289 @@
+#!/usr/bin/env python3
+"""Send SIGTERM to PAcmaCS processes started from Procfile."""
+
+from __future__ import annotations
+
+import argparse
+import os
+import re
+import shutil
+import signal
+import subprocess
+import sys
+import time
+from collections import defaultdict, deque
+from dataclasses import dataclass
+from pathlib import Path
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
+@dataclass(frozen=True)
+class Process:
+    pid: int
+    ppid: int
+    command: str
+
+
+SERVICE_PATTERNS = (
+    (
+        "serviz_backend",
+        (
+            re.compile(r"cd serviz && python3 backend/app/main\.py --config=\.\./config\.yml"),
+            re.compile(r"\b(?:Python|python3?)\b.*backend/app/main\.py --config=\.\./config\.yml"),
+        ),
+    ),
+    (
+        "serviz_frontend",
+        (
+            re.compile(r"cd serviz/frontend && npm run start"),
+            re.compile(r"\bnpm\b.*\brun\b.*\bstart\b"),
+        ),
+    ),
+    (
+        "transnet",
+        (
+            re.compile(r"cd transnet && python3 -u main\.py --config=\.\./config\.yml"),
+        ),
+    ),
+    (
+        "telsink",
+        (
+            re.compile(r"\bpython3\b -u telsink/main\.py --config=config\.yml"),
+            re.compile(r"\b(?:Python|python3?)\b.*-u telsink/main\.py --config=config\.yml"),
+        ),
+    ),
+    (
+        "control_decoder",
+        (
+            re.compile(r"cd control_decoder && python3 -u main\.py --config=\.\./config\.yml --ctrl="),
+        ),
+    ),
+    (
+        "strategy_runner",
+        (
+            re.compile(r"cd strategy_runner && python3 -u main\.py --config=\.\./config\.yml --use="),
+        ),
+    ),
+)
+
+# These direct process names are ambiguous without cwd, so cwd is checked before
+# treating them as roots. This catches orphaned Python/Node children.
+CWD_PATTERNS = (
+    (
+        "transnet",
+        PROJECT_ROOT / "transnet",
+        re.compile(r"\b(?:Python|python3?)\b.*-u main\.py --config=\.\./config\.yml(?:\s|$)"),
+    ),
+    (
+        "control_decoder",
+        PROJECT_ROOT / "control_decoder",
+        re.compile(r"\b(?:Python|python3?)\b.*-u main\.py --config=\.\./config\.yml --ctrl="),
+    ),
+    (
+        "strategy_runner",
+        PROJECT_ROOT / "strategy_runner",
+        re.compile(r"\b(?:Python|python3?)\b.*-u main\.py --config=\.\./config\.yml --use="),
+    ),
+    (
+        "serviz_frontend",
+        PROJECT_ROOT / "serviz" / "frontend",
+        re.compile(r"\bnode\b.*\b(?:vite|webpack|next|react-scripts)\b"),
+    ),
+    (
+        "honcho",
+        PROJECT_ROOT,
+        re.compile(r"\bhoncho\b.*\bstart\b"),
+    ),
+)
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Send SIGTERM to PAcmaCS Procfile processes and their children."
+    )
+    parser.add_argument(
+        "-n",
+        "--dry-run",
+        action="store_true",
+        help="print matched processes without sending SIGTERM",
+    )
+    parser.add_argument(
+        "--wait",
+        type=float,
+        default=3.0,
+        help="seconds to wait before reporting which processes are still alive",
+    )
+    return parser.parse_args()
+
+
+def list_processes() -> dict[int, Process]:
+    result = subprocess.run(
+        ["ps", "-axo", "pid=,ppid=,command="],
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+
+    processes: dict[int, Process] = {}
+    for line in result.stdout.splitlines():
+        match = re.match(r"\s*(\d+)\s+(\d+)\s+(.*)", line)
+        if not match:
+            continue
+        pid, ppid, command = match.groups()
+        processes[int(pid)] = Process(pid=int(pid), ppid=int(ppid), command=command)
+    return processes
+
+
+def process_cwd(pid: int) -> Path | None:
+    proc_cwd = Path("/proc") / str(pid) / "cwd"
+    if proc_cwd.exists():
+        try:
+            return Path(os.readlink(proc_cwd)).resolve()
+        except OSError:
+            return None
+
+    if not shutil.which("lsof"):
+        return None
+
+    try:
+        result = subprocess.run(
+            ["lsof", "-a", "-p", str(pid), "-d", "cwd", "-Fn"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=1,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+
+    for line in result.stdout.splitlines():
+        if line.startswith("n"):
+            return Path(line[1:]).resolve()
+    return None
+
+
+def find_roots(processes: dict[int, Process]) -> dict[int, set[str]]:
+    own_pid = os.getpid()
+    roots: dict[int, set[str]] = defaultdict(set)
+
+    for process in processes.values():
+        if process.pid == own_pid:
+            continue
+
+        for service, patterns in SERVICE_PATTERNS:
+            if any(pattern.search(process.command) for pattern in patterns):
+                roots[process.pid].add(service)
+
+        for service, expected_cwd, pattern in CWD_PATTERNS:
+            if not pattern.search(process.command):
+                continue
+            cwd = process_cwd(process.pid)
+            if cwd == expected_cwd:
+                roots[process.pid].add(service)
+
+    return roots
+
+
+def include_descendants(
+    processes: dict[int, Process], roots: dict[int, set[str]]
+) -> dict[int, set[str]]:
+    children_by_parent: dict[int, list[Process]] = defaultdict(list)
+    for process in processes.values():
+        children_by_parent[process.ppid].append(process)
+
+    targets: dict[int, set[str]] = defaultdict(set)
+    queue: deque[tuple[int, set[str]]] = deque()
+
+    for pid, services in roots.items():
+        targets[pid].update(services)
+        queue.append((pid, set(services)))
+
+    while queue:
+        parent_pid, services = queue.popleft()
+        for child in children_by_parent.get(parent_pid, []):
+            if child.pid == os.getpid():
+                continue
+            new_services = services - targets[child.pid]
+            if not new_services:
+                continue
+            targets[child.pid].update(new_services)
+            queue.append((child.pid, set(targets[child.pid])))
+
+    return targets
+
+
+def print_targets(processes: dict[int, Process], targets: dict[int, set[str]]) -> None:
+    for pid in sorted(targets):
+        process = processes.get(pid)
+        if not process:
+            continue
+        services = ",".join(sorted(targets[pid]))
+        print(f"{pid:>7}  {services:<18}  {process.command}")
+
+
+def alive_pids(pids: list[int]) -> list[int]:
+    alive: list[int] = []
+    for pid in pids:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            continue
+        except PermissionError:
+            alive.append(pid)
+        else:
+            alive.append(pid)
+    return alive
+
+
+def main() -> int:
+    args = parse_args()
+
+    try:
+        processes = list_processes()
+    except subprocess.CalledProcessError as exc:
+        sys.stderr.write(exc.stderr)
+        return exc.returncode
+    except OSError as exc:
+        print(f"Cannot read process list with ps: {exc}", file=sys.stderr)
+        return 1
+
+    roots = find_roots(processes)
+    targets = include_descendants(processes, roots)
+
+    if not targets:
+        print("No PAcmaCS Procfile processes found.")
+        return 0
+
+    if args.dry_run:
+        print("Would send SIGTERM to:")
+        print_targets(processes, targets)
+        return 0
+
+    print("Sending SIGTERM to:")
+    print_targets(processes, targets)
+
+    for pid in sorted(targets, reverse=True):
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        except PermissionError as exc:
+            print(f"Cannot terminate {pid}: {exc}", file=sys.stderr)
+
+    if args.wait > 0:
+        time.sleep(args.wait)
+        remaining = alive_pids(sorted(targets))
+        if remaining:
+            print("Still alive after SIGTERM:", " ".join(str(pid) for pid in remaining))
+            return 1
+
+    print("All matched processes exited or received SIGTERM.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

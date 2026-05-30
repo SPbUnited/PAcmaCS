@@ -16,6 +16,7 @@ class SocketReader:
     msg_size: int = attr.ib(default=65536, init=False)
 
     error_flag: bool = False
+    received_any_package: bool = attr.ib(default=False, init=False)
 
     def __attrs_post_init__(self) -> None:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
@@ -34,8 +35,12 @@ class SocketReader:
                 ans = self.sock.recv(self.msg_size)
                 if self.error_flag:
                     self.error_flag = False
+                    if self.received_any_package:
+                        print("\033[32m  reconnected...\033[0m\n")
+                    else:
+                        print("\033[32m  connected...\033[0m\n")
                     print("  socket_reader info: ip ", self.ip, " port ", self.port)
-                    print("\033[32m  reconnected...\033[0m\n")
+                self.received_any_package = True
                 return ans
             except (socket.timeout, OSError) as e:
                 if not self.error_flag:
@@ -44,11 +49,12 @@ class SocketReader:
                     print("  socket_reader info: ip ", self.ip, " port ", self.port)
                 time.sleep(0.25)
                 error_counter += 1
-                print(f"\033[33m  reconecting {error_counter}...\033[0m\n")
+                if self.received_any_package:
+                    print(f"\033[33m  reconecting {error_counter}...\033[0m\n")
 
-                if error_counter > 3:
-                    print(f"\033[31m  err in SocketReader: {e}\n UNABLE TO RECONNECT\033[0m")
-                    sys.exit(1)
+                    if error_counter > 3:
+                        print(f"\033[31m  err in SocketReader: {e}\n UNABLE TO RECONNECT\033[0m")
+                        sys.exit(1)
 
 
 @attr.s(auto_attribs=True, kw_only=True)
