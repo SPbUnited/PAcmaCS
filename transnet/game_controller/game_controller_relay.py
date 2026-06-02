@@ -32,6 +32,7 @@ class State(Enum):
 @define
 class GameControllerRelay:
     game_controller_fan_url: str
+    s_signals_url: str = field(default="")
 
     multicast_ip: str = field(default="224.5.23.1")
     multicast_port: int = field(default=10003)
@@ -59,6 +60,10 @@ class GameControllerRelay:
         context = zmq.Context()
         relay = context.socket(zmq.PUB)
         relay.bind(self.game_controller_fan_url)
+
+        s_signals = context.socket(zmq.PUB) if self.s_signals_url else None
+        if s_signals:
+            s_signals.connect(self.s_signals_url)
 
         prev_state = State.HALT
 
@@ -92,6 +97,12 @@ class GameControllerRelay:
                 print(relay_data)
 
             relay.send_json(relay_data)
+
+            if s_signals:
+                s_signals.send_json({
+                    "serviz": "update_status_board",
+                    "data": relay_data
+                })
 
             prev_state = mState
 

@@ -319,6 +319,7 @@ if __name__ == "__main__":
 
     game_controller_relay = gcr.GameControllerRelay(
         game_controller_fan_url=config["transnet"]["s_game_controller_fan_url"],
+        s_signals_url=config["ether"]["s_signals_sub_url"],
     )
 
     time.sleep(2)
