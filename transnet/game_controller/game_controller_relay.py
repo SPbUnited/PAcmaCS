@@ -6,7 +6,7 @@ import zmq
 from common.sockets import SocketReader
 import multiprocessing
 from protopy.state.ssl_gc_referee_message_pb2 import Referee
-
+from google.protobuf import json_format
 
 class TeamColour(Enum):
     NEUTRAL = 0
@@ -82,7 +82,8 @@ class GameControllerRelay:
 
             package = self._ssl_converter.FromString(data)
             # print(package)
-
+            json_data = json_format.MessageToJson(package)
+            print(json_data)
             mState, mForTeam = self.update_game_state(package, prev_state=prev_state)
             ballPos: Optional[tuple[float, float]] = self.parse_ball_placement(package)
 
@@ -101,7 +102,7 @@ class GameControllerRelay:
             if s_signals:
                 s_signals.send_json({
                     "serviz": "update_status_board",
-                    "data": relay_data
+                    "data": json_data,
                 })
 
             prev_state = mState
