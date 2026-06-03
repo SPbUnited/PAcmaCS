@@ -43,7 +43,7 @@ class GameControllerRelay:
     _ssl_converter: Referee = field(default=Referee(), init=False)
 
     _reader: multiprocessing.Process = field(init=False)
-
+    prev_sent_statusboard: int = field(default= 0)
     def __attrs_post_init__(self):
         self._socket_reader = SocketReader(
             ip=self.multicast_ip,
@@ -99,11 +99,12 @@ class GameControllerRelay:
 
             relay.send_json(relay_data)
 
-            if s_signals:
+            if s_signals and time.time()-self.prev_sent_statusboard > 1:
                 s_signals.send_json({
-                    "serviz": "update_status_board",
+                    "serviz": "update_status_board",        
                     "data": json_data,
                 })
+                self.prev_sent_statusboard = time.time()
 
             prev_state = mState
 
