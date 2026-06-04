@@ -151,3 +151,10 @@ input[type="range"]::-webkit-slider-thumb {
   border-radius: 50%;
   cursor: pointer;
 }
+.team-yellow {
+  color: #fff145;
+}
+
+.team-blue {
+  color: #779fff;
+}
