@@ -82,8 +82,7 @@ class GameControllerRelay:
 
             package = self._ssl_converter.FromString(data)
             # print(package)
-            json_data = json_format.MessageToJson(package)
-            # print(json_data)
+
             mState, mForTeam = self.update_game_state(package, prev_state=prev_state)
             ballPos: Optional[tuple[float, float]] = self.parse_ball_placement(package)
 
@@ -100,6 +99,7 @@ class GameControllerRelay:
             relay.send_json(relay_data)
 
             if s_signals and time.time()-self.prev_sent_statusboard > 1:
+                json_data = json_format.MessageToJson(package)
                 s_signals.send_json({
                     "serviz": "update_status_board",        
                     "data": json_data,
