@@ -83,7 +83,7 @@ class GameControllerRelay:
             package = self._ssl_converter.FromString(data)
             # print(package)
             json_data = json_format.MessageToJson(package)
-            print(json_data)
+            # print(json_data)
             mState, mForTeam = self.update_game_state(package, prev_state=prev_state)
             ballPos: Optional[tuple[float, float]] = self.parse_ball_placement(package)
 
