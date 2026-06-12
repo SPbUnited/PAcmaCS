@@ -1,3 +1,5 @@
+.devenv/
+
 tests/
 plugins/
 .DS_STORE
