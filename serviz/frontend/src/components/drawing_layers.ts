@@ -1,4 +1,9 @@
 import Component from "../loadComponents";
+import {
+  getRobotSkinMode,
+  RobotSkinMode,
+  setRobotSkinMode,
+} from "../robotSkin";
 import { bus, subscribeToTopic, sendMessage } from "../socketManager";
 
 const DrawingLayers: Component = {
@@ -19,9 +24,36 @@ const DrawingLayers: Component = {
     upHeader.style.display = "flex";
     upHeader.style.flexDirection = "row";
     upHeader.style.height = "auto";
-    upHeader.style.width = "calc(100% - 120px)";
+    upHeader.style.flex = "1 1 auto";
+    upHeader.style.minWidth = "0";
     upHeader.style.userSelect = "none";
     wrapper.append(upHeader);
+
+    const robotSkinLabel = document.createElement("label");
+    robotSkinLabel.style.display = "flex";
+    robotSkinLabel.style.alignItems = "center";
+    robotSkinLabel.style.flex = "0 0 auto";
+    robotSkinLabel.style.color = "#b0b0b0";
+    robotSkinLabel.style.font = "14px Arial, sans-serif";
+    robotSkinLabel.style.userSelect = "none";
+
+    const robotSkinModeToggle = document.createElement("input");
+    robotSkinModeToggle.type = "checkbox";
+    robotSkinModeToggle.checked = getRobotSkinMode() === "id_pattern";
+    robotSkinModeToggle.style.marginRight = "5px";
+    robotSkinLabel.append(robotSkinModeToggle, "ID-pattern robots");
+    wrapper.append(robotSkinLabel);
+
+    robotSkinModeToggle.addEventListener("change", () => {
+      setRobotSkinMode(
+        robotSkinModeToggle.checked ? "id_pattern" : "default",
+      );
+    });
+
+    const onRobotSkinModeChanged = (mode: RobotSkinMode) => {
+      robotSkinModeToggle.checked = mode === "id_pattern";
+    };
+    bus.on("robot_skin_mode_changed", onRobotSkinModeChanged);
 
     const clearButton = document.createElement("button");
     clearButton.textContent = "Clear layers";
@@ -196,6 +228,7 @@ const DrawingLayers: Component = {
 
     return () => {
       bus.off("update_sprites", onUpdateSprites);
+      bus.off("robot_skin_mode_changed", onRobotSkinModeChanged);
     };
   },
 };

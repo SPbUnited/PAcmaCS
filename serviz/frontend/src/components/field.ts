@@ -1,4 +1,5 @@
 import Component from "../loadComponents";
+import { getRobotImageHref, getRobotSkinMode } from "../robotSkin";
 import { bus, subscribeToTopic, sendMessage } from "../socketManager";
 
 const Field: Component = {
@@ -178,7 +179,8 @@ const Field: Component = {
     };
     bus.on("update_geometry", onUpdateGeometry);
 
-    let lastSprites: any = null;
+    let lastSprites: FeedData | null = null;
+    let renderedSprites: FeedData | null = null;
     let isDrawing = false;
     subscribeToTopic("update_sprites");
     const onUpdateSprites = (data) => {
@@ -204,6 +206,13 @@ const Field: Component = {
       }
     };
     bus.on("update_sprites", onUpdateSprites);
+    const onRobotSkinModeChanged = () => {
+      if (renderedSprites) {
+        robotsOnField = [];
+        drawImageSvg(drawingSvg, renderedSprites, robotsOnField);
+      }
+    };
+    bus.on("robot_skin_mode_changed", onRobotSkinModeChanged);
     function requestDraw() {
       if (isDrawing) return;
       isDrawing = true;
@@ -212,6 +221,7 @@ const Field: Component = {
         if (lastSprites) {
           robotsOnField = [];
           drawImageSvg(drawingSvg, lastSprites, robotsOnField);
+          renderedSprites = lastSprites;
           if (isDrawingArrow) {
             updateArrow(
               drawingSvg,
@@ -413,6 +423,7 @@ const Field: Component = {
     return () => {
       bus.off("update_geometry", onUpdateGeometry);
       bus.off("update_sprites", onUpdateSprites);
+      bus.off("robot_skin_mode_changed", onRobotSkinModeChanged);
     };
   },
 };
@@ -813,20 +824,25 @@ function drawImageSvg(
           );
           robot.setAttribute("width", "160");
           robot.setAttribute("height", "180");
-          robot.setAttribute("href", "../../images/robot_blu.svg");
+          robot.setAttribute(
+            "href",
+            getRobotImageHref("blue", element.robot_id),
+          );
           group.appendChild(robot);
 
-          const text = document.createElementNS(svgNS, "text");
-          text.setAttribute("x", element.x.toString());
-          text.setAttribute("y", (-element.y).toString());
-          text.setAttribute("fill", "white");
-          text.setAttribute("text-anchor", "middle");
-          text.setAttribute("dominant-baseline", "middle");
-          text.setAttribute("dy", "0.1em");
-          text.setAttribute("font-size", "150");
-          text.setAttribute("font-weight", "bold");
-          text.textContent = String(element.robot_id);
-          group.appendChild(text);
+          if (getRobotSkinMode() !== "id_pattern") {
+            const text = document.createElementNS(svgNS, "text");
+            text.setAttribute("x", element.x.toString());
+            text.setAttribute("y", (-element.y).toString());
+            text.setAttribute("fill", "white");
+            text.setAttribute("text-anchor", "middle");
+            text.setAttribute("dominant-baseline", "middle");
+            text.setAttribute("dy", "0.1em");
+            text.setAttribute("font-size", "150");
+            text.setAttribute("font-weight", "bold");
+            text.textContent = String(element.robot_id);
+            group.appendChild(text);
+          }
 
           break;
         }
@@ -870,20 +886,25 @@ function drawImageSvg(
           );
           robot.setAttribute("width", "160");
           robot.setAttribute("height", "180");
-          robot.setAttribute("href", "../../images/robot_yel.svg");
+          robot.setAttribute(
+            "href",
+            getRobotImageHref("yellow", element.robot_id),
+          );
           group.appendChild(robot);
 
-          const text = document.createElementNS(svgNS, "text");
-          text.setAttribute("x", element.x.toString());
-          text.setAttribute("y", (-element.y).toString());
-          text.setAttribute("fill", "black");
-          text.setAttribute("text-anchor", "middle");
-          text.setAttribute("dominant-baseline", "middle");
-          text.setAttribute("dy", "0.1em");
-          text.setAttribute("font-size", "150");
-          text.setAttribute("font-weight", "bold");
-          text.textContent = String(element.robot_id);
-          group.appendChild(text);
+          if (getRobotSkinMode() !== "id_pattern") {
+            const text = document.createElementNS(svgNS, "text");
+            text.setAttribute("x", element.x.toString());
+            text.setAttribute("y", (-element.y).toString());
+            text.setAttribute("fill", "black");
+            text.setAttribute("text-anchor", "middle");
+            text.setAttribute("dominant-baseline", "middle");
+            text.setAttribute("dy", "0.1em");
+            text.setAttribute("font-size", "150");
+            text.setAttribute("font-weight", "bold");
+            text.textContent = String(element.robot_id);
+            group.appendChild(text);
+          }
 
           break;
         }
