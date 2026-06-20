@@ -330,6 +330,33 @@ def relay_data(sio: SocketIO):
 
 
 
+def update_status_board():
+    print("Update status_board enter")
+
+    context = zmq.Context()
+
+    s_game_controller = context.socket(zmq.SUB)
+    s_game_controller.connect(config["ether"]["s_signals_pub_url"])
+    s_game_controller.setsockopt_string(zmq.SUBSCRIBE, '{"serviz": "update_status_board"')
+    s_game_controller.setsockopt_string(zmq.SUBSCRIBE, "{'serviz': 'update_status_board'")
+
+    print("Status board socket setup at ", config["ether"]["s_signals_pub_url"])
+
+    while True:
+        sio.sleep(0.01)
+
+        for _ in range(100):
+            try:
+                message = s_game_controller.recv_json(flags=zmq.NOBLOCK)
+                if message.get("serviz") == "update_status_board":
+                    sio.emit("update_status_board", message["data"])
+            except zmq.ZMQError as e:
+                if e.errno == zmq.EAGAIN:
+                    break
+                else:
+                    raise
+
+
 # Run the app
 if __name__ == "__main__":
     sio.sleep(1)
@@ -344,6 +371,7 @@ if __name__ == "__main__":
     sio.start_background_task(
         target=lambda: update_geometry()
     )
+    sio.start_background_task(target=lambda: update_status_board())
     sio.start_background_task(target=lambda: relay_data(sio))
     sio.run(
         app, host="0.0.0.0", port=8100, debug=False, allow_unsafe_werkzeug=True

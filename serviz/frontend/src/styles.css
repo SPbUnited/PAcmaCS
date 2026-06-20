@@ -75,7 +75,7 @@ body {
 
 * button {
   display: block;
-  margin: 5px 15px 5px;
+  margin: 5px 15px;
   padding: 5px;
   width: 80%;
   font-size: 12px;
@@ -150,4 +150,11 @@ input[type="range"]::-webkit-slider-thumb {
   /* цвет ползунка */
   border-radius: 50%;
   cursor: pointer;
+}
+.team-yellow {
+  color: #fff145;
+}
+
+.team-blue {
+  color: #779fff;
 }

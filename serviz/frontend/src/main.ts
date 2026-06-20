@@ -3,7 +3,7 @@ import { GoldenLayout, LayoutConfig } from "golden-layout";
 import "./styles.css";
 import { loadComponents } from "./loadComponents.ts";
 import { loadLayouts } from "./layout_templates/load_layout.ts";
-import DefaultConfig from "./layout_templates/Only field.json";
+import DefaultConfig from "./layout_templates/Guide.json";
 
 const menuContainerElement = document.querySelector("#menuContainer");
 const layoutElement: HTMLElement | null =

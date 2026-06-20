@@ -6,7 +6,7 @@ import zmq
 from common.sockets import SocketReader
 import multiprocessing
 from protopy.state.ssl_gc_referee_message_pb2 import Referee
-
+from google.protobuf import json_format
 
 class TeamColour(Enum):
     NEUTRAL = 0
@@ -32,6 +32,7 @@ class State(Enum):
 @define
 class GameControllerRelay:
     game_controller_fan_url: str
+    s_signals_url: str = field(default="")
 
     multicast_ip: str = field(default="224.5.23.1")
     multicast_port: int = field(default=10003)
@@ -42,7 +43,7 @@ class GameControllerRelay:
     _ssl_converter: Referee = field(default=Referee(), init=False)
 
     _reader: multiprocessing.Process = field(init=False)
-
+    prev_sent_statusboard: int = field(default= 0)
     def __attrs_post_init__(self):
         self._socket_reader = SocketReader(
             ip=self.multicast_ip,
@@ -62,6 +63,10 @@ class GameControllerRelay:
         context = zmq.Context()
         relay = context.socket(zmq.PUB)
         relay.bind(self.game_controller_fan_url)
+
+        s_signals = context.socket(zmq.PUB) if self.s_signals_url else None
+        if s_signals:
+            s_signals.connect(self.s_signals_url)
 
         prev_state = State.HALT
 
@@ -95,6 +100,14 @@ class GameControllerRelay:
                 print(relay_data)
 
             relay.send_json(relay_data)
+
+            if s_signals and time.time()-self.prev_sent_statusboard > 1:
+                json_data = json_format.MessageToJson(package)
+                s_signals.send_json({
+                    "serviz": "update_status_board",        
+                    "data": json_data,
+                })
+                self.prev_sent_statusboard = time.time()
 
             prev_state = mState
 

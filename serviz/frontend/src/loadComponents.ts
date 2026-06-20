@@ -20,11 +20,16 @@ export function loadComponents() {
     }
   }
 
+  result.sort((a, b) => (a.menuOrder ?? 0) - (b.menuOrder ?? 0));
+  custom_result.sort((a, b) => (a.menuOrder ?? 0) - (b.menuOrder ?? 0));
+
   return [result, custom_result];
 }
 
 interface Component {
   name: string;
+  // Lower values sort earlier; omitted defaults to 0, and equal values keep glob order.
+  menuOrder?: number;
   factory: (container: { element: HTMLElement }) => void | (() => void);
   // returns unsubscribe function for every topic (bus.on)
 }
