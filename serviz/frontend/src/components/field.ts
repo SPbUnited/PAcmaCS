@@ -4,6 +4,7 @@ import { bus, subscribeToTopic, sendMessage } from "../socketManager";
 
 const Field: Component = {
   name: "Field",
+  menuOrder: -100,
   factory: (container) => {
     container.element.style.position = "relative";
 
