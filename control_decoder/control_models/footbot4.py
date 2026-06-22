@@ -12,6 +12,21 @@ from control_models.base_model import ControlModel
 STALE_AFTER_SECONDS = 2.0
 STATUS_EMIT_INTERVAL_SECONDS = 0.1
 MAX_TELEMETRY_MESSAGES_PER_TICK = 200
+COMMAND_TELEMETRY_COLUMNS = (
+    "r_id",
+    "speedX",
+    "speedY",
+    "speedW",
+    "dribler",
+    "voltage",
+    "kickUP",
+    "kickDWN",
+    "beep",
+    "dribEN",
+    "charEN",
+    "autokck",
+)
+COMMAND_TELEMETRY_HEADER = 'SENDING COMMANDS IN "FB4" MODE\n'
 
 
 def build_robot_command_payload(
@@ -21,6 +36,60 @@ def build_robot_command_payload(
     payload["isteamyellow"] = isteamyellow
     payload["timestamp"] = timestamp
     return payload
+
+
+def robot_hostname(robot_id: int) -> str:
+    return f"fb4-{robot_id:02}.local"
+
+
+def build_command_telemetry_row(robot: cdcm.DecoderCommand) -> tuple[str, ...]:
+    speed_w = robot.angular_vel if robot.angular_vel is not None else robot.angle
+    angle_mode = int(robot.angle is not None)
+
+    if robot.auto_kick_forward:
+        autokick = 1
+    elif robot.auto_kick_up:
+        autokick = 2
+    elif robot.auto_kick_momentum:
+        autokick = 3
+    else:
+        autokick = 0
+
+    values = (
+        str(robot.robot_id),
+        f"{robot.left_vel:.0f}",
+        f"{robot.forward_vel:.0f}",
+        "null" if speed_w is None else f"{speed_w:.1f}",
+        str(robot.dribbler_setting),
+        str(robot.kicker_setting),
+        str(int(robot.kick_up)),
+        str(int(robot.kick_forward)),
+        str(angle_mode),
+        str(int(robot.dribbler_setting > 0)),
+        str(int(robot.kicker_setting > 0)),
+        str(autokick),
+    )
+    return values
+
+
+def build_command_telemetry(robots: list[cdcm.DecoderCommand]) -> str:
+    rows = [build_command_telemetry_row(robot) for robot in robots]
+    widths = [
+        max([
+            len(column),
+            *(len(row[index]) for row in rows),
+        ])
+        for index, column in enumerate(COMMAND_TELEMETRY_COLUMNS)
+    ]
+
+    def format_row(row) -> str:
+        return "  ".join(
+            value.rjust(width) for value, width in zip(row, widths)
+        )
+
+    lines = [format_row(COMMAND_TELEMETRY_COLUMNS)]
+    lines.extend(format_row(row) for row in rows)
+    return COMMAND_TELEMETRY_HEADER + "\n".join(lines) + "\n"
 
 
 def parse_telemetry_topic(topic: bytes) -> str | None:
@@ -76,32 +145,29 @@ class FB4Decoder(ControlModel):
     def __init__(self, config, telemetry_sender):
         super().__init__(config, telemetry_sender)
 
-        self.fb4_ip_port_low: tuple[str, int] = (
-            config["control_decoder"]["fb4_ip_low"],
-            config["control_decoder"]["fb4_port"],
-        )
-        self.fb4_ip_port_high: tuple[str, int] = (
-            config["control_decoder"]["fb4_ip_high"],
-            config["control_decoder"]["fb4_port"],
-        )
-        self.s_outbound_real_low = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.s_outbound_real_high = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        control_config = config["control_decoder"]
+        self.udpie_port = control_config.get("fb4_port", 10000)
+        self.udpie_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         context = zmq.Context()
         self.robot_cmd_socket = context.socket(zmq.PUB)
         self.robot_cmd_socket.setsockopt(zmq.SNDHWM, 3)
         self.robot_cmd_socket.setsockopt(zmq.LINGER, 0)
-        self.robot_cmd_socket.bind(
-            config["control_decoder"].get("robot_cmd_pub_url", "tcp://*:5555")
-        )
+        self.robot_cmd_socket.setsockopt(zmq.IMMEDIATE, 1)
         self.robot_telemetry_socket = context.socket(zmq.SUB)
         self.robot_telemetry_socket.setsockopt(zmq.RCVHWM, 100)
-        self.robot_telemetry_socket.setsockopt_string(zmq.SUBSCRIBE, "")
-        self.robot_telemetry_socket.bind(
-            config["control_decoder"].get(
-                "robot_telemetry_sub_url", "tcp://*:5556"
+        self.robot_telemetry_socket.setsockopt(zmq.LINGER, 0)
+        self.robot_telemetry_socket.setsockopt_string(zmq.SUBSCRIBE, "tel/")
+
+        command_port = control_config.get("fb4_command_port", 5555)
+        telemetry_port = control_config.get("fb4_telemetry_port", 5556)
+        for robot_id in range(16):
+            robot_host = robot_hostname(robot_id)
+            self.robot_cmd_socket.connect(f"tcp://{robot_host}:{command_port}")
+            self.robot_telemetry_socket.connect(
+                f"tcp://{robot_host}:{telemetry_port}"
             )
-        )
+
         self.robot_status_socket = context.socket(zmq.PUB)
         self.robot_status_socket.connect(config["ether"]["s_signals_sub_url"])
         self.robot_team: dict[int, bool] = {}
@@ -109,31 +175,30 @@ class FB4Decoder(ControlModel):
         self.fresh_robot_ids: set[int] = set()
         self.last_robot_status_emit = 0.0
 
-        def robots_sender_low(data: bytes):
-            self.s_outbound_real_low.sendto(data, self.fb4_ip_port_low)
+        def udpie_sender(robot_id: int, data: bytes):
+            self.udpie_socket.sendto(
+                data, (robot_hostname(robot_id), self.udpie_port)
+            )
 
-        def robots_sender_high(data: bytes):
-            self.s_outbound_real_high.sendto(data, self.fb4_ip_port_high)
-
-        self.udpie_processor = UdPieProcessor(robots_sender_low, robots_sender_high, telemetry_sender)
+        self.udpie_processor = UdPieProcessor(udpie_sender, telemetry_sender)
 
     def process(self, signal_data: cdcm.DecoderTeamCommand) -> None:
-        self.telemetry_text = 'SENDING COMMANDS IN "FB4" MODE\n'
+        self.telemetry_text = build_command_telemetry(signal_data.robot_commands)
         timestamp = time.time()
         for robot in signal_data.robot_commands:
             payload = build_robot_command_payload(
                 robot, signal_data.isteamyellow, timestamp
             )
+            payload_json = json.dumps(payload)
             self.robot_team[robot.robot_id] = signal_data.isteamyellow
             try:
                 self.robot_cmd_socket.send_multipart(
                     [
                         f"cmd/{robot.robot_id}".encode(),
-                        json.dumps(payload).encode(),
+                        payload_json.encode(),
                     ],
                     flags=zmq.NOBLOCK,
                 )
-                self.telemetry_text += json.dumps(payload, sort_keys=True) + "\n"
             except zmq.Again:
                 pass
         self.last_update = time.time()
@@ -172,7 +237,6 @@ class FB4Decoder(ControlModel):
                         "telemetry robot_id must be an integer from 0 to 15"
                     )
                 self.fresh_robot_ids.add(robot_id)
-                # print(f"Robot telemetry {robot_id} ({topic}):", payload)
             except (
                 json.JSONDecodeError,
                 UnicodeDecodeError,
@@ -202,16 +266,16 @@ class FB4Decoder(ControlModel):
                 self.last_robot_status_emit = now
                 self.fresh_robot_ids.clear()
 
-
-###################################################################################################
-
 udpies_history: list[tuple[str, int, str]] = []
 
 
 class UdPieProcessor:
-    def __init__(self, robots_sender_low, robots_sender_high, telemetry_sender: Callable[[str, str], None]):
-        self.robots_sender_low = robots_sender_low
-        self.robots_sender_high = robots_sender_high
+    def __init__(
+        self,
+        robot_sender: Callable[[int, bytes], None],
+        telemetry_sender: Callable[[str, str], None],
+    ):
+        self.robot_sender = robot_sender
         self.telemetry_sender = telemetry_sender
 
     def process_udpie(self, raw_data):
@@ -221,14 +285,15 @@ class UdPieProcessor:
             print("send_udpie: cannot convert data to bytes:", e)
             return
 
+        if len(data) < 2:
+            print("send_udpie: packet is too short")
+            return
+
         print("Get new udpie:", data)
         robot_id = data[1] & 0x0F
 
         try:
-            if robot_id < 8:
-                self.robots_sender_low(data)
-            else:
-                self.robots_sender_high(data)
+            self.robot_sender(robot_id, data)
             self.log_udpie_packet(data)
         except OSError as e:
             print("Can't send UDPie, no route to host:", e)
