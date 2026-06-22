@@ -99,5 +99,5 @@ while True:
                 print("Unknown exception while processing signals: ", e)
                 time.sleep(0.1)
 
+    Decoder.process_telemetry()
     Decoder.send_telemetry()
-

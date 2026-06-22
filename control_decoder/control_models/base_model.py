@@ -25,3 +25,6 @@ class ControlModel(ABC):
 
     def process_signal(self, raw: Any):
         pass
+
+    def process_telemetry(self) -> None:
+        pass

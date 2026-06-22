@@ -1,10 +1,75 @@
-import math
+import json
 import socket
 import time
 from typing import Any, Callable
 
+import zmq
+from cattrs import unstructure
+
 from decoder import control_decoder_command_model as cdcm
 from control_models.base_model import ControlModel
+
+STALE_AFTER_SECONDS = 2.0
+STATUS_EMIT_INTERVAL_SECONDS = 0.1
+MAX_TELEMETRY_MESSAGES_PER_TICK = 200
+
+
+def build_robot_command_payload(
+    robot: cdcm.DecoderCommand, isteamyellow: bool, timestamp: float
+) -> dict:
+    payload = unstructure(robot)
+    payload["isteamyellow"] = isteamyellow
+    payload["timestamp"] = timestamp
+    return payload
+
+
+def parse_telemetry_topic(topic: bytes) -> str | None:
+    try:
+        return topic.decode("utf-8")
+    except (AttributeError, UnicodeDecodeError):
+        return None
+
+
+def record_telemetry(state: dict[int, dict], payload: dict, now: float) -> int | None:
+    if not isinstance(payload, dict):
+        return None
+
+    robot_id = payload.get("robot_id")
+    if type(robot_id) is not int or not 0 <= robot_id <= 15:
+        return None
+
+    state[robot_id] = {
+        "voltage": payload.get("voltage"),
+        "ball_sensor": payload.get("ball_sensor"),
+        "last_seen": now,
+    }
+    return robot_id
+
+
+def build_status_message(
+    state: dict[int, dict], robot_team: dict[int, bool], now: float
+) -> dict:
+    message = {"blue": [], "yellow": []}
+    for robot_id, record in state.items():
+        team = robot_team.get(robot_id, False)
+
+        entry = {
+            "robot_id": robot_id,
+            "online": now - record["last_seen"] < STALE_AFTER_SECONDS,
+        }
+        if record.get("ball_sensor") is not None:
+            entry["ball_sensor"] = record["ball_sensor"]
+        if record.get("voltage") is not None:
+            entry["voltage"] = record["voltage"]
+        message["yellow" if team else "blue"].append(entry)
+
+    return message
+
+
+def should_emit_status(
+    fresh_robot_ids: set[int], now: float, last_emit: float, min_interval: float
+) -> bool:
+    return bool(fresh_robot_ids) and now - last_emit >= min_interval
 
 
 class FB4Decoder(ControlModel):
@@ -22,6 +87,28 @@ class FB4Decoder(ControlModel):
         self.s_outbound_real_low = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.s_outbound_real_high = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
+        context = zmq.Context()
+        self.robot_cmd_socket = context.socket(zmq.PUB)
+        self.robot_cmd_socket.setsockopt(zmq.SNDHWM, 3)
+        self.robot_cmd_socket.setsockopt(zmq.LINGER, 0)
+        self.robot_cmd_socket.bind(
+            config["control_decoder"].get("robot_cmd_pub_url", "tcp://*:5555")
+        )
+        self.robot_telemetry_socket = context.socket(zmq.SUB)
+        self.robot_telemetry_socket.setsockopt(zmq.RCVHWM, 100)
+        self.robot_telemetry_socket.setsockopt_string(zmq.SUBSCRIBE, "")
+        self.robot_telemetry_socket.bind(
+            config["control_decoder"].get(
+                "robot_telemetry_sub_url", "tcp://*:5556"
+            )
+        )
+        self.robot_status_socket = context.socket(zmq.PUB)
+        self.robot_status_socket.connect(config["ether"]["s_signals_sub_url"])
+        self.robot_team: dict[int, bool] = {}
+        self.robot_telemetry_state: dict[int, dict] = {}
+        self.fresh_robot_ids: set[int] = set()
+        self.last_robot_status_emit = 0.0
+
         def robots_sender_low(data: bytes):
             self.s_outbound_real_low.sendto(data, self.fb4_ip_port_low)
 
@@ -31,195 +118,90 @@ class FB4Decoder(ControlModel):
         self.udpie_processor = UdPieProcessor(robots_sender_low, robots_sender_high, telemetry_sender)
 
     def process(self, signal_data: cdcm.DecoderTeamCommand) -> None:
-        self.telemetry_text = 'SENDING COMMANDS IN "FB4" MODE\n \tr_id\tspeedX\tspeedY\tspeedW\tdribler\tvoltage\tkickUP\tkickDWN\tbeep\tdribEN\tcharEN\tautokck\n'
-        packets_low, packets_high = self.decoder(signal_data)
-        for packet in packets_low:
-            self.s_outbound_real_low.sendto(packet, self.fb4_ip_port_low)
-        for packet in packets_high:
-            self.s_outbound_real_high.sendto(packet, self.fb4_ip_port_high)
-
-        for cmd in packets_low + packets_high:
-            self.telemetry_text += create_telemetry(cmd)
-        self.last_update = time.time()
-
-    def decoder(self, decoder_team_command: cdcm.DecoderTeamCommand) -> tuple[list[bytes], list[bytes]]:
-        """Convert the decoder command to a robot command"""
-        commands_low: list[bytes] = []
-        commands_high: list[bytes] = []
-        for robot in decoder_team_command.robot_commands:
-            angle: float
-            angvel_flag: int
-            if robot.angle is not None:
-                angle = -robot.angle
-                angvel_flag = 1
-            elif robot.angular_vel is not None:
-                angle = robot.angular_vel
-                angvel_flag = 0
-            else:
-                raise RuntimeError
-
-            # angle_info = int(math.log(18 / math.pi * abs(angle) + 1) * math.copysign(1, angle) * (100 / math.log(18 + 1)))
-
-            autokick = 0
-            if robot.auto_kick_forward:
-                autokick = 1
-            elif robot.auto_kick_up:
-                autokick = 2
-            elif robot.auto_kick_momentum:
-                autokick = 3
-
-            command_bytes = create_packet(
-                bot_number=int(robot.robot_id),
-                speed_x=-robot.left_vel / (1100 / 100),
-                speed_y=robot.forward_vel / (1100 / 100),
-                speed_w=angle,
-                dribbler_speed=int(robot.dribbler_setting),
-                kicker_voltage=int(robot.kicker_setting),
-                kick_up=int(robot.kick_up),
-                kick_down=int(robot.kick_forward),
-                beep=int(angvel_flag),
-                dribbler_en=int(robot.dribbler_setting > 0),
-                charge_en=int(robot.kicker_setting > 0),
-                autokick=autokick,
+        self.telemetry_text = 'SENDING COMMANDS IN "FB4" MODE\n'
+        timestamp = time.time()
+        for robot in signal_data.robot_commands:
+            payload = build_robot_command_payload(
+                robot, signal_data.isteamyellow, timestamp
             )
-            if robot.robot_id < 8:
-                commands_low.append(command_bytes)
-            else:
-                commands_high.append(command_bytes)
-
-        return commands_low, commands_high
+            self.robot_team[robot.robot_id] = signal_data.isteamyellow
+            try:
+                self.robot_cmd_socket.send_multipart(
+                    [
+                        f"cmd/{robot.robot_id}".encode(),
+                        json.dumps(payload).encode(),
+                    ],
+                    flags=zmq.NOBLOCK,
+                )
+                self.telemetry_text += json.dumps(payload, sort_keys=True) + "\n"
+            except zmq.Again:
+                pass
+        self.last_update = time.time()
 
     def process_signal(self, raw: Any):
         self.udpie_processor.process_udpie(raw)
 
+    def process_telemetry(self) -> None:
+        for _ in range(MAX_TELEMETRY_MESSAGES_PER_TICK):
+            try:
+                frames = self.robot_telemetry_socket.recv_multipart(flags=zmq.NOBLOCK)
+            except zmq.Again:
+                break
+            except zmq.ZMQError as error:
+                print("Robot telemetry receive error:", error)
+                break
 
-def create_telemetry(data: bytes) -> str:
-    """Create line for telemetry for single robot"""
-    values = [
-        data[1],
-        int.from_bytes(data[2:3], "big", signed=True),
-        int.from_bytes(data[3:4], "big", signed=True),
-        int.from_bytes(data[4:5], "big", signed=True),
-        data[5],
-        data[6],
-        data[7],
-        data[8],
-        data[9],
-        data[10],
-        data[11],
-        data[12],
-    ]
-    values_str = [str(val) for val in values]
-    return "\t" + "\t".join(values_str) + "\n"
+            try:
+                if len(frames) != 2:
+                    raise ValueError(f"expected 2 frames, got {len(frames)}")
 
+                topic = parse_telemetry_topic(frames[0])
+                if topic is None or not topic.startswith("tel/"):
+                    raise ValueError("invalid telemetry topic")
 
-def create_packet(
-    bot_number: int,      # unsigned byte (0-255)
-    speed_x: float,       # signed byte (-128 to 127)
-    speed_y: float,       # signed byte
-    speed_w: float,       # angular velocity, or angle in rad if beep == 1
-    dribbler_speed: int,  # unsigned byte
-    kicker_voltage: int,  # unsigned byte
-    kick_up: int,         # boolean flag (bit 0)
-    kick_down: int,       # boolean flag (bit 1) 
-    beep: int,            # boolean flag (bit 2)
-    dribbler_en: int,     # boolean flag (bit 3)
-    charge_en: int,       # boolean flag (bit 4)
-    autokick: int,        # unsigned byte
-) -> bytes:
-    encoded_w = angle_to_int8_pi128(speed_w) if beep == 1 else float_to_143(speed_w)
+                payload = json.loads(frames[1])
+                if not isinstance(payload, dict):
+                    raise ValueError("telemetry payload must be a JSON object")
 
-    bytes_list = [
-        0x01,  # Header
-        bot_number + 240,
-        float_to_143(speed_x),
-        float_to_143(speed_y),
-        encoded_w,
-        dribbler_speed,
-        kicker_voltage,
-        kick_up,
-        kick_down,
-        beep,
-        dribbler_en,
-        charge_en,
-        autokick,
-    ]
+                now = time.time()
+                robot_id = record_telemetry(
+                    self.robot_telemetry_state, payload, now
+                )
+                if robot_id is None:
+                    raise ValueError(
+                        "telemetry robot_id must be an integer from 0 to 15"
+                    )
+                self.fresh_robot_ids.add(robot_id)
+                # print(f"Robot telemetry {robot_id} ({topic}):", payload)
+            except (
+                json.JSONDecodeError,
+                UnicodeDecodeError,
+                ValueError,
+                TypeError,
+                zmq.ZMQError,
+            ) as error:
+                print("Invalid robot telemetry message:", error)
 
-    return bytes(bytes_list)
+        now = time.time()
+        if should_emit_status(
+            self.fresh_robot_ids,
+            now,
+            self.last_robot_status_emit,
+            STATUS_EMIT_INTERVAL_SECONDS,
+        ):
+            status_message = build_status_message(
+                self.robot_telemetry_state, self.robot_team, now
+            )
+            try:
+                self.robot_status_socket.send_json(
+                    {"serviz": "update_robot_status", "data": status_message}
+                )
+            except zmq.ZMQError as error:
+                print("Robot status publish error:", error)
+            else:
+                self.last_robot_status_emit = now
+                self.fresh_robot_ids.clear()
 
-
-def angle_to_int8_pi128(angle_rad: float) -> int:
-    """
-    Кодирует угол в int8_t с единицей измерения pi/128 rad.
-    Возвращает значение в диапазоне 0..255 для упаковки в bytes().
-    """
-    raw = round(angle_rad * 128 / math.pi)
-
-    # clamp to int8_t range
-    raw = max(-128, min(127, raw))
-
-    # convert signed int8_t to byte
-    return raw & 0xFF
-
-
-def float_to_minifloat(x, exponent_bits, mantissa_bits):
-    if x == 0.0:
-        return (0, 0, 0)
-    sign = 0 if x > 0 else 1
-    x = abs(x)
-    m, e = math.frexp(x)
-    significand = m * 2  # Now in [1.0, 2.0)
-    exponent = e - 1
-    fractional_part = significand - 1.0
-    bias = (1 << (exponent_bits - 1)) - 1
-    stored_exponent = exponent + bias
-    max_exp = (1 << exponent_bits) - 1
-    max_significand = (1 << mantissa_bits) - 1
-
-    is_subnormal = False
-
-    if stored_exponent > max_exp:
-        return (sign, max_exp, max_significand)
-    elif stored_exponent < -mantissa_bits:
-        return (sign, 0, 0)
-    else:
-        if stored_exponent <= 0:
-            fractional_part = (fractional_part + 1) * 2**stored_exponent
-            stored_exponent = 0
-            is_subnormal = True
-
-        scaled = fractional_part * (2**mantissa_bits)
-        rounded_mantissa = round(scaled)
-
-        if rounded_mantissa >= (1 << mantissa_bits) and not is_subnormal:
-            stored_exponent += 1
-            mantissa = 0
-            if stored_exponent > max_exp:
-                return (sign, max_exp, max_significand)
-        else:
-            mantissa = rounded_mantissa
-
-        return (sign, stored_exponent, mantissa)
-
-
-def minifloat_to_float(sign, stored_exponent, mantissa, exponent_bits, mantissa_bits):
-    bias = (1 << (exponent_bits - 1)) - 1
-    exponent2 = 2 ** (stored_exponent - bias - mantissa_bits)
-    normalizer = (stored_exponent != 0) * (2 ** (stored_exponent - bias))
-    print(bias, exponent2, mantissa, normalizer)
-    return (-1) ** sign * (exponent2 * mantissa + normalizer)
-
-
-def minifloat_to_binary(sign, stored_exponent, mantissa, exponent_bits, mantissa_bits):
-    exponent_str = format(stored_exponent, f"0{exponent_bits}b")
-    mantissa_str = format(mantissa, f"0{mantissa_bits}b")
-    return f"{sign} {stored_exponent} {mantissa}\t{sign}{exponent_str}{mantissa_str}"
-
-
-def float_to_143(x: float) -> int:
-    sign, exp, mantissa = float_to_minifloat(x, 4, 3)
-    out = sign << 7 | exp << 3 | mantissa
-    return out
 
 ###################################################################################################
 
