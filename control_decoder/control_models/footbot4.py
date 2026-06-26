@@ -206,6 +206,16 @@ class FB4Decoder(ControlModel):
     def process_signal(self, raw: Any):
         self.udpie_processor.process_udpie(raw)
 
+    def broadcast_command(self, command: cdcm.DecoderCommand) -> None:
+        payload = build_robot_command_payload(command, False, time.time())
+        try:
+            self.robot_cmd_socket.send_multipart(
+                [b"cmd/all", json.dumps(payload).encode()],
+                flags=zmq.NOBLOCK,
+            )
+        except zmq.Again:
+            pass
+
     def process_telemetry(self) -> None:
         for _ in range(MAX_TELEMETRY_MESSAGES_PER_TICK):
             try:

@@ -94,6 +94,13 @@ while True:
                 if signal["control"] == "send_udpie":
                     raw = signal.get("data")
                     Decoder.process_signal(raw)
+                elif signal["control"] == "robot_commands":
+                    signal_data = structure(signal["data"], cdcm.DecoderTeamCommand)
+                    Decoder.process(signal_data)
+                elif signal["control"] == "broadcast_command":
+                    team_cmd = structure(signal["data"], cdcm.DecoderTeamCommand)
+                    if team_cmd.robot_commands:
+                        Decoder.broadcast_command(team_cmd.robot_commands[0])
 
             except Exception as e:
                 print("Unknown exception while processing signals: ", e)

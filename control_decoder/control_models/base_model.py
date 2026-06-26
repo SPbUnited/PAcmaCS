@@ -26,5 +26,8 @@ class ControlModel(ABC):
     def process_signal(self, raw: Any):
         pass
 
+    def broadcast_command(self, command: cdcm.DecoderCommand) -> None:
+        pass
+
     def process_telemetry(self) -> None:
         pass
