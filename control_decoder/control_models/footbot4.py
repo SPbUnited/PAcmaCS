@@ -1,12 +1,13 @@
 import json
 import socket
+import threading
 import time
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 import zmq
-from cattrs import unstructure
 
 from decoder import control_decoder_command_model as cdcm
+from decoder.robot_control_proto import control_pb2
 from control_models.base_model import ControlModel
 
 STALE_AFTER_SECONDS = 2.0
@@ -29,13 +30,22 @@ COMMAND_TELEMETRY_COLUMNS = (
 COMMAND_TELEMETRY_HEADER = 'SENDING COMMANDS IN "FB4" MODE\n'
 
 
-def build_robot_command_payload(
-    robot: cdcm.DecoderCommand, isteamyellow: bool, timestamp: float
-) -> dict:
-    payload = unstructure(robot)
-    payload["isteamyellow"] = isteamyellow
-    payload["timestamp"] = timestamp
-    return payload
+def build_old_format_command(robot: cdcm.DecoderCommand) -> control_pb2.OldFormat:
+    speed_w = robot.angular_vel if robot.angular_vel is not None else robot.angle
+    command = control_pb2.OldFormat()
+    command.vel_x = round(robot.left_vel)
+    command.vel_y = round(robot.forward_vel)
+    command.angular_velocity_or_delta_angle = round(speed_w or 0)
+    command.kicker_setting = robot.kicker_setting
+    command.dribbler_setting = round(robot.dribbler_setting)
+    command.autokick_straight = robot.auto_kick_forward
+    command.autokick_high = robot.auto_kick_up
+    command.kick_straight = robot.kick_forward
+    command.kick_high = robot.kick_up
+    command.angvel_angle_toggle = robot.angle is not None
+    command.dribbler_is_enabled = robot.dribbler_setting > 0
+    command.high_voltage = robot.kicker_setting > 0
+    return command
 
 
 def robot_hostname(robot_id: int) -> str:
@@ -92,13 +102,6 @@ def build_command_telemetry(robots: list[cdcm.DecoderCommand]) -> str:
     return COMMAND_TELEMETRY_HEADER + "\n".join(lines) + "\n"
 
 
-def parse_telemetry_topic(topic: bytes) -> str | None:
-    try:
-        return topic.decode("utf-8")
-    except (AttributeError, UnicodeDecodeError):
-        return None
-
-
 def record_telemetry(state: dict[int, dict], payload: dict, now: float) -> int | None:
     if not isinstance(payload, dict):
         return None
@@ -149,25 +152,29 @@ class FB4Decoder(ControlModel):
         self.udpie_port = control_config.get("fb4_port", 10000)
         self.udpie_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
+        self.command_port = control_config.get("fb4_command_port", 5555)
+        self.telemetry_port = control_config.get("fb4_telemetry_port", 5556)
+        self.robot_count = control_config.get("fb4_robot_count", 16)
+
+        self.robot_cmd_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.robot_telemetry_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.robot_telemetry_socket.bind(("0.0.0.0", self.telemetry_port))
+        self.robot_telemetry_socket.setblocking(False)
+
+        # We resolve fb4-NN.local ourselves rather than resolving hostnames on the
+        # command/telemetry hot path. An absent fb4-NN.local takes ~10s to fail via
+        # mDNS, so resolving off-thread keeps control-loop sends non-blocking; a
+        # periodic re-resolve still follows hostname/IP changes and picks robots up
+        # as they appear or disappear.
+        self._discovered_ips: dict[int, str] = {}   # rid -> ip, written by discovery
+        self._discovery_lock = threading.Lock()
+        self._discovery_stop = threading.Event()
+        self._discovery_thread = threading.Thread(
+            target=self._discovery_loop, daemon=True
+        )
+        self._discovery_thread.start()
+
         context = zmq.Context()
-        self.robot_cmd_socket = context.socket(zmq.PUB)
-        self.robot_cmd_socket.setsockopt(zmq.SNDHWM, 3)
-        self.robot_cmd_socket.setsockopt(zmq.LINGER, 0)
-        self.robot_cmd_socket.setsockopt(zmq.IMMEDIATE, 1)
-        self.robot_telemetry_socket = context.socket(zmq.SUB)
-        self.robot_telemetry_socket.setsockopt(zmq.RCVHWM, 100)
-        self.robot_telemetry_socket.setsockopt(zmq.LINGER, 0)
-        self.robot_telemetry_socket.setsockopt_string(zmq.SUBSCRIBE, "tel/")
-
-        command_port = control_config.get("fb4_command_port", 5555)
-        telemetry_port = control_config.get("fb4_telemetry_port", 5556)
-        for robot_id in range(16):
-            robot_host = robot_hostname(robot_id)
-            self.robot_cmd_socket.connect(f"tcp://{robot_host}:{command_port}")
-            self.robot_telemetry_socket.connect(
-                f"tcp://{robot_host}:{telemetry_port}"
-            )
-
         self.robot_status_socket = context.socket(zmq.PUB)
         self.robot_status_socket.connect(config["ether"]["s_signals_sub_url"])
         self.robot_team: dict[int, bool] = {}
@@ -182,61 +189,94 @@ class FB4Decoder(ControlModel):
 
         self.udpie_processor = UdPieProcessor(udpie_sender, telemetry_sender)
 
+    def _resolve_robot_ip(self, robot_id: int) -> Optional[str]:
+        try:
+            infos = socket.getaddrinfo(
+                robot_hostname(robot_id), None,
+                socket.AF_INET, socket.SOCK_STREAM,
+            )
+        except OSError:
+            return None
+        return infos[0][4][0] if infos else None
+
+    def _discovery_loop(self) -> None:
+        # Resolve all candidate hostnames concurrently so that dead .local lookups
+        # (~10s each) do not serialise; one cycle is bounded by the slowest lookup.
+        while not self._discovery_stop.is_set():
+            threads = []
+
+            def worker(rid: int) -> None:
+                ip = self._resolve_robot_ip(rid)
+                with self._discovery_lock:
+                    if ip is None:
+                        self._discovered_ips.pop(rid, None)
+                    else:
+                        self._discovered_ips[rid] = ip
+
+            for rid in range(self.robot_count):
+                thread = threading.Thread(target=worker, args=(rid,), daemon=True)
+                thread.start()
+                threads.append(thread)
+            for thread in threads:
+                thread.join()
+            self._discovery_stop.wait(5.0)
+
+    def _snapshot_discovered_ips(self) -> dict[int, str]:
+        with self._discovery_lock:
+            return dict(self._discovered_ips)
+
     def process(self, signal_data: cdcm.DecoderTeamCommand) -> None:
         self.telemetry_text = build_command_telemetry(signal_data.robot_commands)
-        timestamp = time.time()
+        discovered_ips = self._snapshot_discovered_ips()
         for robot in signal_data.robot_commands:
-            payload = build_robot_command_payload(
-                robot, signal_data.isteamyellow, timestamp
-            )
-            payload_json = json.dumps(payload)
             self.robot_team[robot.robot_id] = signal_data.isteamyellow
+            ip = discovered_ips.get(robot.robot_id)
+            if ip is None:
+                print(f"[fb4] robot {robot.robot_id} has no discovered IP; skipping")
+                continue
+            data = build_old_format_command(robot).SerializeToString()
             try:
-                self.robot_cmd_socket.send_multipart(
-                    [
-                        f"cmd/{robot.robot_id}".encode(),
-                        payload_json.encode(),
-                    ],
-                    flags=zmq.NOBLOCK,
-                )
-            except zmq.Again:
-                pass
+                self.robot_cmd_socket.sendto(data, (ip, self.command_port))
+            except OSError as error:
+                print(f"[fb4] send error for robot {robot.robot_id} at {ip}: {error}")
         self.last_update = time.time()
 
     def process_signal(self, raw: Any):
         self.udpie_processor.process_udpie(raw)
 
     def broadcast_command(self, command: cdcm.DecoderCommand) -> None:
-        payload = build_robot_command_payload(command, False, time.time())
-        try:
-            self.robot_cmd_socket.send_multipart(
-                [b"cmd/all", json.dumps(payload).encode()],
-                flags=zmq.NOBLOCK,
-            )
-        except zmq.Again:
-            pass
+        data = build_old_format_command(command).SerializeToString()
+        for robot_id, ip in self._snapshot_discovered_ips().items():
+            try:
+                self.robot_cmd_socket.sendto(data, (ip, self.command_port))
+            except OSError as error:
+                print(
+                    f"[fb4] broadcast send error for robot {robot_id} at {ip}: "
+                    f"{error}"
+                )
 
     def process_telemetry(self) -> None:
+        ip_to_robot = {
+            ip: robot_id for robot_id, ip in self._snapshot_discovered_ips().items()
+        }
         for _ in range(MAX_TELEMETRY_MESSAGES_PER_TICK):
             try:
-                frames = self.robot_telemetry_socket.recv_multipart(flags=zmq.NOBLOCK)
-            except zmq.Again:
+                data, (src_ip, _src_port) = self.robot_telemetry_socket.recvfrom(4096)
+            except BlockingIOError:
                 break
-            except zmq.ZMQError as error:
+            except OSError as error:
                 print("Robot telemetry receive error:", error)
                 break
 
             try:
-                if len(frames) != 2:
-                    raise ValueError(f"expected 2 frames, got {len(frames)}")
+                robot_id = ip_to_robot.get(src_ip)
+                if robot_id is None:
+                    raise ValueError(f"unknown telemetry source IP {src_ip}")
 
-                topic = parse_telemetry_topic(frames[0])
-                if topic is None or not topic.startswith("tel/"):
-                    raise ValueError("invalid telemetry topic")
-
-                payload = json.loads(frames[1])
+                payload = json.loads(data)
                 if not isinstance(payload, dict):
                     raise ValueError("telemetry payload must be a JSON object")
+                payload["robot_id"] = robot_id
 
                 now = time.time()
                 robot_id = record_telemetry(
@@ -252,7 +292,6 @@ class FB4Decoder(ControlModel):
                 UnicodeDecodeError,
                 ValueError,
                 TypeError,
-                zmq.ZMQError,
             ) as error:
                 print("Invalid robot telemetry message:", error)
 

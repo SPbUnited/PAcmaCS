@@ -1,8 +1,11 @@
 import argparse
 import json
+import socket
 import time
 
-import zmq
+from decoder.robot_control_proto import control_pb2
+from google.protobuf import message
+from google.protobuf.json_format import MessageToJson
 
 
 def build_telemetry_payload(
@@ -19,18 +22,10 @@ def build_telemetry_payload(
     }
 
 
-def decode_command(payload: bytes) -> dict | None:
-    try:
-        command = json.loads(payload)
-    except (json.JSONDecodeError, TypeError, UnicodeDecodeError):
-        return None
-    return command if isinstance(command, dict) else None
-
-
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Emulate an FB4 robot over ZMQ")
+    parser = argparse.ArgumentParser(description="Emulate an FB4 robot over UDP")
     parser.add_argument("--robot-id", type=int, required=True)
-    parser.add_argument("--bind-host", default="*")
+    parser.add_argument("--bind-host", default="0.0.0.0")
     parser.add_argument("--cmd-port", type=int, default=5555)
     parser.add_argument("--tel-port", type=int, default=5556)
     parser.add_argument("--rate", type=float, default=50.0)
@@ -41,18 +36,12 @@ def main() -> None:
     if args.rate <= 0:
         parser.error("--rate must be greater than zero")
 
-    context = zmq.Context()
-    command_socket = context.socket(zmq.SUB)
-    command_socket.setsockopt(zmq.RCVHWM, 3)
-    command_socket.setsockopt(zmq.LINGER, 0)
-    command_socket.setsockopt_string(zmq.SUBSCRIBE, "cmd/all")
-    command_socket.setsockopt_string(zmq.SUBSCRIBE, f"cmd/{args.robot_id}")
-    command_socket.bind(f"tcp://{args.bind_host}:{args.cmd_port}")
+    command_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    command_socket.bind((args.bind_host, args.cmd_port))
+    command_socket.setblocking(False)
 
-    telemetry_socket = context.socket(zmq.PUB)
-    telemetry_socket.setsockopt(zmq.SNDHWM, 50)
-    telemetry_socket.setsockopt(zmq.LINGER, 0)
-    telemetry_socket.bind(f"tcp://{args.bind_host}:{args.tel_port}")
+    telemetry_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    telemetry_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
     get_timestamp = None
     seq = 0
@@ -62,24 +51,20 @@ def main() -> None:
         while True:
             while True:
                 try:
-                    frames = command_socket.recv_multipart(flags=zmq.NOBLOCK)
-                except zmq.Again:
+                    data, addr = command_socket.recvfrom(4096)
+                except BlockingIOError:
                     break
-                except zmq.ZMQError as error:
+                except OSError as error:
                     print("Command receive error:", error)
                     break
 
                 try:
-                    if len(frames) != 2:
-                        raise ValueError(f"expected 2 frames, got {len(frames)}")
-                    topic = frames[0].decode("utf-8")
-                    print("Command topic:", topic)
-                    command = decode_command(frames[1])
-                    if command is None:
-                        raise ValueError("invalid command JSON")
-                    get_timestamp = command.get("timestamp")
-                    print(json.dumps(command, indent=2, sort_keys=True))
-                except (UnicodeDecodeError, ValueError) as error:
+                    command = control_pb2.OldFormat()
+                    command.ParseFromString(data)
+                    get_timestamp = time.time()
+                    print(f"Command from {addr[0]}:{addr[1]}:")
+                    print(MessageToJson(command))
+                except message.DecodeError as error:
                     print("Command parse error:", error)
 
             monotonic_now = time.monotonic()
@@ -88,14 +73,11 @@ def main() -> None:
                     args.robot_id, time.time(), seq, get_timestamp
                 )
                 try:
-                    telemetry_socket.send_multipart(
-                        [
-                            f"tel/{args.robot_id}".encode(),
-                            json.dumps(payload).encode(),
-                        ],
-                        flags=zmq.NOBLOCK,
+                    telemetry_socket.sendto(
+                        json.dumps(payload).encode(),
+                        ("<broadcast>", args.tel_port),
                     )
-                except (TypeError, ValueError, zmq.ZMQError) as error:
+                except (TypeError, ValueError, OSError) as error:
                     print("Telemetry send error:", error)
                 seq += 1
                 next_telemetry = monotonic_now + interval
@@ -106,7 +88,6 @@ def main() -> None:
     finally:
         command_socket.close()
         telemetry_socket.close()
-        context.term()
 
 
 if __name__ == "__main__":
