@@ -102,8 +102,32 @@ install: guard_not_mac install_misc install_docker post_install_docker
 install_wsl: install_misc
 	@echo "\n${YELLOW}Now please install Docker Desktop from ${WHITE}https://www.docker.com/products/docker-desktop/${NC}\n"
 
-init: init_py init_npm
+init: init_py init_proto init_npm
 	mkdir -p logs
+
+init_proto: no-sudo
+	@echo "${GREEN}=============="
+	@echo "| PROTO INIT |"
+	@echo "==============${NC}"
+	git submodule update --init
+	. venv/bin/activate && pip install protoletariat --no-deps -q
+	cd transnet && . ../venv/bin/activate && bash build_proto.sh
+	mkdir -p control_decoder/decoder/robot_control_proto
+	. venv/bin/activate && python3 -m grpc_tools.protoc \
+		-I ssl_packet_package/proto/spbunited/robot \
+		--python_out=control_decoder/decoder/robot_control_proto \
+		--pyi_out=control_decoder/decoder/robot_control_proto \
+		control.proto
+	. venv/bin/activate && python3 -m grpc_tools.protoc \
+		-I ssl_packet_package/proto/spbunited/robot \
+		--descriptor_set_out=/tmp/control_pb2.fds \
+		--include_imports \
+		control.proto
+	. venv/bin/activate && protol \
+		--create-package \
+		--in-place \
+		--python-out control_decoder/decoder/robot_control_proto \
+		raw /tmp/control_pb2.fds
 
 init_py: no-sudo
 	@echo "${GREEN}============="

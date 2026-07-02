@@ -1,0 +1,3 @@
+[submodule "ssl_packet_package"]
+	path = ssl_packet_package
+	url = https://github.com/SPbUnited/ssl_packet_package

@@ -9,19 +9,13 @@ cattrs
 pytest
 
 # Transnet
-zmq
+pyzmq
 protobuf
-protoletariat
+grpcio-tools
 
 # serviz
 Flask
 Flask-SocketIO
-python-socketio
-python-engineio
 gevent
-pyzmq
-PyYAML 
 eventlet
-attrs
-#strategy_runner
 psutil
