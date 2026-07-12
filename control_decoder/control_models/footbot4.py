@@ -30,21 +30,33 @@ COMMAND_TELEMETRY_COLUMNS = (
 COMMAND_TELEMETRY_HEADER = 'SENDING COMMANDS IN "FB4" MODE\n'
 
 
-def build_old_format_command(robot: cdcm.DecoderCommand) -> control_pb2.OldFormat:
-    speed_w = robot.angular_vel if robot.angular_vel is not None else robot.angle
-    command = control_pb2.OldFormat()
-    command.vel_x = round(robot.left_vel)
-    command.vel_y = round(robot.forward_vel)
-    command.angular_velocity_or_delta_angle = round(speed_w or 0)
-    command.kicker_setting = robot.kicker_setting
-    command.dribbler_setting = round(robot.dribbler_setting)
-    command.autokick_straight = robot.auto_kick_forward
-    command.autokick_high = robot.auto_kick_up
-    command.kick_straight = robot.kick_forward
-    command.kick_high = robot.kick_up
-    command.angvel_angle_toggle = robot.angle is not None
-    command.dribbler_is_enabled = robot.dribbler_setting > 0
-    command.high_voltage = robot.kicker_setting > 0
+def build_new_format_command(robot: cdcm.DecoderCommand) -> control_pb2.NewFormat:
+    command = control_pb2.NewFormat()
+
+    command.speed_control.vel_x = robot.left_vel
+    command.speed_control.vel_y = robot.forward_vel
+    if robot.angle is not None:
+        command.speed_control.delta_angle = robot.angle
+    else:
+        command.speed_control.angular_velocity = robot.angular_vel or 0.0
+
+    if robot.kick_up:
+        kicker_mode = control_pb2.KICK_HIGH
+    elif robot.kick_forward:
+        kicker_mode = control_pb2.KICK_STRAIGHT
+    elif robot.auto_kick_up:
+        kicker_mode = control_pb2.AUTOKICK_HIGH
+    elif robot.auto_kick_forward:
+        kicker_mode = control_pb2.AUTOKICK_STRAIGHT
+    elif robot.auto_kick_momentum:
+        kicker_mode = control_pb2.AUTOKICK_MOMENTUM
+    else:
+        kicker_mode = control_pb2.IDLE
+
+    command.kicker_and_dribbler.kicker_mode = kicker_mode
+    command.kicker_and_dribbler.kicker_setting = robot.kicker_setting
+    command.kicker_and_dribbler.dribbler_setting = round(robot.dribbler_setting)
+
     return command
 
 
@@ -234,7 +246,7 @@ class FB4Decoder(ControlModel):
             if ip is None:
                 print(f"[fb4] robot {robot.robot_id} has no discovered IP; skipping")
                 continue
-            data = build_old_format_command(robot).SerializeToString()
+            data = build_new_format_command(robot).SerializeToString()
             try:
                 self.robot_cmd_socket.sendto(data, (ip, self.command_port))
             except OSError as error:
@@ -245,7 +257,7 @@ class FB4Decoder(ControlModel):
         self.udpie_processor.process_udpie(raw)
 
     def broadcast_command(self, command: cdcm.DecoderCommand) -> None:
-        data = build_old_format_command(command).SerializeToString()
+        data = build_new_format_command(command).SerializeToString()
         for robot_id, ip in self._snapshot_discovered_ips().items():
             try:
                 self.robot_cmd_socket.sendto(data, (ip, self.command_port))

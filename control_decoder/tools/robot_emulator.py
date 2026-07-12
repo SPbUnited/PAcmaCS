@@ -59,7 +59,7 @@ def main() -> None:
                     break
 
                 try:
-                    command = control_pb2.OldFormat()
+                    command = control_pb2.NewFormat()
                     command.ParseFromString(data)
                     get_timestamp = time.time()
                     print(f"Command from {addr[0]}:{addr[1]}:")
