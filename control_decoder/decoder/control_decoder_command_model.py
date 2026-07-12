@@ -7,17 +7,17 @@ class DecoderCommand:
 
     forward_vel: float = field() # [m/s]
     left_vel: float = field() # [m/s]
-    angular_vel: Optional[float] = field() # [rad/s]
-    angle: Optional[float] = field() # [rad]
+    angular_vel: Optional[float] = field(default=None) # [rad/s]
+    angle: Optional[float] = field(default=None) # [rad]
 
-    kick_up: bool = field()
-    kick_forward: bool = field()
-    auto_kick_up: bool = field()
-    auto_kick_forward: bool = field()
-    auto_kick_momentum: bool = field()
+    kick_up: bool = field(default=False)
+    kick_forward: bool = field(default=False)
+    auto_kick_up: bool = field(default=False)
+    auto_kick_forward: bool = field(default=False)
+    auto_kick_momentum: bool = field(default=False)
 
-    kicker_setting: int = field() # 0-15 [popugi]
-    dribbler_setting: float = field() # 0-15 [popugi]
+    kicker_setting: int = field(default=0) # 0-15 [popugi]
+    dribbler_setting: float = field(default=0) # 0-15 [popugi]
 
 @define
 class DecoderTeamCommand:

@@ -117,17 +117,17 @@ init_proto: no-sudo
 		-I ssl_packet_package/proto/spbunited/robot \
 		--python_out=control_decoder/decoder/robot_control_proto \
 		--pyi_out=control_decoder/decoder/robot_control_proto \
-		control.proto
+		control.proto telemetry.proto
 	. venv/bin/activate && python3 -m grpc_tools.protoc \
 		-I ssl_packet_package/proto/spbunited/robot \
-		--descriptor_set_out=/tmp/control_pb2.fds \
+		--descriptor_set_out=/tmp/robot_pb2.fds \
 		--include_imports \
-		control.proto
+		control.proto telemetry.proto
 	. venv/bin/activate && protol \
 		--create-package \
 		--in-place \
 		--python-out control_decoder/decoder/robot_control_proto \
-		raw /tmp/control_pb2.fds
+		raw /tmp/robot_pb2.fds
 
 init_py: no-sudo
 	@echo "${GREEN}============="

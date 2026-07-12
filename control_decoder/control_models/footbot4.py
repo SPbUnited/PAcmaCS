@@ -1,13 +1,13 @@
-import json
 import socket
 import threading
 import time
 from typing import Any, Callable, Optional
 
 import zmq
+from google.protobuf.message import DecodeError
 
 from decoder import control_decoder_command_model as cdcm
-from decoder.robot_control_proto import control_pb2
+from decoder.robot_control_proto import control_pb2, telemetry_pb2
 from control_models.base_model import ControlModel
 
 STALE_AFTER_SECONDS = 2.0
@@ -114,20 +114,19 @@ def build_command_telemetry(robots: list[cdcm.DecoderCommand]) -> str:
     return COMMAND_TELEMETRY_HEADER + "\n".join(lines) + "\n"
 
 
-def record_telemetry(state: dict[int, dict], payload: dict, now: float) -> int | None:
-    if not isinstance(payload, dict):
-        return None
-
-    robot_id = payload.get("robot_id")
-    if type(robot_id) is not int or not 0 <= robot_id <= 15:
-        return None
-
-    state[robot_id] = {
-        "voltage": payload.get("voltage"),
-        "ball_sensor": payload.get("ball_sensor"),
-        "last_seen": now,
-    }
-    return robot_id
+def record_telemetry(
+    state: dict[int, dict],
+    robot_id: int,
+    telemetry: telemetry_pb2.RobotTelemetry,
+    now: float,
+) -> None:
+    st = telemetry.strategy_telemetry
+    entry: dict = {"last_seen": now}
+    if st.HasField("kicker_voltage"):
+        entry["voltage"] = st.kicker_voltage
+    if st.HasField("ball_in"):
+        entry["ball_sensor"] = st.ball_in
+    state[robot_id] = entry
 
 
 def build_status_message(
@@ -285,26 +284,13 @@ class FB4Decoder(ControlModel):
                 if robot_id is None:
                     raise ValueError(f"unknown telemetry source IP {src_ip}")
 
-                payload = json.loads(data)
-                if not isinstance(payload, dict):
-                    raise ValueError("telemetry payload must be a JSON object")
-                payload["robot_id"] = robot_id
+                telemetry = telemetry_pb2.RobotTelemetry()
+                telemetry.ParseFromString(data)
 
                 now = time.time()
-                robot_id = record_telemetry(
-                    self.robot_telemetry_state, payload, now
-                )
-                if robot_id is None:
-                    raise ValueError(
-                        "telemetry robot_id must be an integer from 0 to 15"
-                    )
+                record_telemetry(self.robot_telemetry_state, robot_id, telemetry, now)
                 self.fresh_robot_ids.add(robot_id)
-            except (
-                json.JSONDecodeError,
-                UnicodeDecodeError,
-                ValueError,
-                TypeError,
-            ) as error:
+            except (DecodeError, ValueError) as error:
                 print("Invalid robot telemetry message:", error)
 
         now = time.time()

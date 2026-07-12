@@ -7,6 +7,8 @@ transnet/protopy/
 transnet/proto/
 control_decoder/decoder/robot_control_proto/control_pb2.py
 control_decoder/decoder/robot_control_proto/control_pb2.pyi
+control_decoder/decoder/robot_control_proto/telemetry_pb2.py
+control_decoder/decoder/robot_control_proto/telemetry_pb2.pyi
 
 *.pdf
 # Byte-compiled / optimized / DLL files

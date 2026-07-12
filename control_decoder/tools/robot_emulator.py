@@ -1,25 +1,17 @@
 import argparse
-import json
 import socket
 import time
 
-from decoder.robot_control_proto import control_pb2
+from decoder.robot_control_proto import control_pb2, telemetry_pb2
 from google.protobuf import message
 from google.protobuf.json_format import MessageToJson
 
 
-def build_telemetry_payload(
-    robot_id: int, now: float, seq: int, get_timestamp: float | None
-) -> dict:
-    return {
-        "robot_id": robot_id,
-        "timestamp": now,
-        "seq": seq,
-        "get_timestamp": get_timestamp,
-        "voltage": 24.0,
-        "ball_sensor": False,
-        "status": "ok",
-    }
+def build_telemetry_payload() -> bytes:
+    telem = telemetry_pb2.RobotTelemetry()
+    telem.strategy_telemetry.kicker_voltage = 24.0
+    telem.strategy_telemetry.ball_in = False
+    return telem.SerializeToString()
 
 
 def main() -> None:
@@ -43,8 +35,6 @@ def main() -> None:
     telemetry_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     telemetry_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
-    get_timestamp = None
-    seq = 0
     interval = 1.0 / args.rate
     next_telemetry = time.monotonic()
     try:
@@ -61,7 +51,6 @@ def main() -> None:
                 try:
                     command = control_pb2.NewFormat()
                     command.ParseFromString(data)
-                    get_timestamp = time.time()
                     print(f"Command from {addr[0]}:{addr[1]}:")
                     print(MessageToJson(command))
                 except message.DecodeError as error:
@@ -69,17 +58,13 @@ def main() -> None:
 
             monotonic_now = time.monotonic()
             if monotonic_now >= next_telemetry:
-                payload = build_telemetry_payload(
-                    args.robot_id, time.time(), seq, get_timestamp
-                )
                 try:
                     telemetry_socket.sendto(
-                        json.dumps(payload).encode(),
+                        build_telemetry_payload(),
                         ("<broadcast>", args.tel_port),
                     )
-                except (TypeError, ValueError, OSError) as error:
+                except OSError as error:
                     print("Telemetry send error:", error)
-                seq += 1
                 next_telemetry = monotonic_now + interval
 
             time.sleep(min(0.005, interval / 2))
