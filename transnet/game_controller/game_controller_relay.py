@@ -89,8 +89,10 @@ class GameControllerRelay:
             relay_data = {
                 "state": mState.value,
                 "team": mForTeam.value,
-                "is_left": False,
+                "blue_on_positive": package.blue_team_on_positive_half,
                 "ball_pos": ballPos,
+                "yellow_gk": package.yellow.goalkeeper,
+                "blue_gk": package.blue.goalkeeper
             }
 
             if mState != prev_state:
