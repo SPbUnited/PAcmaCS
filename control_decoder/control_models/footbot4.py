@@ -4,12 +4,16 @@ import time
 from typing import Any, Callable, Optional
 
 import zmq
+from attrs import evolve
 from google.protobuf.message import DecodeError
 
 from decoder import control_decoder_command_model as cdcm
 from decoder.robot_control_proto import control_pb2, telemetry_pb2
 from control_models.base_model import ControlModel
+from control_models.footbot4_nrf import build_nrf_packet
 
+# Robots with id below this go through the NRF bridge, the rest over WiFi.
+DEFAULT_WIFI_MIN_ROBOT_ID = 8
 STALE_AFTER_SECONDS = 2.0
 STATUS_EMIT_INTERVAL_SECONDS = 0.1
 MAX_TELEMETRY_MESSAGES_PER_TICK = 200
@@ -166,11 +170,16 @@ class FB4Decoder(ControlModel):
         self.command_port = control_config.get("fb4_command_port", 5555)
         self.telemetry_port = control_config.get("fb4_telemetry_port", 5556)
         self.robot_count = control_config.get("fb4_robot_count", 16)
+        self.wifi_min_robot_id = control_config.get(
+            "fb4_wifi_min_robot_id", DEFAULT_WIFI_MIN_ROBOT_ID
+        )
+        self.nrf_address = (control_config["fb4_ip_low"], self.udpie_port)
 
         self.robot_cmd_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.robot_telemetry_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.robot_telemetry_socket.bind(("0.0.0.0", self.telemetry_port))
         self.robot_telemetry_socket.setblocking(False)
+        self.nrf_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         # We resolve fb4-NN.local ourselves rather than resolving hostnames on the
         # command/telemetry hot path. An absent fb4-NN.local takes ~10s to fail via
@@ -194,11 +203,17 @@ class FB4Decoder(ControlModel):
         self.last_robot_status_emit = 0.0
 
         def udpie_sender(robot_id: int, data: bytes):
-            self.udpie_socket.sendto(
-                data, (robot_hostname(robot_id), self.udpie_port)
-            )
+            if self.uses_wifi(robot_id):
+                self.udpie_socket.sendto(
+                    data, (robot_hostname(robot_id), self.udpie_port)
+                )
+            else:
+                self.nrf_socket.sendto(data, self.nrf_address)
 
         self.udpie_processor = UdPieProcessor(udpie_sender, telemetry_sender)
+
+    def uses_wifi(self, robot_id: int) -> bool:
+        return robot_id >= self.wifi_min_robot_id
 
     def _resolve_robot_ip(self, robot_id: int) -> Optional[str]:
         try:
@@ -224,7 +239,7 @@ class FB4Decoder(ControlModel):
                     else:
                         self._discovered_ips[rid] = ip
 
-            for rid in range(self.robot_count):
+            for rid in range(self.wifi_min_robot_id, self.robot_count):
                 thread = threading.Thread(target=worker, args=(rid,), daemon=True)
                 thread.start()
                 threads.append(thread)
@@ -241,6 +256,9 @@ class FB4Decoder(ControlModel):
         discovered_ips = self._snapshot_discovered_ips()
         for robot in signal_data.robot_commands:
             self.robot_team[robot.robot_id] = signal_data.isteamyellow
+            if not self.uses_wifi(robot.robot_id):
+                self._send_nrf(robot)
+                continue
             ip = discovered_ips.get(robot.robot_id)
             if ip is None:
                 print(f"[fb4] robot {robot.robot_id} has no discovered IP; skipping")
@@ -252,10 +270,19 @@ class FB4Decoder(ControlModel):
                 print(f"[fb4] send error for robot {robot.robot_id} at {ip}: {error}")
         self.last_update = time.time()
 
+    def _send_nrf(self, robot: cdcm.DecoderCommand) -> None:
+        try:
+            self.nrf_socket.sendto(build_nrf_packet(robot), self.nrf_address)
+        except OSError as error:
+            print(f"[fb4] NRF send error for robot {robot.robot_id}: {error}")
+
     def process_signal(self, raw: Any):
         self.udpie_processor.process_udpie(raw)
 
     def broadcast_command(self, command: cdcm.DecoderCommand) -> None:
+        for robot_id in range(self.wifi_min_robot_id):
+            self._send_nrf(evolve(command, robot_id=robot_id))
+
         data = build_new_format_command(command).SerializeToString()
         for robot_id, ip in self._snapshot_discovered_ips().items():
             try:
