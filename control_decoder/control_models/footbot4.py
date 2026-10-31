@@ -58,8 +58,9 @@ def build_robot_command(robot: cdcm.AnyDecoderCommand) -> control_pb2.RobotComma
     match robot:
         case cdcm.DecoderRicochetCommand():
             command.robot_control_type = control_pb2.RobotControlType.RICOCHET
-            command.ricochet.x = robot.x
-            command.ricochet.y = robot.y
+            # DecoderRicochetCommand coordinates are in mm, the robot takes m
+            command.ricochet.x = robot.x / 1000
+            command.ricochet.y = robot.y / 1000
             command.ricochet.angle = robot.angle
             fill_kicker_and_dribbler(command.ricochet.kicker_and_dribbler, robot)
 
@@ -70,13 +71,15 @@ def build_robot_command(robot: cdcm.AnyDecoderCommand) -> control_pb2.RobotComma
 
         case cdcm.DecoderCommand():
             command.robot_control_type = control_pb2.RobotControlType.NEW_FORMAT
-            command.new_format.speed_control.vel_x = robot.forward_vel
-            command.new_format.speed_control.vel_y = -robot.left_vel
+            # DecoderCommand speeds are in mm/s, the robot takes m/s.
+            # Robot frame: vel_y > 0 is left, angular_velocity > 0 is counterclockwise,
+            # the same as DecoderCommand
+            command.new_format.speed_control.vel_x = robot.forward_vel / 1000
+            command.new_format.speed_control.vel_y = robot.left_vel / 1000
             if robot.angle is not None:
                 command.new_format.speed_control.delta_angle = robot.angle
             else:
                 command.new_format.speed_control.angular_velocity = robot.angular_vel or 0.0
-                command.new_format.speed_control.angular_velocity *= -1
             fill_kicker_and_dribbler(command.new_format.kicker_and_dribbler, robot)
 
     return command
@@ -120,7 +123,7 @@ def build_command_telemetry_row(robot: cdcm.DecoderCommand) -> tuple[str, ...]:
 def build_target_telemetry_line(robot: cdcm.AnyDecoderCommand) -> str:
     match robot:
         case cdcm.DecoderRicochetCommand():
-            target = f"x={robot.x:.2f}  y={robot.y:.2f}  angle={robot.angle:.2f}"
+            target = f"x={robot.x:.0f}  y={robot.y:.0f}  angle={robot.angle:.2f}"
         case cdcm.DecoderCatchBallCommand():
             target = f"angle={robot.angle:.2f}"
         case _:

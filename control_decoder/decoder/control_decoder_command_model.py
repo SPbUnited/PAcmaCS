@@ -7,8 +7,8 @@ from typing import List, Optional, Union
 class DecoderCommand:
     robot_id: int = field()
 
-    forward_vel: float = field() # [m/s]
-    left_vel: float = field() # [m/s]
+    forward_vel: float = field() # [mm/s]
+    left_vel: float = field() # [mm/s]
     angular_vel: Optional[float] = field(default=None) # [rad/s]
     angle: Optional[float] = field(default=None) # [rad]
 
@@ -29,8 +29,8 @@ class DecoderRicochetCommand:
     shift sideways to meet it without turning"""
     robot_id: int = field()
 
-    x: float = field() # [m]
-    y: float = field() # [m]
+    x: float = field() # [mm]
+    y: float = field() # [mm]
     angle: float = field() # [rad]
 
     kick_up: bool = field(default=False)
