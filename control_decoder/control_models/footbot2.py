@@ -22,7 +22,7 @@ class FB2Decoder(ControlModel):
         self.last_update = time.time()
 
     def process(self, signal_data: cdcm.DecoderTeamCommand) -> None:
-        self.telemetry_text = 'SENDING COMMANDS IN "FB2" MODE\n \tr_id\tspeedX\tspeedY\tspeedW\tdribler\tvoltage\tkickUP\tkickDWN\tbeep\tdribEN\tcharEN\tautokck\n'
+        self.telemetry_text = 'SENDING COMMANDS IN "FB2" MODE\n \tr_id\tspeedX\tspeedY\tspeedW\tdribler\tvoltage\tkickUP\tkickDWN\tangvel\tdribEN\tcharEN\tautokck\n'
         packets_low, packets_high = self.decoder(signal_data)
         for packet in packets_low:
             self.s_outbound_real_low.sendto(packet, self.fb2_ip_port_low)
@@ -38,6 +38,11 @@ class FB2Decoder(ControlModel):
         commands_low: list[bytes] = []
         commands_high: list[bytes] = []
         for robot in decoder_team_command.robot_commands:
+            # FB2 only understands speed commands
+            if not isinstance(robot, cdcm.DecoderCommand):
+                self.warn_unsupported(robot)
+                continue
+
             angle: float
             angvel_flag: int
             if robot.angle is not None:
@@ -66,7 +71,7 @@ class FB2Decoder(ControlModel):
                 kicker_voltage=int(robot.kicker_setting),
                 kick_up=int(robot.kick_up),
                 kick_down=int(robot.kick_forward),
-                beep=int(angvel_flag),
+                angvel_flag=int(angvel_flag),
                 dribbler_en=int(robot.dribbler_setting > 0),
                 charge_en=int(robot.kicker_setting > 0),
                 autokick=autokick,
@@ -88,7 +93,7 @@ def create_packet(
     kicker_voltage: int,  # unsigned byte
     kick_up: int,  # boolean flag (bit 0)
     kick_down: int,  # boolean flag (bit 1)
-    beep: int,  # boolean flag (bit 2)
+    angvel_flag: int,  # boolean flag (bit 2), 1 - speed_w is angular velocity, 0 - angle; FB2 has no buzzer
     dribbler_en: int,  # boolean flag (bit 3)
     charge_en: int,  # boolean flag (bit 4)
     autokick: int,  # unsigned byte
@@ -104,7 +109,7 @@ def create_packet(
         kicker_voltage,
         kick_up,
         kick_down,
-        beep,
+        angvel_flag,
         dribbler_en,
         charge_en,
         autokick,

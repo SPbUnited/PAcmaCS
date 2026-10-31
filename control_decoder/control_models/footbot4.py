@@ -19,6 +19,7 @@ COMMAND_TELEMETRY_COLUMNS = (
     "voltage",
     "kickUP",
     "kickDWN",
+    "angMode",
     "beep",
     "dribEN",
     "charEN",
@@ -27,17 +28,10 @@ COMMAND_TELEMETRY_COLUMNS = (
 COMMAND_TELEMETRY_HEADER = 'SENDING COMMANDS IN "FB4" MODE\n'
 
 
-def build_robot_command(robot: cdcm.DecoderCommand) -> control_pb2.RobotCommand:
-    command = control_pb2.RobotCommand()
-
-    command.new_format.speed_control.vel_x = robot.forward_vel
-    command.new_format.speed_control.vel_y = -robot.left_vel
-    if robot.angle is not None:
-        command.new_format.speed_control.delta_angle = robot.angle
-    else:
-        command.new_format.speed_control.angular_velocity = robot.angular_vel or 0.0
-        command.new_format.speed_control.angular_velocity *= -1
-
+def fill_kicker_and_dribbler(
+    kicker_and_dribbler: control_pb2.KickerAndDribbler,
+    robot: cdcm.AnyDecoderCommand,
+) -> None:
     if robot.kick_up:
         kicker_mode = control_pb2.KICK_HIGH
     elif robot.kick_forward:
@@ -51,11 +45,40 @@ def build_robot_command(robot: cdcm.DecoderCommand) -> control_pb2.RobotCommand:
     else:
         kicker_mode = control_pb2.IDLE
 
-    command.new_format.kicker_and_dribbler.kicker_mode = kicker_mode
-    command.new_format.kicker_and_dribbler.kicker_voltage = robot.kicker_setting
-    command.new_format.kicker_and_dribbler.dribbler_setting = round(robot.dribbler_setting)
+    kicker_and_dribbler.kicker_mode = kicker_mode
+    kicker_and_dribbler.kicker_voltage = robot.kicker_setting
+    kicker_and_dribbler.dribbler_setting = round(robot.dribbler_setting)
+
+
+def build_robot_command(robot: cdcm.AnyDecoderCommand) -> control_pb2.RobotCommand:
+    command = control_pb2.RobotCommand()
     command.robot_id = robot.robot_id
-    command.robot_control_type = control_pb2.RobotControlType.NEW_FORMAT
+    command.beep = robot.beep
+
+    match robot:
+        case cdcm.DecoderRicochetCommand():
+            command.robot_control_type = control_pb2.RobotControlType.RICOCHET
+            command.ricochet.x = robot.x
+            command.ricochet.y = robot.y
+            command.ricochet.angle = robot.angle
+            fill_kicker_and_dribbler(command.ricochet.kicker_and_dribbler, robot)
+
+        case cdcm.DecoderCatchBallCommand():
+            command.robot_control_type = control_pb2.RobotControlType.CATCH_BALL
+            command.catch_ball.angle = robot.angle
+            fill_kicker_and_dribbler(command.catch_ball.kicker_and_dribbler, robot)
+
+        case cdcm.DecoderCommand():
+            command.robot_control_type = control_pb2.RobotControlType.NEW_FORMAT
+            command.new_format.speed_control.vel_x = robot.forward_vel
+            command.new_format.speed_control.vel_y = -robot.left_vel
+            if robot.angle is not None:
+                command.new_format.speed_control.delta_angle = robot.angle
+            else:
+                command.new_format.speed_control.angular_velocity = robot.angular_vel or 0.0
+                command.new_format.speed_control.angular_velocity *= -1
+            fill_kicker_and_dribbler(command.new_format.kicker_and_dribbler, robot)
+
     return command
 
 
@@ -86,6 +109,7 @@ def build_command_telemetry_row(robot: cdcm.DecoderCommand) -> tuple[str, ...]:
         str(int(robot.kick_up)),
         str(int(robot.kick_forward)),
         str(angle_mode),
+        str(int(robot.beep)),
         str(int(robot.dribbler_setting > 0)),
         str(int(robot.kicker_setting > 0)),
         str(autokick),
@@ -93,8 +117,32 @@ def build_command_telemetry_row(robot: cdcm.DecoderCommand) -> tuple[str, ...]:
     return values
 
 
-def build_command_telemetry(robots: list[cdcm.DecoderCommand]) -> str:
-    rows = [build_command_telemetry_row(robot) for robot in robots]
+def build_target_telemetry_line(robot: cdcm.AnyDecoderCommand) -> str:
+    match robot:
+        case cdcm.DecoderRicochetCommand():
+            target = f"x={robot.x:.2f}  y={robot.y:.2f}  angle={robot.angle:.2f}"
+        case cdcm.DecoderCatchBallCommand():
+            target = f"angle={robot.angle:.2f}"
+        case _:
+            target = ""
+    return (
+        f"r_id {robot.robot_id} {cdcm.CONTROL_TYPES[type(robot)]}  {target}  "
+        f"voltage={robot.kicker_setting}  dribler={robot.dribbler_setting}  "
+        f"beep={int(robot.beep)}"
+    )
+
+
+def build_command_telemetry(robots: list[cdcm.AnyDecoderCommand]) -> str:
+    rows = [
+        build_command_telemetry_row(robot)
+        for robot in robots
+        if isinstance(robot, cdcm.DecoderCommand)
+    ]
+    target_lines = [
+        build_target_telemetry_line(robot)
+        for robot in robots
+        if not isinstance(robot, cdcm.DecoderCommand)
+    ]
     widths = [
         max([
             len(column),
@@ -110,6 +158,7 @@ def build_command_telemetry(robots: list[cdcm.DecoderCommand]) -> str:
 
     lines = [format_row(COMMAND_TELEMETRY_COLUMNS)]
     lines.extend(format_row(row) for row in rows)
+    lines.extend(target_lines)
     return COMMAND_TELEMETRY_HEADER + "\n".join(lines) + "\n"
 
 
@@ -212,7 +261,7 @@ class FB4Decoder(ControlModel):
     def process_signal(self, raw: Any):
         self.udpie_processor.process_udpie(raw)
 
-    def broadcast_command(self, command: cdcm.DecoderCommand) -> None:
+    def broadcast_command(self, command: cdcm.AnyDecoderCommand) -> None:
         data = build_robot_command(command).SerializeToString()
         for robot_id, ip in self._snapshot_discovered_ips().items():
             try:

@@ -35,6 +35,10 @@ class SimDecoder(ControlModel):
         )
 
         for decoder_command in decoder_team_command.robot_commands:
+            # grSim has no equivalent of the other FB4 control types
+            if not isinstance(decoder_command, cdcm.DecoderCommand):
+                self.warn_unsupported(decoder_command)
+                continue
 
             is_kick = (
                 decoder_command.kick_up

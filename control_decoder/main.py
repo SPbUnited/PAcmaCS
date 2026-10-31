@@ -4,7 +4,6 @@ from argparse import ArgumentParser
 import decoder.control_decoder_command_model as cdcm
 import yaml
 import zmq
-from cattrs import structure
 
 from control_models import base_model, footbot2, footbot4, simulator
 
@@ -77,7 +76,7 @@ while True:
         if s_inbound in socks:
             try:
                 signal = s_inbound.recv_json()
-                signal_data = structure(signal["data"], cdcm.DecoderTeamCommand)
+                signal_data = cdcm.converter.structure(signal["data"], cdcm.DecoderTeamCommand)
                 Decoder.process(signal_data)
 
             except OverflowError:
@@ -100,10 +99,10 @@ while True:
                     raw = signal.get("data")
                     Decoder.process_signal(raw)
                 elif signal["control"] == "robot_commands":
-                    signal_data = structure(signal["data"], cdcm.DecoderTeamCommand)
+                    signal_data = cdcm.converter.structure(signal["data"], cdcm.DecoderTeamCommand)
                     Decoder.process(signal_data)
                 elif signal["control"] == "broadcast_command":
-                    team_cmd = structure(signal["data"], cdcm.DecoderTeamCommand)
+                    team_cmd = cdcm.converter.structure(signal["data"], cdcm.DecoderTeamCommand)
                     if team_cmd.robot_commands:
                         Decoder.broadcast_command(team_cmd.robot_commands[0])
                     
