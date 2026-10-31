@@ -42,6 +42,8 @@ s_signals = context.socket(zmq.SUB)
 s_signals.connect(signals_inbound)
 s_signals.setsockopt_string(zmq.SUBSCRIBE, '{"control":')
 s_signals.setsockopt_string(zmq.SUBSCRIBE, "{'control':")
+s_signals.setsockopt_string(zmq.SUBSCRIBE, '{"transnet":')
+s_signals.setsockopt_string(zmq.SUBSCRIBE, "{'transnet':")
 
 poller = zmq.Poller()
 poller.register(s_inbound, zmq.POLLIN)
@@ -91,7 +93,10 @@ while True:
         if s_signals in socks:
             try:
                 signal = s_signals.recv_json()
-                if signal["control"] == "send_udpie":
+                if "transnet" in signal and signal["transnet"] == "set_formation" and isinstance(Decoder,footbot4.FB4Decoder):
+                    formation = signal["data"]
+                    Decoder.process_formation(formation)
+                elif signal["control"] == "send_udpie":
                     raw = signal.get("data")
                     Decoder.process_signal(raw)
                 elif signal["control"] == "robot_commands":
@@ -101,7 +106,7 @@ while True:
                     team_cmd = structure(signal["data"], cdcm.DecoderTeamCommand)
                     if team_cmd.robot_commands:
                         Decoder.broadcast_command(team_cmd.robot_commands[0])
-
+                    
             except Exception as e:
                 print("Unknown exception while processing signals: ", e)
                 time.sleep(0.1)

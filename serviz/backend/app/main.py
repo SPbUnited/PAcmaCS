@@ -9,6 +9,15 @@ from blue_green_storage import BGStore
 
 from argparse import ArgumentParser
 import yaml
+import zmq
+from google.protobuf import json_format
+from google.protobuf.message import DecodeError
+
+import sys
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parents[3] / "control_decoder"))
+from decoder.robot_control_proto import telemetry_pb2
 
 parser = ArgumentParser()
 parser.add_argument("--config", default="config.yml")
@@ -247,6 +256,50 @@ def update_telemetry():
 
         telemetry_store.switch()
 
+
+def update_robot_status():
+    print("Update robot status enter")
+
+    context = zmq.Context()
+
+    s_robot_status = context.socket(zmq.SUB)
+    s_robot_status.connect(config["control_decoder"]["s_telemetry_fan_url"])
+    s_robot_status.setsockopt_string(zmq.SUBSCRIBE, "")
+
+    print("Robot status socket setup at ", config["control_decoder"]["s_telemetry_fan_url"])
+
+    # The stream carries one RobotTelemetry per packet, possibly at a high rate;
+    # forward only the newest packet of each robot, at most every ROBOT_STATUS_EMIT_INTERVAL
+    ROBOT_STATUS_EMIT_INTERVAL = 0.1
+    latest: dict[int, dict] = {}
+    last_emit = 0.0
+
+    while True:
+        sio.sleep(0.01)
+
+        for _ in range(100):
+            try:
+                data = s_robot_status.recv(flags=zmq.NOBLOCK)
+                telemetry = telemetry_pb2.RobotTelemetry()
+                telemetry.ParseFromString(data)
+                latest[telemetry.robot_id] = json_format.MessageToDict(
+                    telemetry, preserving_proto_field_name=True
+                )
+            except DecodeError as e:
+                print("Bad robot telemetry protobuf:", e)
+            except zmq.ZMQError as e:
+                if e.errno == zmq.EAGAIN:
+                    break
+                else:
+                    raise
+
+        now = time.time()
+        if latest and now - last_emit >= ROBOT_STATUS_EMIT_INTERVAL:
+            sio.emit("update_robot_status", list(latest.values()))
+            latest = {}
+            last_emit = now
+
+
 def update_geometry():
     print("Update geometry enter")
 
@@ -367,6 +420,9 @@ if __name__ == "__main__":
     )
     sio.start_background_task(
         target=lambda: update_telemetry()
+    )
+    sio.start_background_task(
+        target=lambda: update_robot_status()
     )
     sio.start_background_task(
         target=lambda: update_geometry()

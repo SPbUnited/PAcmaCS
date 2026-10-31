@@ -17,6 +17,7 @@ transnet:
 control_decoder:
   api_version: 2
   s_control_sink_url: tcp://*:5051
+  s_telemetry_fan_url: tcp://127.0.0.1:5052
   fb2_ip_low: "10.0.120.211"
   fb2_ip_high: "10.0.120.210"
   fb2_port: 10000

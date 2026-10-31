@@ -1,17 +1,14 @@
+import math
 import socket
 import threading
 import time
 from typing import Any, Callable, Optional
 
 import zmq
-from google.protobuf.message import DecodeError
 
 from decoder import control_decoder_command_model as cdcm
-from decoder.robot_control_proto import control_pb2, telemetry_pb2
+from decoder.robot_control_proto import control_pb2
 from control_models.base_model import ControlModel
-
-STALE_AFTER_SECONDS = 2.0
-STATUS_EMIT_INTERVAL_SECONDS = 0.1
 MAX_TELEMETRY_MESSAGES_PER_TICK = 200
 COMMAND_TELEMETRY_COLUMNS = (
     "r_id",
@@ -30,15 +27,16 @@ COMMAND_TELEMETRY_COLUMNS = (
 COMMAND_TELEMETRY_HEADER = 'SENDING COMMANDS IN "FB4" MODE\n'
 
 
-def build_new_format_command(robot: cdcm.DecoderCommand) -> control_pb2.NewFormat:
-    command = control_pb2.NewFormat()
+def build_robot_command(robot: cdcm.DecoderCommand) -> control_pb2.RobotCommand:
+    command = control_pb2.RobotCommand()
 
-    command.speed_control.vel_x = robot.left_vel
-    command.speed_control.vel_y = robot.forward_vel
+    command.new_format.speed_control.vel_x = robot.forward_vel
+    command.new_format.speed_control.vel_y = -robot.left_vel
     if robot.angle is not None:
-        command.speed_control.delta_angle = robot.angle
+        command.new_format.speed_control.delta_angle = robot.angle
     else:
-        command.speed_control.angular_velocity = robot.angular_vel or 0.0
+        command.new_format.speed_control.angular_velocity = robot.angular_vel or 0.0
+        command.new_format.speed_control.angular_velocity *= -1
 
     if robot.kick_up:
         kicker_mode = control_pb2.KICK_HIGH
@@ -53,10 +51,11 @@ def build_new_format_command(robot: cdcm.DecoderCommand) -> control_pb2.NewForma
     else:
         kicker_mode = control_pb2.IDLE
 
-    command.kicker_and_dribbler.kicker_mode = kicker_mode
-    command.kicker_and_dribbler.kicker_setting = robot.kicker_setting
-    command.kicker_and_dribbler.dribbler_setting = round(robot.dribbler_setting)
-
+    command.new_format.kicker_and_dribbler.kicker_mode = kicker_mode
+    command.new_format.kicker_and_dribbler.kicker_voltage = robot.kicker_setting
+    command.new_format.kicker_and_dribbler.dribbler_setting = round(robot.dribbler_setting)
+    command.robot_id = robot.robot_id
+    command.robot_control_type = control_pb2.RobotControlType.NEW_FORMAT
     return command
 
 
@@ -114,47 +113,6 @@ def build_command_telemetry(robots: list[cdcm.DecoderCommand]) -> str:
     return COMMAND_TELEMETRY_HEADER + "\n".join(lines) + "\n"
 
 
-def record_telemetry(
-    state: dict[int, dict],
-    robot_id: int,
-    telemetry: telemetry_pb2.RobotTelemetry,
-    now: float,
-) -> None:
-    st = telemetry.strategy_telemetry
-    entry: dict = {"last_seen": now}
-    if st.HasField("kicker_voltage"):
-        entry["voltage"] = st.kicker_voltage
-    if st.HasField("ball_in"):
-        entry["ball_sensor"] = st.ball_in
-    state[robot_id] = entry
-
-
-def build_status_message(
-    state: dict[int, dict], robot_team: dict[int, bool], now: float
-) -> dict:
-    message = {"blue": [], "yellow": []}
-    for robot_id, record in state.items():
-        team = robot_team.get(robot_id, False)
-
-        entry = {
-            "robot_id": robot_id,
-            "online": now - record["last_seen"] < STALE_AFTER_SECONDS,
-        }
-        if record.get("ball_sensor") is not None:
-            entry["ball_sensor"] = record["ball_sensor"]
-        if record.get("voltage") is not None:
-            entry["voltage"] = record["voltage"]
-        message["yellow" if team else "blue"].append(entry)
-
-    return message
-
-
-def should_emit_status(
-    fresh_robot_ids: set[int], now: float, last_emit: float, min_interval: float
-) -> bool:
-    return bool(fresh_robot_ids) and now - last_emit >= min_interval
-
-
 class FB4Decoder(ControlModel):
     def __init__(self, config, telemetry_sender):
         super().__init__(config, telemetry_sender)
@@ -188,10 +146,10 @@ class FB4Decoder(ControlModel):
         context = zmq.Context()
         self.robot_status_socket = context.socket(zmq.PUB)
         self.robot_status_socket.connect(config["ether"]["s_signals_sub_url"])
-        self.robot_team: dict[int, bool] = {}
-        self.robot_telemetry_state: dict[int, dict] = {}
-        self.fresh_robot_ids: set[int] = set()
-        self.last_robot_status_emit = 0.0
+        # Every RobotTelemetry packet from the robots is republished here as is, one per
+        # message; strategy and serviz (Robot status) both read this one stream.
+        self.strategy_telemetry_socket = context.socket(zmq.PUB)
+        self.strategy_telemetry_socket.bind(control_config["s_telemetry_fan_url"])
 
         def udpie_sender(robot_id: int, data: bytes):
             self.udpie_socket.sendto(
@@ -240,12 +198,11 @@ class FB4Decoder(ControlModel):
         self.telemetry_text = build_command_telemetry(signal_data.robot_commands)
         discovered_ips = self._snapshot_discovered_ips()
         for robot in signal_data.robot_commands:
-            self.robot_team[robot.robot_id] = signal_data.isteamyellow
             ip = discovered_ips.get(robot.robot_id)
             if ip is None:
                 print(f"[fb4] robot {robot.robot_id} has no discovered IP; skipping")
                 continue
-            data = build_new_format_command(robot).SerializeToString()
+            data = build_robot_command(robot).SerializeToString()
             try:
                 self.robot_cmd_socket.sendto(data, (ip, self.command_port))
             except OSError as error:
@@ -256,7 +213,7 @@ class FB4Decoder(ControlModel):
         self.udpie_processor.process_udpie(raw)
 
     def broadcast_command(self, command: cdcm.DecoderCommand) -> None:
-        data = build_new_format_command(command).SerializeToString()
+        data = build_robot_command(command).SerializeToString()
         for robot_id, ip in self._snapshot_discovered_ips().items():
             try:
                 self.robot_cmd_socket.sendto(data, (ip, self.command_port))
@@ -267,12 +224,9 @@ class FB4Decoder(ControlModel):
                 )
 
     def process_telemetry(self) -> None:
-        ip_to_robot = {
-            ip: robot_id for robot_id, ip in self._snapshot_discovered_ips().items()
-        }
         for _ in range(MAX_TELEMETRY_MESSAGES_PER_TICK):
             try:
-                data, (src_ip, _src_port) = self.robot_telemetry_socket.recvfrom(4096)
+                data, _src = self.robot_telemetry_socket.recvfrom(4096)
             except BlockingIOError:
                 break
             except OSError as error:
@@ -280,39 +234,34 @@ class FB4Decoder(ControlModel):
                 break
 
             try:
-                robot_id = ip_to_robot.get(src_ip)
-                if robot_id is None:
-                    raise ValueError(f"unknown telemetry source IP {src_ip}")
-
-                telemetry = telemetry_pb2.RobotTelemetry()
-                telemetry.ParseFromString(data)
-
-                now = time.time()
-                record_telemetry(self.robot_telemetry_state, robot_id, telemetry, now)
-                self.fresh_robot_ids.add(robot_id)
-            except (DecodeError, ValueError) as error:
-                print("Invalid robot telemetry message:", error)
-
-        now = time.time()
-        if should_emit_status(
-            self.fresh_robot_ids,
-            now,
-            self.last_robot_status_emit,
-            STATUS_EMIT_INTERVAL_SECONDS,
-        ):
-            status_message = build_status_message(
-                self.robot_telemetry_state, self.robot_team, now
-            )
-            try:
-                self.robot_status_socket.send_json(
-                    {"serviz": "update_robot_status", "data": status_message}
-                )
+                self.strategy_telemetry_socket.send(data)
             except zmq.ZMQError as error:
-                print("Robot status publish error:", error)
-            else:
-                self.last_robot_status_emit = now
-                self.fresh_robot_ids.clear()
+                print("Robot telemetry publish error:", error)
 
+    def process_formation(self,formation)->None:
+        for team in ["YELLOW","BLUE"]:
+            if team not in formation:
+                continue
+            for robot in formation[team]:
+                command = control_pb2.RobotCommand()
+                command.robot_id = robot["robot_id"]
+                command.robot_control_type = control_pb2.RobotControlType.GLOBAL_COORDINATES
+                command.global_coordinates.x = robot["x"]/1000
+                command.global_coordinates.y = robot["y"]/1000
+                # serviz sends rotation in degrees (grSim convention); proto expects radians
+                command.global_coordinates.angle = math.radians(robot["rotation"])
+                data = command.SerializeToString()
+                discovered_ips = self._snapshot_discovered_ips()
+                ip = discovered_ips.get(robot["robot_id"])
+                if ip is None:
+                    print(f"[fb4] robot {robot["robot_id"]} has no discovered IP; skipping")
+                    continue
+                try:
+                    self.robot_cmd_socket.sendto(data, (ip, self.command_port))
+                except OSError as error:
+                    print(f"[fb4] send error for robot {robot["robot_id"]} at {ip}: {error}")
+
+        
 udpies_history: list[tuple[str, int, str]] = []
 
 

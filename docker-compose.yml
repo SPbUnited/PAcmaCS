@@ -5,6 +5,7 @@ services:
     volumes:
       - .:/app
       - /tmp:/tmp
+      - /run/avahi-daemon:/run/avahi-daemon
     environment:
       - VERSION=${VERSION}
       - DIV=${DIV}
