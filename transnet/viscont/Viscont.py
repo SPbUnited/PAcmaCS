@@ -96,23 +96,43 @@ class SSLVision:
 class SimControl:
     client: Any
 
-    def set_formation(self, formation):
-        graveyard = {"x": -2000, "y": 3000, "rotation": 0}
+    @staticmethod
+    def _graveyard_positions(formation) -> Dict[Team, list]:
+        """(x, y) in mm for robots 0..15 of each team, parked off the playing area."""
+        field = formation.get("field")
+        try:
+            half_width = float(field["width"]) / 2
+            boundary = float(field["boundary"])
+        except (TypeError, KeyError, ValueError):
+            # No field info: legacy Div B layout, one row along y=3000
+            xs = iter(range(-2000, -2000 + 32 * 200, 200))
+            return {
+                team: [(next(xs), 3000) for _ in range(16)]
+                for team in [Team.YELLOW, Team.BLUE]
+            }
 
-        if "enable_graveyard" in formation and formation["enable_graveyard"] == True:
+        # One row per team in the boundary strip behind each touch line
+        y = half_width + boundary / 2
+        row = [(i - 7.5) * 200 for i in range(16)]
+        return {
+            Team.YELLOW: [(x, y) for x in row],
+            Team.BLUE: [(x, -y) for x in row],
+        }
+
+    def set_formation(self, formation):
+        if formation.get("enable_graveyard") == True:
             # Send all robots to the graveyard
-            for team in [Team.YELLOW, Team.BLUE]:
-                for i in range(16):
+            for team, positions in self._graveyard_positions(formation).items():
+                for i, (x, y) in enumerate(positions):
                     self.client.send_robot_replacement(
                         RobotReplacement(
-                            x=graveyard["x"] / 1000,
-                            y=graveyard["y"] / 1000,
-                            direction=graveyard["rotation"],
+                            x=x / 1000,
+                            y=y / 1000,
+                            direction=0,
                             robot_id=i,
                             team=team,
                         )
                     )
-                    graveyard["x"] += 200
 
         # Send all known robots to the required formation
         for team in [Team.YELLOW, Team.BLUE]:

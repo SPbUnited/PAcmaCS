@@ -316,6 +316,5 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
-.codex-tl/
 .claude/
 CLAUDE.md
