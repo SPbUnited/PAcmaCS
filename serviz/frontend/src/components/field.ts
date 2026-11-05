@@ -165,8 +165,8 @@ const Field: Component = {
       fieldConfig = {
         width: data.length,
         height: data.width,
-        leftGoalColor: "#FFFF00",
-        rightGoalColor: "#0000FF",
+        leftGoalColor: fieldConfig.leftGoalColor,
+        rightGoalColor: fieldConfig.rightGoalColor,
         goalWidth: data.goalWidth,
         goalDepth: data.goalDepth,
         penaltyAreaWidth: data.penaltyAreaWidth,
@@ -179,6 +179,26 @@ const Field: Component = {
       updateTransform();
     };
     bus.on("update_geometry", onUpdateGeometry);
+
+    // GameController tells which half the blue team defends; paint goals accordingly.
+    subscribeToTopic("update_status_board");
+    const onUpdateStatusBoard = (data) => {
+      const colors = goalColorsFromReferee(data);
+      if (
+        colors === null ||
+        (colors.left === fieldConfig.leftGoalColor &&
+          colors.right === fieldConfig.rightGoalColor)
+      ) {
+        return;
+      }
+      fieldConfig = {
+        ...fieldConfig,
+        leftGoalColor: colors.left,
+        rightGoalColor: colors.right,
+      };
+      drawField(fieldSvg, fieldConfig);
+    };
+    bus.on("update_status_board", onUpdateStatusBoard);
 
     let lastSprites: FeedData | null = null;
     let renderedSprites: FeedData | null = null;
@@ -423,6 +443,7 @@ const Field: Component = {
 
     return () => {
       bus.off("update_geometry", onUpdateGeometry);
+      bus.off("update_status_board", onUpdateStatusBoard);
       bus.off("update_sprites", onUpdateSprites);
       bus.off("robot_skin_mode_changed", onRobotSkinModeChanged);
     };
@@ -463,11 +484,36 @@ interface FieldConfig {
   borderSize: number;
 }
 
+const BLUE_GOAL_COLOR = "#0000ff";
+const YELLOW_GOAL_COLOR = "#ffff00";
+
+// Referee payload arrives as MessageToJson() string; blueTeamOnPositiveHalf is
+// present only when the GC sets it. Positive half = +x = right goal.
+function goalColorsFromReferee(
+  data: unknown,
+): { left: string; right: string } | null {
+  let referee: unknown = data;
+  if (typeof data === "string") {
+    try {
+      referee = JSON.parse(data);
+    } catch {
+      return null;
+    }
+  }
+  if (typeof referee !== "object" || referee === null) return null;
+  const blueOnPositive = (referee as { blueTeamOnPositiveHalf?: unknown })
+    .blueTeamOnPositiveHalf;
+  if (typeof blueOnPositive !== "boolean") return null;
+  return blueOnPositive
+    ? { left: YELLOW_GOAL_COLOR, right: BLUE_GOAL_COLOR }
+    : { left: BLUE_GOAL_COLOR, right: YELLOW_GOAL_COLOR };
+}
+
 const defaultFieldCfg: FieldConfig = {
   width: 9000,
   height: 6000,
-  leftGoalColor: "#0000ff",
-  rightGoalColor: "#ffff00",
+  leftGoalColor: BLUE_GOAL_COLOR,
+  rightGoalColor: YELLOW_GOAL_COLOR,
   goalWidth: 1000,
   goalDepth: 180,
   penaltyAreaWidth: 2000,
