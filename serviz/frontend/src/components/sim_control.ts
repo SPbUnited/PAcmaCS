@@ -35,7 +35,7 @@ const SimControl: Component = {
     btn0.style.font = "20px Arial, sans-serif";
     firstRow.appendChild(btn0);
     btn0.addEventListener("click", () => {
-      sendMessage("send_signal", formations[0]);
+      sendMessage("send_signal", fitFormationToField(formations[0]));
     });
 
     const btn1 = document.createElement("button");
@@ -43,7 +43,7 @@ const SimControl: Component = {
     btn1.style.cssText = btn0.style.cssText;
     firstRow.appendChild(btn1);
     btn1.addEventListener("click", () => {
-      sendMessage("send_signal", formations[1]);
+      sendMessage("send_signal", fitFormationToField(formations[1]));
     });
 
     const btn2 = document.createElement("button");
@@ -51,7 +51,7 @@ const SimControl: Component = {
     btn2.style.cssText = btn0.style.cssText;
     firstRow.appendChild(btn2);
     btn2.addEventListener("click", () => {
-      sendMessage("send_signal", formations[2]);
+      sendMessage("send_signal", fitFormationToField(formations[2]));
     });
 
     const secondRow = document.createElement("div");
@@ -408,11 +408,66 @@ let formations = [
   },
 ];
 
+// Formations above are authored for a Div B field; they are scaled to the real one.
+const REF_FIELD_LENGTH = 9000;
+const REF_FIELD_WIDTH = 6000;
+const ROBOT_RADIUS = 90;
+
+interface FieldGeometry {
+  length: number;
+  width: number;
+  boundary: number;
+}
+
+// Module-level so geometry is known even if the panel is opened after it was emitted.
+let fieldGeometry: FieldGeometry | null = null;
+subscribeToTopic("update_geometry");
+bus.on("update_geometry", (data) => {
+  const isPositive = (v: unknown) =>
+    typeof v === "number" && Number.isFinite(v) && v > 0;
+  if (!data || !isPositive(data.length) || !isPositive(data.width)) return;
+  fieldGeometry = {
+    length: data.length,
+    width: data.width,
+    boundary: isPositive(data.borderSize) ? data.borderSize : 0,
+  };
+});
+
+type Placement = { x: number; y: number };
+
+function fitFormationToField<T extends { data: object }>(formation: T): T {
+  const result = structuredClone(formation);
+  if (fieldGeometry === null) return result;
+
+  const kx = fieldGeometry.length / REF_FIELD_LENGTH;
+  const ky = fieldGeometry.width / REF_FIELD_WIDTH;
+  const scale = (p: Placement) => {
+    p.x *= kx;
+    p.y *= ky;
+  };
+
+  const data = result.data as {
+    BLUE?: Placement[];
+    YELLOW?: Placement[];
+    BALL?: Placement;
+    enable_graveyard?: boolean;
+    field?: FieldGeometry;
+  };
+  data.BLUE?.forEach(scale);
+  data.YELLOW?.forEach(scale);
+  if (data.BALL) scale(data.BALL);
+  // Lets the backend park unused robots just outside this field.
+  if (data.enable_graveyard) data.field = { ...fieldGeometry };
+  return result;
+}
+
 function generateRandomFormation() {
+  const length = fieldGeometry?.length ?? REF_FIELD_LENGTH;
+  const width = fieldGeometry?.width ?? REF_FIELD_WIDTH;
   const randomRobot = (id: number) => ({
     robot_id: id,
-    x: Math.random() * 8000 - 4000,
-    y: Math.random() * 6000 - 3000,
+    x: (Math.random() - 0.5) * (length - 2 * ROBOT_RADIUS),
+    y: (Math.random() - 0.5) * (width - 2 * ROBOT_RADIUS),
     rotation: Math.random() * 360,
   });
 
