@@ -2,6 +2,8 @@ from attrs import define, field
 import socket
 import threading
 
+from common.sockets import join_multicast_group
+
 
 @define
 class MulticastListener:
@@ -19,11 +21,7 @@ class MulticastListener:
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind(("", self.port))
 
-        # Join the multicast group
-        mreq = struct.pack(
-            "4sl", socket.inet_aton(self.multicast_group), socket.INADDR_ANY
-        )
-        self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+        join_multicast_group(self.sock, self.multicast_group)
 
         self.running = True
         self.thread = threading.Thread(target=self._listen)

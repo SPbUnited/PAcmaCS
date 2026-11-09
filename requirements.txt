@@ -18,4 +18,3 @@ Flask
 Flask-SocketIO
 gevent
 eventlet
-psutil

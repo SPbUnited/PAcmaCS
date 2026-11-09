@@ -1,7 +1,6 @@
 export VERSION:=$(shell jq '.version' package.json)
 export DIV:=divB# divC
 export CTRL:=SIM# REAL
-export STRAT:=true# false
 
 # https://stackoverflow.com/a/78547267
 export UID=$(shell id -u)

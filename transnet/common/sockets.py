@@ -5,6 +5,30 @@ from typing import Optional
 
 import attr
 
+# Container bridges never carry vision, and a socket can join at most 20 groups
+SKIPPED_INTERFACE_PREFIXES = ("docker", "br-", "veth")
+
+
+def join_multicast_group(sock: socket.socket, group: str) -> None:
+    """Join the group on every interface. With INADDR_ANY the kernel joins on the one
+    the route to the group goes through, and a full-tunnel VPN (wg-quick with 0.0.0.0/0)
+    moves that route off the LAN, so vision stops arriving"""
+    joined = False
+    for index, name in socket.if_nameindex():
+        if name.startswith(SKIPPED_INTERFACE_PREFIXES):
+            continue
+        # struct ip_mreqn: group, local address (any), interface index; Linux only
+        mreqn = struct.pack("4s4si", socket.inet_aton(group), socket.inet_aton("0.0.0.0"), index)
+        try:
+            sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreqn)
+            joined = True
+        except OSError:
+            pass  # down, no multicast or not Linux
+
+    if not joined:
+        mreq = struct.pack("4sl", socket.inet_aton(group), socket.INADDR_ANY)
+        sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+
 
 @attr.s(auto_attribs=True, kw_only=True)
 class SocketReader:
@@ -21,8 +45,7 @@ class SocketReader:
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind((self.ip, self.port))
 
-        mreq = struct.pack("4sl", socket.inet_aton(self.ip), socket.INADDR_ANY)
-        self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+        join_multicast_group(self.sock, self.ip)
 
         self.sock.settimeout(self.timeout)
 

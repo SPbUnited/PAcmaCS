@@ -282,9 +282,19 @@ def update_robot_status():
                 data = s_robot_status.recv(flags=zmq.NOBLOCK)
                 telemetry = telemetry_pb2.RobotTelemetry()
                 telemetry.ParseFromString(data)
-                latest[telemetry.robot_id] = json_format.MessageToDict(
+                message = json_format.MessageToDict(
                     telemetry, preserving_proto_field_name=True
                 )
+                # The runner sends raspberry_status only about once a second, in a single
+                # packet: keep its fields when a newer packet without them replaces it
+                previous = latest.get(telemetry.robot_id, {})
+                raspberry = {
+                    **previous.get("raspberry_status", {}),
+                    **message.get("raspberry_status", {}),
+                }
+                if raspberry:
+                    message["raspberry_status"] = raspberry
+                latest[telemetry.robot_id] = message
             except DecodeError as e:
                 print("Bad robot telemetry protobuf:", e)
             except zmq.ZMQError as e:

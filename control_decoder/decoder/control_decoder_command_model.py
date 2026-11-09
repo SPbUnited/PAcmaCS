@@ -63,7 +63,35 @@ class DecoderCatchBallCommand:
 
     beep: bool = field(default=False)
 
-AnyDecoderCommand = Union[DecoderCommand, DecoderRicochetCommand, DecoderCatchBallCommand]
+@define
+class DecoderCoefficientsCommand:
+    """Controller coefficients (Coefficients in robot/control.proto), not a motion command: the robot keeps
+    running the one it has. None: not sent, the robot keeps its value. Units as in the proto (m, m/s, s),
+    not mm. FB4 over WiFi only"""
+    robot_id: int = field()
+
+    # STM32
+    angle_k: Optional[float] = field(default=None)
+    angle_b: Optional[float] = field(default=None)
+    max_linear_vel: Optional[float] = field(default=None) # [m/s]
+    max_linear_accel: Optional[float] = field(default=None) # [m/s^2]
+    max_angular_vel: Optional[float] = field(default=None) # [rad/s]
+    max_angular_accel: Optional[float] = field(default=None) # [rad/s^2]
+    wheel_vel_p: Optional[float] = field(default=None)
+    wheel_vel_i: Optional[float] = field(default=None)
+    # fb4-runner
+    position_kp: Optional[float] = field(default=None) # [1/s]
+    position_max_vel: Optional[float] = field(default=None) # [m/s]
+    ricochet_gain: Optional[float] = field(default=None) # [1/s]
+    catch_gain: Optional[float] = field(default=None) # [1/s]
+    onboard_max_vel: Optional[float] = field(default=None) # [m/s]
+    kicker_face_x: Optional[float] = field(default=None) # [m]
+    min_approach_vel: Optional[float] = field(default=None) # [m/s]
+    freeze_s: Optional[float] = field(default=None) # [s]
+
+AnyDecoderCommand = Union[
+    DecoderCommand, DecoderRicochetCommand, DecoderCatchBallCommand, DecoderCoefficientsCommand
+]
 
 @define
 class DecoderTeamCommand:
@@ -76,6 +104,7 @@ CONTROL_TYPES = {
     DecoderCommand: "NEW_FORMAT",
     DecoderRicochetCommand: "RICOCHET",
     DecoderCatchBallCommand: "CATCH_BALL",
+    DecoderCoefficientsCommand: "SET_COEFFICIENTS",
 }
 
 converter = Converter()

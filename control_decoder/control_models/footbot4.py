@@ -5,13 +5,24 @@ import time
 from typing import Any, Callable, Optional
 
 import zmq
+from attrs import asdict, evolve
+from google.protobuf.message import DecodeError
 
 from decoder import control_decoder_command_model as cdcm
-from decoder.robot_control_proto import control_pb2
+from decoder.robot_control_proto import control_pb2, telemetry_pb2
 from control_models.base_model import ControlModel
+from control_models.footbot4_radio import build_radio_packet
+
 MAX_TELEMETRY_MESSAGES_PER_TICK = 200
+# A robot is driven over WiFi only while it has a discovered IP and its telemetry
+# came no longer than this ago; otherwise its commands go to the radio box
+DEFAULT_WIFI_FEEDBACK_TIMEOUT = 1.0  # [s]
+BOX_WARNING_INTERVAL = 1.0  # [s] radio box send errors are printed at most this often
+LINK_WIFI = "wifi"
+LINK_BOX = "box"
 COMMAND_TELEMETRY_COLUMNS = (
     "r_id",
+    "link",
     "speedX",
     "speedY",
     "speedW",
@@ -53,6 +64,13 @@ def fill_kicker_and_dribbler(
 def build_robot_command(robot: cdcm.AnyDecoderCommand) -> control_pb2.RobotCommand:
     command = control_pb2.RobotCommand()
     command.robot_id = robot.robot_id
+    if isinstance(robot, cdcm.DecoderCoefficientsCommand):
+        command.robot_control_type = control_pb2.RobotControlType.SET_COEFFICIENTS
+        command.coefficients.SetInParent()  # sent even with no field set
+        for name, value in asdict(robot).items():
+            if name != "robot_id" and value is not None:
+                setattr(command.coefficients, name, value)
+        return command
     command.beep = robot.beep
 
     match robot:
@@ -89,7 +107,7 @@ def robot_hostname(robot_id: int) -> str:
     return f"fb4-{robot_id:02}.local"
 
 
-def build_command_telemetry_row(robot: cdcm.DecoderCommand) -> tuple[str, ...]:
+def build_command_telemetry_row(robot: cdcm.DecoderCommand, link: str) -> tuple[str, ...]:
     speed_w = robot.angular_vel if robot.angular_vel is not None else robot.angle
     angle_mode = int(robot.angle is not None)
 
@@ -104,6 +122,7 @@ def build_command_telemetry_row(robot: cdcm.DecoderCommand) -> tuple[str, ...]:
 
     values = (
         str(robot.robot_id),
+        link,
         f"{robot.left_vel:.0f}",
         f"{robot.forward_vel:.0f}",
         "null" if speed_w is None else f"{speed_w:.1f}",
@@ -120,7 +139,7 @@ def build_command_telemetry_row(robot: cdcm.DecoderCommand) -> tuple[str, ...]:
     return values
 
 
-def build_target_telemetry_line(robot: cdcm.AnyDecoderCommand) -> str:
+def build_target_telemetry_line(robot: cdcm.AnyDecoderCommand, link: str) -> str:
     match robot:
         case cdcm.DecoderRicochetCommand():
             target = f"x={robot.x:.0f}  y={robot.y:.0f}  angle={robot.angle:.2f}"
@@ -129,22 +148,22 @@ def build_target_telemetry_line(robot: cdcm.AnyDecoderCommand) -> str:
         case _:
             target = ""
     return (
-        f"r_id {robot.robot_id} {cdcm.CONTROL_TYPES[type(robot)]}  {target}  "
+        f"r_id {robot.robot_id} {link} {cdcm.CONTROL_TYPES[type(robot)]}  {target}  "
         f"voltage={robot.kicker_setting}  dribler={robot.dribbler_setting}  "
         f"beep={int(robot.beep)}"
     )
 
 
-def build_command_telemetry(robots: list[cdcm.AnyDecoderCommand]) -> str:
+def build_command_telemetry(robots: list[cdcm.AnyDecoderCommand], links: dict[int, str]) -> str:
     rows = [
-        build_command_telemetry_row(robot)
+        build_command_telemetry_row(robot, links[robot.robot_id])
         for robot in robots
         if isinstance(robot, cdcm.DecoderCommand)
     ]
     target_lines = [
-        build_target_telemetry_line(robot)
+        build_target_telemetry_line(robot, links[robot.robot_id])
         for robot in robots
-        if not isinstance(robot, cdcm.DecoderCommand)
+        if not isinstance(robot, (cdcm.DecoderCommand, cdcm.DecoderCoefficientsCommand))
     ]
     widths = [
         max([
@@ -176,11 +195,27 @@ class FB4Decoder(ControlModel):
         self.command_port = control_config.get("fb4_command_port", 5555)
         self.telemetry_port = control_config.get("fb4_telemetry_port", 5556)
         self.robot_count = control_config.get("fb4_robot_count", 16)
+        self.wifi_feedback_timeout = control_config.get(
+            "fb4_wifi_feedback_timeout", DEFAULT_WIFI_FEEDBACK_TIMEOUT
+        )
+        # Radio boxes take robots 0..7 (low) and 8..15 (high), as with FB2
+        self.box_address_low = (control_config["fb4_ip_low"], self.udpie_port)
+        self.box_address_high = (control_config["fb4_ip_high"], self.udpie_port)
 
         self.robot_cmd_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.robot_telemetry_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.robot_telemetry_socket.bind(("0.0.0.0", self.telemetry_port))
         self.robot_telemetry_socket.setblocking(False)
+        # Non-blocking: while the box's address is unresolved (ARP; a box that is off), the kernel queues the
+        # packets against the socket's send buffer, and a blocking sendto then waits until ARP gives up (~3 s),
+        # stalling the whole decoder. Packets that don't fit are dropped instead
+        self.box_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.box_socket.setblocking(False)
+        self._box_errors = 0  # box packets not sent since the last warning
+        self._last_box_warning = time.time()
+
+        self._last_feedback: dict[int, float] = {}  # rid -> time of its last telemetry
+        self._links: dict[int, str] = {}  # rid -> link of its last command, to log switches
 
         # We resolve fb4-NN.local ourselves rather than resolving hostnames on the
         # command/telemetry hot path. An absent fb4-NN.local takes ~10s to fail via
@@ -204,11 +239,58 @@ class FB4Decoder(ControlModel):
         self.strategy_telemetry_socket.bind(control_config["s_telemetry_fan_url"])
 
         def udpie_sender(robot_id: int, data: bytes):
-            self.udpie_socket.sendto(
-                data, (robot_hostname(robot_id), self.udpie_port)
-            )
+            ip = self._wifi_ip(robot_id, self._snapshot_discovered_ips())
+            if ip is None:
+                self.box_socket.sendto(data, self._box_address(robot_id))
+            else:
+                self.udpie_socket.sendto(data, (ip, self.udpie_port))
 
         self.udpie_processor = UdPieProcessor(udpie_sender, telemetry_sender)
+
+    def _wifi_ip(self, robot_id: int, discovered_ips: dict[int, str]) -> Optional[str]:
+        """IP to drive the robot over WiFi, None if it goes through the radio box"""
+        ip = discovered_ips.get(robot_id)
+        last_feedback = self._last_feedback.get(robot_id)
+        if ip is None or last_feedback is None:
+            return None
+        if time.time() - last_feedback > self.wifi_feedback_timeout:
+            return None
+        return ip
+
+    def _box_address(self, robot_id: int) -> tuple[str, int]:
+        return self.box_address_low if robot_id < 8 else self.box_address_high
+
+    def _update_link(self, robot_id: int, link: str) -> None:
+        # The first command of a robot is printed as a switch from the other link too: "wifi -> box"
+        previous = self._links.get(robot_id, LINK_BOX if link == LINK_WIFI else LINK_WIFI)
+        if previous != link:
+            print(f"[fb4] robot {robot_id}: {previous} -> {link}")
+            self._links[robot_id] = link
+
+    def _send_to_box(self, robot: cdcm.AnyDecoderCommand) -> None:
+        if isinstance(robot, cdcm.DecoderCoefficientsCommand):
+            return  # the strategy sends them every robot now and then, nothing to set over the box
+        # The box only carries speed commands, onboard ones need WiFi
+        if not isinstance(robot, cdcm.DecoderCommand):
+            self.warn_unsupported(robot)
+            return
+        try:
+            self.box_socket.sendto(build_radio_packet(robot), self._box_address(robot.robot_id))
+        except OSError as error:  # BlockingIOError too: the box doesn't answer ARP
+            self._warn_box_error(robot.robot_id, error)
+
+    def _warn_box_error(self, robot_id: int, error: OSError) -> None:
+        # Commands come at the strategy rate for every robot without WiFi, so print at most once per interval
+        self._box_errors += 1
+        now = time.time()
+        if now - self._last_box_warning < BOX_WARNING_INTERVAL:
+            return
+        print(
+            f"[fb4] {self._box_errors} box packets not sent in {now - self._last_box_warning:.0f} s "
+            f"(last: robot {robot_id}, {self._box_address(robot_id)[0]}: {error!r}); is the radio box on?"
+        )
+        self._box_errors = 0
+        self._last_box_warning = now
 
     def _resolve_robot_ip(self, robot_id: int) -> Optional[str]:
         try:
@@ -247,18 +329,21 @@ class FB4Decoder(ControlModel):
             return dict(self._discovered_ips)
 
     def process(self, signal_data: cdcm.DecoderTeamCommand) -> None:
-        self.telemetry_text = build_command_telemetry(signal_data.robot_commands)
         discovered_ips = self._snapshot_discovered_ips()
+        links: dict[int, str] = {}
         for robot in signal_data.robot_commands:
-            ip = discovered_ips.get(robot.robot_id)
+            ip = self._wifi_ip(robot.robot_id, discovered_ips)
+            links[robot.robot_id] = LINK_BOX if ip is None else LINK_WIFI
+            self._update_link(robot.robot_id, links[robot.robot_id])
             if ip is None:
-                print(f"[fb4] robot {robot.robot_id} has no discovered IP; skipping")
+                self._send_to_box(robot)
                 continue
             data = build_robot_command(robot).SerializeToString()
             try:
                 self.robot_cmd_socket.sendto(data, (ip, self.command_port))
             except OSError as error:
                 print(f"[fb4] send error for robot {robot.robot_id} at {ip}: {error}")
+        self.telemetry_text = build_command_telemetry(signal_data.robot_commands, links)
         self.last_update = time.time()
 
     def process_signal(self, raw: Any):
@@ -266,7 +351,12 @@ class FB4Decoder(ControlModel):
 
     def broadcast_command(self, command: cdcm.AnyDecoderCommand) -> None:
         data = build_robot_command(command).SerializeToString()
-        for robot_id, ip in self._snapshot_discovered_ips().items():
+        discovered_ips = self._snapshot_discovered_ips()
+        for robot_id in range(self.robot_count):
+            ip = self._wifi_ip(robot_id, discovered_ips)
+            if ip is None:
+                self._send_to_box(evolve(command, robot_id=robot_id))
+                continue
             try:
                 self.robot_cmd_socket.sendto(data, (ip, self.command_port))
             except OSError as error:
@@ -290,6 +380,14 @@ class FB4Decoder(ControlModel):
             except zmq.ZMQError as error:
                 print("Robot telemetry publish error:", error)
 
+            # Telemetry is the WiFi feedback that keeps the robot off the radio box
+            telemetry = telemetry_pb2.RobotTelemetry()
+            try:
+                telemetry.ParseFromString(data)
+            except DecodeError:
+                continue
+            self._last_feedback[telemetry.robot_id] = time.time()
+
     def process_formation(self,formation)->None:
         for team in ["YELLOW","BLUE"]:
             if team not in formation:
@@ -304,9 +402,10 @@ class FB4Decoder(ControlModel):
                 command.global_coordinates.angle = math.radians(robot["rotation"])
                 data = command.SerializeToString()
                 discovered_ips = self._snapshot_discovered_ips()
-                ip = discovered_ips.get(robot["robot_id"])
+                ip = self._wifi_ip(robot["robot_id"], discovered_ips)
                 if ip is None:
-                    print(f"[fb4] robot {robot["robot_id"]} has no discovered IP; skipping")
+                    # The radio box has no GLOBAL_COORDINATES command
+                    print(f"[fb4] robot {robot["robot_id"]} has no WiFi link; relocate skipped")
                     continue
                 try:
                     self.robot_cmd_socket.sendto(data, (ip, self.command_port))
